@@ -1373,7 +1373,7 @@ c$$$       end
       return
  1111 format('ga_create_JKblocked failed to ga_create(',
      &       'MT_DBL,',i12,',',i12,',',a10,',',i12,',',i12,
-     &       ') where n1=',i12,' and n2=',i12
+     &       ') where n1=',i12,' and n2=',i12)
       end
 
 
