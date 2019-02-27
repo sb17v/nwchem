@@ -73,6 +73,7 @@ c
 c  ======================================================================================================
 c
       character*(nw_max_path_len) input_filename, rtdb_name
+      character*(nw_max_path_len) nwchem_rev, ga_rev
       double precision total_wall, total_cpu
 #ifdef USE_OFFLOAD
       integer ppnout
@@ -112,7 +113,38 @@ c
 c     Get the name of the input file from the command line
 c
          call get_input_filename(input_filename)
-c
+!------- special cases
+         if (input_filename(1:10) .eq. '***help***') then
+           write(luout,888)
+ 888       format(/
+     &            12x,
+     &            'NWChem usage:'/
+     &            12x,
+     &            'Get version information:'/
+     &            12x,
+     &            '  -version/--version'/
+     &            12x,
+     &            'Run input.nw with one process:'/
+     &            12x,
+     &            '  nwchem input[.nw]'/
+     &            12x,
+     &            'Run input.nw with MPI:'/
+     &            12x,
+     &            '  mpirun <mpi opts> nwchem input[.nw]'//)
+           goto 999
+         endif
+         if (input_filename(1:10) .eq. '***vers***') then
+           call util_nwchem_version(nwchem_rev)
+           call util_ga_version(ga_rev)
+ 22      format(/
+     $     '    NWChem revision = ', a/
+     $     '    GA revision     = ', a)
+         write(luout,22)
+     &     nwchem_rev(1:inp_strlen(nwchem_rev)),
+     &     ga_rev(1:inp_strlen(ga_rev))
+           goto 999
+         endif
+!------- end special cases
          open(LuIn, file=input_filename, status='old', form='formatted',
      $        err=10000)
          goto 10001
@@ -393,7 +425,7 @@ c
 c
 c     Tidy up the parallel environment
 c
-      call pend()
+ 999  call pend()
 c
 c     Close the ECCE' output file if there is one
 c

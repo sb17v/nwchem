@@ -49,14 +49,27 @@ c
 c
 c     hack to get nwchem.nw to be read with mpi
 c
-         if(inp_strlen(test).eq.0.and.arg.eq.1) 
+         if(inp_strlen(test).eq.0.and.arg.eq.1)
      $        input_filename(1:1)='-'
  1       format(' argument',i3,' = ',a)
       enddo
  2    continue
       if (nargs .ge. 1) then
-         if (input_filename(1:1) .eq. '-') 
-     $        input_filename = 'nwchem.nw'
+!
+! version and help are special cases that do not open
+! any input file...
+!
+        if ((input_filename(1:8) .eq. '-version').or.
+     &      (input_filename(1:9) .eq. '--version')) then
+          input_filename = '***vers***'
+          return
+        elseif ((input_filename(1:5) .eq. '-help').or.
+     &          (input_filename(1:6) .eq. '--help')) then
+          input_filename = '***help***'
+          return
+        elseif (input_filename(1:1) .eq. '-') then
+          input_filename = 'nwchem.nw'
+        endif
       else
          input_filename = 'nwchem.nw'
       endif
@@ -75,8 +88,7 @@ c
       return
 c
  10   l = inp_strlen(input_filename)
-      write(LuOut,*) ' Unable to open ',input_filename(1:l), 
+      write(LuOut,*) ' Unable to open ',input_filename(1:l),
      $     ' --- appending .nw'
       input_filename(l+1:l+3) = '.nw'
-c     
       end
