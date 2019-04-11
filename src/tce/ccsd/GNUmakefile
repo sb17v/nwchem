@@ -5,7 +5,7 @@ OBJ_OPTIMIZE = ccsd_e.o ccsd_t1.o ccsd_t2.o cc2_t1.o cc2_t2.o \
                ccsd_1prdm_ph.o ccsd_1prdm_pp.o \
                icsd_t1.o icsd_t2.o \
 	       ccsd_kernels.o ccsd_t2_8.o tce_1b_dens_print.o \
-	       trunc_precision.o
+               ccsd_t2_8_mp.o trunc_precision.o
 
 LIB_INCLUDES = -I../include
 
@@ -14,7 +14,8 @@ LIBRARY = libtce.a
 USES_BLAS = ccsd_e.F ccsd_t1.F ccsd_t2.F cc2_t1.F cc2_t2.F \
             ccsd_1prdm_hh.F ccsd_1prdm_hp.F ccsd_1prdm_ph.F \
             ccsd_1prdm_pp.F ccsd_1prdm.F \
-            icsd_t1.F icsd_t2.F ccsd_t2_8.F
+            icsd_t1.F icsd_t2.F ccsd_t2_8.F \
+            ccsd_t2_8_mp.F
 
 
 LIB_DEFINES = -DDEBUG_PRINT
