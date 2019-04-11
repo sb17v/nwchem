@@ -208,7 +208,6 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       real(kind=sp), allocatable :: sf_a(:)
       real(kind=sp), allocatable :: sf_b(:)
       real(kind=sp), allocatable :: sf_c(:)
-      real(kind=sp), allocatable :: sf_t(:)
 #ifdef USE_FASTMEM
       !dec$ attributes fastmem :: f_a,f_b,f_c,f_t
 #endif
@@ -373,9 +372,19 @@ c no sfill
      &                        f_a,f_b,f_c,
      &                        0.5d0*alpha)
 #else
+#ifdef HALF_PRECISION
+       call truncate_sp2hp(sf_a, dimhhpp)
+       call truncate_sp2hp(sf_b, dimpppp)
+#endif
+
                    CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &                  salpha,sf_a,dim_common,sf_b,
      &                  dim_common,1.0,sf_c,dima_sort)
+     
+#ifdef HALF_PRECISION
+       call truncate_sp2hp(sf_c, dimhhpp)
+#endif
+
 #endif
                   END IF
                  END IF
@@ -515,6 +524,9 @@ cendif// USE_F90_ALLOCATABLE
       deallocate(f_a,stat=e_a)
       deallocate(f_b,stat=e_b)
       deallocate(f_c,stat=e_c)
+      deallocate(sf_a)
+      deallocate(sf_b)
+      deallocate(sf_c)
 # ifndef USE_LOOPS_NOT_DGEMM
       deallocate(f_t,stat=e_t)
 # endif
