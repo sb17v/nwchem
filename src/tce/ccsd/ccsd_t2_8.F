@@ -196,8 +196,6 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       INTEGER p3b_2,p4b_2,p5b_2,p6b_2
       INTEGER dima,dimb,dimc,dim_common,dima_sort,dimb_sort
 
-      integer i
-
       integer, parameter :: sp = selected_real_kind(6, 37)
       integer, parameter :: dp = selected_real_kind(15, 307)
 
