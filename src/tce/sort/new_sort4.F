@@ -226,7 +226,7 @@
 
       integer, parameter :: sp = selected_real_kind(6, 37)
       integer, parameter :: dp = selected_real_kind(15, 307)
-      
+
       real(kind=sp) s(a*b*c*d)
       real(kind=dp) u(a*b*c*d)
       real(kind=dp) f
@@ -441,10 +441,10 @@
 
       integer, parameter :: sp = selected_real_kind(6, 37)
       integer, parameter :: dp = selected_real_kind(15, 307)
-      
+
       real(kind=dp) s(a*b*c*d)
       real(kind=sp) u(a*b*c*d)
-      real(kind=dp) f      
+      real(kind=dp) f
 
       integer iax,ibx
       jd(1) = a
@@ -647,7 +647,7 @@
       endif
       endif
       return
-      end      
+      end
 
       subroutine tce_sortacc_4(u,s,a,b,c,d,i,j,k,l,f)
       implicit none
@@ -857,11 +857,11 @@
 
       integer, parameter :: sp = selected_real_kind(6, 37)
       integer, parameter :: dp = selected_real_kind(15, 307)
-      
+
       real(kind=sp) s(a*b*c*d)
       real(kind=dp) u(a*b*c*d)
-      real(kind=dp) f      
-      
+      real(kind=dp) f
+
       integer iax,ibx
       jd(1) = a
       jd(2) = b
@@ -950,10 +950,10 @@
 
       integer, parameter :: sp = selected_real_kind(6, 37)
       integer, parameter :: dp = selected_real_kind(15, 307)
-      
+
       real(kind=dp) s(a*b*c*d)
       real(kind=sp) u(a*b*c*d)
-      real(kind=dp) f            
+      real(kind=dp) f
 
       integer iax,ibx
       jd(1) = a
@@ -1033,7 +1033,7 @@
        enddo
       endif
       return
-      end      
+      end
 
       subroutine tce_sortacc_4(u,s,a,b,c,d,i,j,k,l,f)
       implicit none
