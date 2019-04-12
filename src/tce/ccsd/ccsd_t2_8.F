@@ -195,19 +195,11 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       INTEGER p5b_1,p6b_1,h1b_1,h2b_1
       INTEGER p3b_2,p4b_2,p5b_2,p6b_2
       INTEGER dima,dimb,dimc,dim_common,dima_sort,dimb_sort
-
-      integer, parameter :: sp = selected_real_kind(6, 37)
-      integer, parameter :: dp = selected_real_kind(15, 307)
-
 #ifdef USE_F90_ALLOCATABLE
-      real(kind=dp), allocatable :: f_a(:)
-      real(kind=dp), allocatable :: f_b(:)
-      real(kind=dp), allocatable :: f_c(:)
-      real(kind=dp), allocatable :: f_t(:)
-
-      real(kind=sp), allocatable :: sf_a(:)
-      real(kind=sp), allocatable :: sf_b(:)
-      real(kind=sp), allocatable :: sf_c(:)
+      double precision, allocatable :: f_a(:)
+      double precision, allocatable :: f_b(:)
+      double precision, allocatable :: f_c(:)
+      double precision, allocatable :: f_t(:)
 #ifdef USE_FASTMEM
       !dec$ attributes fastmem :: f_a,f_b,f_c,f_t
 #endif
@@ -220,7 +212,6 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       integer e_a,e_b,e_c,e_t
 #endif
       double precision alpha
-      real(kind=sp) salpha
       integer p5b_in,p6b_in
       INTEGER NXTASK
       EXTERNAL NXTASK
@@ -236,10 +227,6 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       allocate(f_a(1:dimhhpp),stat=e_a)
       allocate(f_b(1:dimpppp),stat=e_b)
       allocate(f_c(1:dimhhpp),stat=e_c)
-
-      allocate(sf_a(1:dimhhpp),stat=e_a)
-      allocate(sf_b(1:dimpppp),stat=e_b)
-      allocate(sf_c(1:dimhhpp),stat=e_c)
 # ifndef USE_LOOPS_NOT_DGEMM
       allocate(f_t(1:dimtemp),stat=e_t)
 # endif
@@ -283,10 +270,6 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &             * int_mb(k_range+h1b-1) * int_mb(k_range+h2b-1)
 #ifdef USE_F90_ALLOCATABLE
               CALL DFILL(dimc,0.0d0,f_c,1)
-c no sfill
-              do i=1, dimc
-                 sf_c(i) = 0.0
-              end do
 #if 0
               DO p5b = noab+1,noab+nvab
                DO p6b = p5b,noab+nvab
@@ -318,7 +301,7 @@ c no sfill
                    CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                  int_mb(k_a_offset),(h2b_1-1+noab*(h1b_1-1+noab*
      &                  (p6b_1-noab-1+nvab*(p5b_1-noab-1)))))
-                   CALL tce_sort_4_mp_d2s(f_t,sf_a,
+                   CALL TCE_SORT_4(f_t,f_a,
      &                  int_mb(k_range+p5b-1),int_mb(k_range+p6b-1),
      &                  int_mb(k_range+h1b-1),int_mb(k_range+h2b-1),
      &                  4,3,2,1,1.0d0)
@@ -349,18 +332,15 @@ c no sfill
 #endif
                    end if
 #ifndef USE_LOOPS_NOT_DGEMM
-                   CALL tce_sort_4_mp_d2s(f_t,sf_b,
+                   CALL TCE_SORT_4(f_t,f_b,
      &                  int_mb(k_range+p3b-1),int_mb(k_range+p4b-1),
      &                  int_mb(k_range+p5b-1),int_mb(k_range+p6b-1),
      &                  2,1,4,3,1.0d0)
-
 #endif
                    if (p5b .eq. p6b) then
                     alpha = 1.0d0
-                    salpha = 1.0
                    else
                     alpha = 2.0d0
-                    salpha = 2.0
                    end if
 #ifdef USE_LOOPS_NOT_DGEMM
                    call t2_p8(int_mb(k_range+h1b-1),
@@ -372,19 +352,9 @@ c no sfill
      &                        f_a,f_b,f_c,
      &                        0.5d0*alpha)
 #else
-#ifdef HALF_PRECISION
-       call truncate_sp2hp(sf_a, dimhhpp)
-       call truncate_sp2hp(sf_b, dimpppp)
-#endif
-
-                   CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,
-     &                  salpha,sf_a,dim_common,sf_b,
-     &                  dim_common,1.0,sf_c,dima_sort)
-     
-#ifdef HALF_PRECISION
-       call truncate_sp2hp(sf_c, dimhhpp)
-#endif
-
+                   CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+     &                  alpha,f_a,dim_common,f_b,
+     &                  dim_common,1.0d0,f_c,dima_sort)
 #endif
                   END IF
                  END IF
@@ -396,8 +366,7 @@ c no sfill
      &             int_mb(k_c_offset),(h2b-1+noab*(h1b-1+noab*
      &             (p4b-noab-1+nvab*(p3b-noab-1)))))
 #else
-
-              CALL tce_sort_4_mp_s2d(sf_c,f_t,
+              CALL TCE_SORT_4(f_c,f_t,
      &             int_mb(k_range+p4b-1),int_mb(k_range+p3b-1),
      &             int_mb(k_range+h2b-1),int_mb(k_range+h1b-1),
      &             2,1,4,3,0.5d0)
@@ -524,9 +493,6 @@ cendif// USE_F90_ALLOCATABLE
       deallocate(f_a,stat=e_a)
       deallocate(f_b,stat=e_b)
       deallocate(f_c,stat=e_c)
-      deallocate(sf_a)
-      deallocate(sf_b)
-      deallocate(sf_c)
 # ifndef USE_LOOPS_NOT_DGEMM
       deallocate(f_t,stat=e_t)
 # endif
