@@ -91,6 +91,9 @@ c ---------------------------------------
       double precision cpu     ! CPU sec counter
       double precision wall    ! WALL sec counter
       integer ccsd_t2_8_alg
+      integer t2_7_3_prec, t2_7_prec, t2_2_5_prec
+      integer t2_2_6_prec, t2_8_prec, t2_6_3_prec
+      integer t2_6_prec, t2_2_2_3_prec
       integer p,h,maxp,maxh
       integer profile
       double precision tt0,tt1,t2timers(50)
@@ -138,8 +141,24 @@ c
       CALL DELETEFILE(d_i3)
       IF (.not.MA_POP_STACK(l_i3_offset)) 
      1    CALL ERRQUIT('ccsd_t2',-1,MA_ERR)
+
+      if (.not.rtdb_get(rtdb,'tce:t2_2_2_3_prec',mt_int,1,
+     1                  t2_2_2_3_prec)) then
+        t2_2_2_3_prec = 0
+      endif
+      if (t2_2_2_3_prec.eq.0) then
       CALL ccsd_t2_2_2_3(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                   d_i2,k_i2_offset)
+      elseif (t2_2_2_3_prec.GE.1 .AND. t2_2_2_3_prec.LE.3) then
+c 1 = FP32         
+c 2 = FP16
+c 3 = BF16
+      CALL ccsd_t2_2_2_3_mp(d_t2,k_t2_offset,d_v2,k_v2_offset,
+     1                   d_i2,k_i2_offset, maxh, maxp, t2_2_2_3_prec)
+      else
+        CALL errquit('t2_2_2_3_prec',t2_2_2_3_prec,INPUT_ERR)
+      endif
+
       CALL RECONCILEFILE(d_i2,size_i2)
       CALL ccsd_t2_2_2(d_t1,k_t1_offset,d_i2,k_i2_offset,
      1                 d_i1,k_i1_offset)
@@ -165,14 +184,42 @@ c
       CALL ccsd_t2_2_5_2(d_t1,k_t1_offset,d_v2,k_v2_offset,
      1                   d_i2,k_i2_offset)
       CALL RECONCILEFILE(d_i2,size_i2)
+
+      if (.not.rtdb_get(rtdb,'tce:t2_2_5_prec',mt_int,1,
+     1                  t2_2_5_prec)) then
+        t2_2_5_prec = 0
+      endif
+      if (t2_2_5_prec.eq.0) then
       CALL ccsd_t2_2_5(d_t2,k_t2_offset,d_i2,k_i2_offset,
      1                 d_i1,k_i1_offset)
+      elseif (t2_2_5_prec.GE.1 .AND. t2_2_5_prec.LE.3) then
+      CALL ccsd_t2_2_5_mp(d_t2,k_t2_offset,d_i2,k_i2_offset,
+     1                 d_i1,k_i1_offset,maxh,maxp,t2_2_5_prec)
+      else
+        CALL errquit('t2_2_5_prec',t2_2_5_prec,INPUT_ERR)
+      endif
+
       CALL DELETEFILE(d_i2)
       IF (.not.MA_POP_STACK(l_i2_offset)) 
      1    CALL ERRQUIT('ccsd_t2',-1,MA_ERR)
       CALL c2f_t2_t12(d_t1,k_t1_offset,d_t2,k_t2_offset)
+
+      if (.not.rtdb_get(rtdb,'tce:t2_2_6_prec',mt_int,1,
+     1                  t2_2_6_prec)) then
+        t2_2_6_prec = 0
+      endif
+      if (t2_2_6_prec.eq.0) then
       CALL ccsd_t2_2_6(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                 d_i1,k_i1_offset)
+      elseif (t2_2_6_prec.GE.1 .AND. t2_2_6_prec.LE.3) then
+      CALL ccsd_t2_2_6_mp(d_t2,k_t2_offset,d_v2,k_v2_offset,
+     1                 d_i1,k_i1_offset,maxh,maxp, t2_2_6_prec)
+      else
+        CALL errquit('t2_2_6_prec',t2_2_6_prec,INPUT_ERR)
+      endif
+
+
+
       CALL c2d_t2_t12(d_t1,k_t1_offset,d_t2,k_t2_offset) 
       CALL RECONCILEFILE(d_i1,size_i1)
       CALL ccsd_t2_2(d_t1,k_t1_offset,d_i1,k_i1_offset,d_i0,k_i0_offset)
@@ -263,10 +310,37 @@ c -----------------------
       CALL DELETEFILE(d_i2)
       IF (.not.MA_POP_STACK(l_i2_offset)) 
      1    CALL ERRQUIT('ccsd_t2',-1,MA_ERR)
+
+      if (.not.rtdb_get(rtdb,'tce:t2_6_3_prec',mt_int,1,
+     1                  t2_6_3_prec)) then
+        t2_6_3_prec = 0
+      endif
+      if (t2_6_3_prec.eq.0) then
       CALL ccsd_t2_6_3(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                 d_i1,k_i1_offset)
+      elseif (t2_6_3_prec.GE.1 .AND. t2_6_3_prec.LE.3) then
+      CALL ccsd_t2_6_3_mp(d_t2,k_t2_offset,d_v2,k_v2_offset,
+     1                 d_i1,k_i1_offset,maxh,maxp,t2_6_3_prec)
+      else
+        CALL errquit('t2_6_3_prec',t2_6_3_prec,INPUT_ERR)
+      endif
+
+
       CALL RECONCILEFILE(d_i1,size_i1)
+      if (.not.rtdb_get(rtdb,'tce:t2_6_prec',mt_int,1,
+     1                  t2_6_prec)) then
+        t2_6_prec = 0
+      endif
+      if (t2_6_prec.eq.0) then
       CALL ccsd_t2_6(d_t2,k_t2_offset,d_i1,k_i1_offset,d_i0,k_i0_offset)
+      elseif (t2_6_prec.GE.1 .AND. t2_6_prec.LE.3) then
+      CALL ccsd_t2_6_mp(d_t2,k_t2_offset,d_i1,k_i1_offset,d_i0,
+     &        k_i0_offset,maxh,maxp,t2_6_prec)
+      else
+        CALL errquit('t2_6_prec',t2_6_prec,INPUT_ERR)
+      endif
+
+
       CALL DELETEFILE(d_i1)
       IF (.not.MA_POP_STACK(l_i1_offset)) 
      1    CALL ERRQUIT('ccsd_t2',-1,MA_ERR)
@@ -274,12 +348,39 @@ c -----------------------
       CALL TCE_FILENAME('ccsd_t2_7_1_i1',filename)
       CALL CREATEFILE(filename,d_i1,size_i1)
       CALL ccsd_t2_7_1(d_v2,k_v2_offset,d_i1,k_i1_offset)
+
       CALL ccsd_t2_7_2(d_t1,k_t1_offset,d_v2,k_v2_offset,
      1                 d_i1,k_i1_offset)
+
+      if (.not.rtdb_get(rtdb,'tce:t2_7_3_prec',mt_int,1,
+     1                  t2_7_3_prec)) then
+        t2_7_3_prec = 0
+      endif
+      if (t2_7_3_prec.eq.0) then
       CALL ccsd_t2_7_3(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                 d_i1,k_i1_offset)
+      elseif (t2_7_3_prec.GE.1 .AND. t2_7_3_prec.LE.3) then
+      CALL ccsd_t2_7_3_mp(d_t2,k_t2_offset,d_v2,k_v2_offset,
+     1                 d_i1,k_i1_offset,maxh,maxp, t2_7_3_prec)
+      else
+        CALL errquit('t2_7_3_prec',t2_7_3_prec,INPUT_ERR)
+      endif
+
       CALL RECONCILEFILE(d_i1,size_i1)
+
+      if (.not.rtdb_get(rtdb,'tce:t2_7_prec',mt_int,1,
+     1                  t2_7_prec)) then
+        t2_7_prec = 0
+      endif
+      if (t2_7_prec.eq.0) then
       CALL ccsd_t2_7(d_t2,k_t2_offset,d_i1,k_i1_offset,d_i0,k_i0_offset)
+      elseif (t2_7_prec.GE.1 .AND. t2_7_prec.LE.3) then
+      CALL ccsd_t2_7_mp(d_t2,k_t2_offset,d_i1,k_i1_offset,d_i0,
+     &                  k_i0_offset,maxh,maxp,t2_7_prec)
+      else
+        CALL errquit('t2_7_prec',t2_7_prec,INPUT_ERR)
+      endif
+
       CALL DELETEFILE(d_i1)
       IF (.not.MA_POP_STACK(l_i1_offset)) 
      1    CALL ERRQUIT('ccsd_t2',-1,MA_ERR)
@@ -306,8 +407,21 @@ c
         CALL ccsd_t2_8(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                 d_i0,k_i0_offset)
       else if (ccsd_t2_8_alg.eq.2) then
+      if (.not.rtdb_get(rtdb,'tce:t2_8_prec',mt_int,1,
+     1                  t2_8_prec)) then
+        t2_8_prec = 0
+      endif
+      if (t2_8_prec.eq.0) then
         CALL ccsd_t2_8_test(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                      d_i0,k_i0_offset,maxh,maxp)
+      elseif (t2_8_prec.GE.1 .AND. t2_8_prec.LE.3) then
+         ! Mixed-Precision
+        CALL ccsd_t2_8_mp(d_t2,k_t2_offset,d_v2,k_v2_offset,
+     1                         d_i0,k_i0_offset,maxh,maxp,t2_8_prec)
+      else
+        CALL errquit('t2_8_prec',t2_8_prec,INPUT_ERR)
+      endif
+
       else if (ccsd_t2_8_alg.eq.3) then
         CALL ccsd_t2_8_spiral(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                        d_i0,k_i0_offset)
@@ -325,10 +439,6 @@ c
         CALL ccsd_t2_8_dgemm_driver(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                              d_i0,k_i0_offset,maxh,maxp)
 #endif
-      else if (ccsd_t2_8_alg.eq.8) then
-        ! mixed-precision
-        CALL ccsd_t2_8_test_mp(d_t2,k_t2_offset,d_v2,k_v2_offset,
-     1                         d_i0,k_i0_offset,maxh,maxp)
       else
         CALL errquit('ccsd_t2_8_alg',ccsd_t2_8_alg,INPUT_ERR)
       endif
