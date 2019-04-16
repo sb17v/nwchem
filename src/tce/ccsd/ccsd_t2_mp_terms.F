@@ -207,9 +207,20 @@ C     i1 ( h6 p3 h1 p5 )_vt + = -1/2 * Sum ( h8 p7 ) * t ( p3 p7 h1 h8 )_t * v (
      &,int_mb(k_range+h8b-1),int_mb(k_range+p5b-1),int_mb(k_range+p7b-1)
      &,3,1,2,4,1.0d0)
       END IF
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_a, dimhhpp)
+         call truncate_sp2hp(sf_b, dimhhpp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_a, dimhhpp)
+         call truncate_sp2bf(sf_b, dimhhpp)
+      endif
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
      &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
-
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_c, dimhhpp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_c, dimhhpp)
+      endif
       END IF
       END IF
       END IF
@@ -391,8 +402,20 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
       CALL TCE_SORT_4_mp_d2s(df_t,sf_b,int_mb(k_range+p4b-1)
      &,int_mb(k_range+h6b-1),int_mb(k_range+h2b-1),int_mb(k_range+p5b-1)
      &,3,1,2,4,1.0d0)
+      if(prec.eq.2) then
+        call truncate_sp2hp(sf_a, dimhhpp)
+        call truncate_sp2hp(sf_b, dimhhpp)
+      else if(prec.eq.3) then
+        call truncate_sp2bf(sf_a, dimhhpp)
+        call truncate_sp2bf(sf_b, dimhhpp)
+      endif
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
      &,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+      if(prec.eq.2) then
+        call truncate_sp2hp(sf_c, dimhhpp)
+      else if(prec.eq.3) then
+        call truncate_sp2bf(sf_c, dimhhpp)
+      endif
       END IF
       END IF
       END IF
@@ -612,8 +635,20 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1 * P( 2 ) * Sum ( h7 p9 ) * t ( p3 p9 h1 h7 )_
      &),int_mb(k_range+h7b-1),int_mb(k_range+h2b-1),int_mb(k_range+p9b-1
      &),3,1,2,4,-1.0d0)
       END IF
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_a, dimhhpp)
+         call truncate_sp2hp(sf_b, dimhhhp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_a, dimhhpp)
+         call truncate_sp2bf(sf_b, dimhhhp)
+      endif
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
      &,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_c, dimhhhp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_c, dimhhhp)
+      endif
       END IF
       END IF
       END IF
@@ -806,8 +841,20 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
       ELSE
          alpha = 2.0
       END IF
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_a, dimhhpp)
+         call truncate_sp2hp(sf_b, dimhhhp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_a, dimhhpp)
+         call truncate_sp2bf(sf_b, dimhhhp)
+      endif
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
      &,sf_a,dim_common,sf_b,dim_common,1.0, sf_c, dima_sort)
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_c, dimhhhp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_c, dimhhhp)
+      endif
       END IF
       END IF
       END IF
@@ -964,22 +1011,21 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
                    else
                     alpha = 2.0
                    end if
-
                    if(prec.eq.2) then
-                   call truncate_sp2hp(sf_a, dimhhpp)
-                   call truncate_sp2hp(sf_b, dimpppp)
-                else if(prec.eq.3) then
-!     call truncate_sp2bf(sf_a, dimhhpp)
-!     call truncate_sp2bf(sf_b, dimhhpp)
-                endif
+                      call truncate_sp2hp(sf_a, dimhhpp)
+                      call truncate_sp2hp(sf_b, dimpppp)
+                   else if(prec.eq.3) then
+                      call truncate_sp2bf(sf_a, dimhhpp)
+                      call truncate_sp2bf(sf_b, dimpppp)
+                   endif
                    CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,
-     &                  alpha,sf_a,dim_common,sf_b,
-     &                  dim_common,1.0,sf_c,dima_sort)
+     &                        alpha,sf_a,dim_common,sf_b,
+     &                        dim_common,1.0,sf_c,dima_sort)
                    if(prec.eq.2) then
-                   call truncate_sp2hp(sf_c, dimhhpp)
-                else if(prec.eq.3) then
-! call truncate_sp2bf(sf_c, dimhhpp)
-                endif
+                      call truncate_sp2hp(sf_c, dimhhpp)
+                   else if(prec.eq.3) then
+                      call truncate_sp2bf(sf_c, dimhhpp)
+                   endif
                   END IF
                  END IF
                 END IF
@@ -1153,8 +1199,20 @@ C     i1 ( h9 h11 h1 h2 )_vt + = -1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v 
       ELSE
          alpha = 2.0
       END IF
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_a, dimhhpp)
+         call truncate_sp2hp(sf_b, dimhhpp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_a, dimhhpp)
+         call truncate_sp2bf(sf_b, dimhhpp)
+      endif
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
      &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_c, dimhhhh)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_c, dimhhhh)
+      endif
       END IF
       END IF
       END IF
@@ -1319,8 +1377,20 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1/2 * Sum ( h11 h9 ) * t ( p3 p4 h9 h11 )_t * i
       ELSE
          alpha = 2.0
       END IF
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_a, dimhhpp)
+         call truncate_sp2hp(sf_b, dimhhhh)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_a, dimhhpp)
+         call truncate_sp2bf(sf_b, dimhhhh)
+      endif
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
      &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_c, dimhhpp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_c, dimhhpp)
+      endif
       END IF
       END IF
       END IF
@@ -1494,8 +1564,20 @@ C     i2 ( h10 h11 h1 h2 )_vt + = -1/2 * Sum ( p7 p8 ) * t ( p7 p8 h1 h2 )_t * v
       ELSE
          alpha = 2.0
       END IF
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_a, dimhhpp)
+         call truncate_sp2hp(sf_b, dimhhpp)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_a, dimhhpp)
+         call truncate_sp2bf(sf_b, dimhhpp)
+      endif
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
      &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+      if(prec.eq.2) then
+         call truncate_sp2hp(sf_c, dimhhhh)
+      else if(prec.eq.3) then
+         call truncate_sp2bf(sf_c, dimhhhh)
+      endif
       END IF
       END IF
       END IF
