@@ -1,4 +1,5 @@
 #include <x86intrin.h>
+#include <stdint.h>
 
 // Truncate float32->float16, then convert back to float32 and store in original array memory                         
 void truncate_sp2hp_(float* s_arr, int* sizeP){
@@ -13,5 +14,13 @@ void truncate_sp2hp_(float* s_arr, int* sizeP){
     __m128i fp16_vector = _mm256_cvtps_ph(fp32_vector, 0);
     fp32_vector = _mm256_cvtph_ps(fp16_vector);
     _mm256_store_ps(s_arr+i, fp32_vector);
+  }
+}
+
+void truncate_sp2bf_(float* s_arr, int* sizeP){
+  int size = *sizeP;
+  for (int i=0; i<size; i++) {
+    uint32_t tmp = (*(uint32_t*)&s_arr[i] >> 16) << 16;
+    s_arr[i] = *(float*)&tmp;
   }
 }
