@@ -93,7 +93,7 @@ c ---------------------------------------
       integer ccsd_t2_8_alg
       integer t2_7_3_prec, t2_7_prec, t2_2_5_prec
       integer t2_2_6_prec, t2_8_prec, t2_6_3_prec
-      integer t2_6_prec, t2_2_2_3_prec
+      integer t2_6_prec, t2_2_2_3_prec, t2_prec
       integer p,h,maxp,maxh
       integer profile
       double precision tt0,tt1,t2timers(50)
@@ -102,6 +102,33 @@ c
       if (.not.rtdb_get(rtdb,'tce:term_profiling',mt_int,1,
      1                  profile)) then
         profile = 0
+      endif
+
+      if (rtdb_get(rtdb,'tce:t2_prec',mt_int,1, t2_prec)) then
+         if(.not.rtdb_put(rtdb, 'tce:t2_2_2_3_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_2_2_3_prec rtdb_put failed',911,
+     &       RTDB_ERR)
+         if(.not.rtdb_put(rtdb, 'tce:t2_2_5_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_2_5_prec rtdb_put failed',911,
+     &       RTDB_ERR)
+         if(.not.rtdb_put(rtdb, 'tce:t2_2_6_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_2_6_prec rtdb_put failed',911,
+     &       RTDB_ERR)
+         if(.not.rtdb_put(rtdb, 'tce:t2_6_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_6_prec rtdb_put failed',911,
+     &       RTDB_ERR)
+         if(.not.rtdb_put(rtdb, 'tce:t2_6_3_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_6_3_prec rtdb_put failed',911,
+     &       RTDB_ERR)
+         if(.not.rtdb_put(rtdb, 'tce:t2_7_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_7_prec rtdb_put failed',911,
+     &       RTDB_ERR)
+         if(.not.rtdb_put(rtdb, 'tce:t2_7_3_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_7_3_prec rtdb_put failed',911,
+     &       RTDB_ERR)
+         if(.not.rtdb_put(rtdb, 'tce:t2_8_prec',mt_int,1,t2_prec))
+     &    call errquit('tce:t2_8_prec rtdb_put failed',911,
+     &       RTDB_ERR)
       endif
 c
 c Here we determine the maximum tile dimension
