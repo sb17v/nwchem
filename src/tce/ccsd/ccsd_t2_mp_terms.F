@@ -753,7 +753,7 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
       INTEGER k_c
       integer p5b_in,p6b_in
       DOUBLE PRECISION FACTORIAL
-      INTEGER maxh, maxp, dimhhpp, dimhhhp, dimtemp
+      INTEGER maxh, maxp, dimhhpp, dimhppp, dimhhhp, dimtemp
       EXTERNAL NXTASK
       EXTERNAL FACTORIAL
       real(kind=dp), allocatable :: df_t(:)
@@ -767,11 +767,12 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
       next = NXTASK(nprocs, 1)
 
       dimhhpp = maxh*maxh*maxp*maxp
+      dimhppp = maxh*maxp*maxp*maxp
       dimhhhp = maxh*maxh*maxh*maxp
-      dimtemp = max(dimhhpp, dimhhhp)
+      dimtemp = max(dimhhhp, dimhppp)
 
       allocate(sf_a(1:dimhhpp),stat=e_a)
-      allocate(sf_b(1:dimhhhp),stat=e_b)
+      allocate(sf_b(1:dimhppp),stat=e_b)
       allocate(sf_c(1:dimhhhp),stat=e_c)
       allocate(df_t(1:dimtemp),stat=e_t)
       if (e_a.ne.0) call errquit("MA a",dimhhpp,MA_ERR)
