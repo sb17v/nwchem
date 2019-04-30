@@ -38,7 +38,9 @@ void truncate_sp2bf_(float* s_arr, int* sizeP)
     uint32_t tmp = (*(uint32_t*)&s_arr[i] >> 16) << 16;
     s_arr[i] = *(float*)&tmp;
 #else
-    s_arr[i] &= ~0xFFFF;
+    uint32_t tmp = *(uint32_t*)&s_arr[i];
+    tmp &= ~0xFFFF;
+    s_arr[i] = *(float*)&tmp;
 #endif
   }
 }
