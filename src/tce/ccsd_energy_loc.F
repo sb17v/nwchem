@@ -31,6 +31,12 @@ c
       integer unitn
       integer fldgts
       character*255 filename
+      integer, dimension(4) :: t2_prec_path
+      double precision, dimension(3) :: t2_prec_thresh
+      integer i
+      integer path_end
+      integer prec
+      double precision prec_thresh
 c
       nodezero=(ga_nodeid().eq.0)
       if (skip_t) then
@@ -38,6 +44,36 @@ c
         return
       endif
 c
+      if(.not.rtdb_get(rtdb,'tce:t2_prec_path',mt_int,4, 
+     &     t2_prec_path)) then
+      t2_prec_path = (/ 0, 0, 0, 1/)
+      endif
+
+      if(.not.rtdb_get(rtdb,'tce:t2_prec_thresh',mt_dbl,3, 
+     &     t2_prec_thresh)) then
+      t2_prec_thresh = (/ 0, 0, 0 /)
+      endif
+
+      do i=4, 1, -1
+         if(t2_prec_path(i).eq.1) then
+            path_end=i
+            exit
+          endif
+      enddo
+
+      do i=1, 4
+         if(t2_prec_path(i).eq.1) then
+            prec=i
+            if(prec.ne.path_end) then
+            prec_thresh = t2_prec_thresh(i)
+            endif
+            exit
+         endif
+      enddo
+
+      
+      
+
       call tce_diis_init()
 c       if (.not.rtdb_get(rtdb,'tce:maxioprocs',mt_int,1,max_ioprocs_in)) 
 c     4      max_ioprocs_in=4
@@ -50,6 +86,8 @@ c     number of digits for parallel file prefix (util_file_name0 last arg)
      R         ' tce:filedgts redefined to ',fldgts
        endif
       do iter=1,maxiter
+         write(*,*) 'Precision of next iter: ', prec
+         write(*,*) 'Residual thresh for prec increase: ', prec_thresh
         cpu=-util_cpusec()
         wall=-util_wallsec()
         if (nodezero.and.(iter.eq.1)) then
@@ -117,7 +155,7 @@ cxxxxxxxxxxxxxxxxxxxxx
            else
            call ccsd_t2(rtdb,d_f1,d_r2,k_t1_local,d_t2,d_v2,
      1                  k_f1_offset,k_t2_offset,
-     2                  k_t1_offset,k_t2_offset,k_v2_offset)
+     2                  k_t1_offset,k_t2_offset,k_v2_offset,prec)
           end if
         end if
         call reconcilefile(d_r2,size_t2)
@@ -136,6 +174,19 @@ cxxxxxxxxxxxxxxxxxxxxx
           write(LuOut,9100) iter,residual,corr,cpu,wall,cpusecs(37)
 c          write(LuOut,9101) cpusecs(37),cpusecs(38)
           end if
+        endif
+        if (prec.ne.path_end) then
+           if (residual .lt. prec_thresh) then
+              do i=prec+1, 4
+                 if(t2_prec_path(i).eq.1) then
+                    prec=i
+                    if(prec.ne.path_end) then
+                       prec_thresh=t2_prec_thresh(i)
+                    endif
+                    exit
+                 endif
+              enddo
+           endif
         endif
         if (residual .lt. thresh) then
           if (nodezero) then

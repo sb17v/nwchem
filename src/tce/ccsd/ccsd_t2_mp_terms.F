@@ -210,7 +210,7 @@ C     i1 ( h6 p3 h1 p5 )_vt + = -1/2 * Sum ( h8 p7 ) * t ( p3 p7 h1 h8 )_t * v (
       if(prec.eq.2) then
          call truncate_sp2hp(sf_a, dimhhpp)
          call truncate_sp2hp(sf_b, dimhhpp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhpp)
       endif
@@ -218,7 +218,7 @@ C     i1 ( h6 p3 h1 p5 )_vt + = -1/2 * Sum ( h8 p7 ) * t ( p3 p7 h1 h8 )_t * v (
      &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhpp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_c, dimhhpp)
       endif
       END IF
@@ -405,7 +405,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
       if(prec.eq.2) then
         call truncate_sp2hp(sf_a, dimhhpp)
         call truncate_sp2hp(sf_b, dimhhpp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
         call truncate_sp2bf(sf_a, dimhhpp)
         call truncate_sp2bf(sf_b, dimhhpp)
       endif
@@ -413,7 +413,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
      &,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
       if(prec.eq.2) then
         call truncate_sp2hp(sf_c, dimhhpp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
         call truncate_sp2bf(sf_c, dimhhpp)
       endif
       END IF
@@ -638,7 +638,7 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1 * P( 2 ) * Sum ( h7 p9 ) * t ( p3 p9 h1 h7 )_
       if(prec.eq.2) then
          call truncate_sp2hp(sf_a, dimhhpp)
          call truncate_sp2hp(sf_b, dimhhhp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhhp)
       endif
@@ -646,7 +646,7 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1 * P( 2 ) * Sum ( h7 p9 ) * t ( p3 p9 h1 h7 )_
      &,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_c, dimhhhp)
       endif
       END IF
@@ -845,7 +845,7 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
       if(prec.eq.2) then
          call truncate_sp2hp(sf_a, dimhhpp)
          call truncate_sp2hp(sf_b, dimhhhp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhhp)
       endif
@@ -853,7 +853,7 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
      &,sf_a,dim_common,sf_b,dim_common,1.0, sf_c, dima_sort)
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_c, dimhhhp)
       endif
       END IF
@@ -1015,7 +1015,7 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
                    if(prec.eq.2) then
                       call truncate_sp2hp(sf_a, dimhhpp)
                       call truncate_sp2hp(sf_b, dimpppp)
-                   else if(prec.eq.3) then
+                   else if(prec.eq.1) then
                       call truncate_sp2bf(sf_a, dimhhpp)
                       call truncate_sp2bf(sf_b, dimpppp)
                    endif
@@ -1024,7 +1024,7 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
      &                        dim_common,1.0,sf_c,dima_sort)
                    if(prec.eq.2) then
                       call truncate_sp2hp(sf_c, dimhhpp)
-                   else if(prec.eq.3) then
+                   else if(prec.eq.1) then
                       call truncate_sp2bf(sf_c, dimhhpp)
                    endif
                   END IF
@@ -1203,7 +1203,7 @@ C     i1 ( h9 h11 h1 h2 )_vt + = -1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v 
       if(prec.eq.2) then
          call truncate_sp2hp(sf_a, dimhhpp)
          call truncate_sp2hp(sf_b, dimhhpp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhpp)
       endif
@@ -1211,7 +1211,7 @@ C     i1 ( h9 h11 h1 h2 )_vt + = -1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v 
      &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhh)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_c, dimhhhh)
       endif
       END IF
@@ -1381,7 +1381,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1/2 * Sum ( h11 h9 ) * t ( p3 p4 h9 h11 )_t * i
       if(prec.eq.2) then
          call truncate_sp2hp(sf_a, dimhhpp)
          call truncate_sp2hp(sf_b, dimhhhh)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhhh)
       endif
@@ -1389,7 +1389,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1/2 * Sum ( h11 h9 ) * t ( p3 p4 h9 h11 )_t * i
      &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhpp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_c, dimhhpp)
       endif
       END IF
@@ -1568,7 +1568,7 @@ C     i2 ( h10 h11 h1 h2 )_vt + = -1/2 * Sum ( p7 p8 ) * t ( p7 p8 h1 h2 )_t * v
       if(prec.eq.2) then
          call truncate_sp2hp(sf_a, dimhhpp)
          call truncate_sp2hp(sf_b, dimhhpp)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhpp)
       endif
@@ -1576,7 +1576,7 @@ C     i2 ( h10 h11 h1 h2 )_vt + = -1/2 * Sum ( p7 p8 ) * t ( p7 p8 h1 h2 )_t * v
      &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhh)
-      else if(prec.eq.3) then
+      else if(prec.eq.1) then
          call truncate_sp2bf(sf_c, dimhhhh)
       endif
       END IF
