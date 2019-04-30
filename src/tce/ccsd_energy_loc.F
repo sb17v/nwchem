@@ -64,7 +64,6 @@ c
       do i=1, 4
          if(t2_prec_path(i).eq.1) then
             prec=i
-            write(*,*) 'Initial precision: ', prec
             if(prec.ne.path_end) then
             prec_thresh = t2_prec_thresh(i)
             endif
