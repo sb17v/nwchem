@@ -64,6 +64,7 @@ c
       do i=1, 4
          if(t2_prec_path(i).eq.1) then
             prec=i
+            write(*,*) 'Initial precision: ', prec
             if(prec.ne.path_end) then
             prec_thresh = t2_prec_thresh(i)
             endif
@@ -71,10 +72,8 @@ c
          endif
       enddo
 
-      
-      
 
-      call tce_diis_init()
+       call tce_diis_init()
 c       if (.not.rtdb_get(rtdb,'tce:maxioprocs',mt_int,1,max_ioprocs_in)) 
 c     4      max_ioprocs_in=4
 c     number of digits for parallel file prefix (util_file_name0 last arg)
@@ -85,14 +84,19 @@ c     number of digits for parallel file prefix (util_file_name0 last arg)
           if(ga_nodeid().eq.0) write(6,*)
      R         ' tce:filedgts redefined to ',fldgts
        endif
+
+
       do iter=1,maxiter
-         write(*,*) 'Precision of next iter: ', prec
-         write(*,*) 'Residual thresh for prec increase: ', prec_thresh
         cpu=-util_cpusec()
         wall=-util_wallsec()
         if (nodezero.and.(iter.eq.1)) then
           if(ccsd_var.ne.'ic') write(LuOut,9050) "CCSD"
           if(ccsd_var.eq.'ic') write(LuOut,9052) "CCSD"
+            write(*,*) 'Initial precision: ', prec
+            if(prec.ne.path_end) then
+      write(*,*) 'Residual threshold for increasing precision: ',
+     &                      prec_thresh
+      endif
         end if
         if (nodezero.and.(iter.eq.1)) then
          if(ccsd_var.eq.'ic') write(LuOut,9051)"NEW TASK SCHEDULING"
@@ -180,8 +184,11 @@ c          write(LuOut,9101) cpusecs(37),cpusecs(38)
               do i=prec+1, 4
                  if(t2_prec_path(i).eq.1) then
                     prec=i
+                    write(*,*) 'Increasing precision to: ', prec
                     if(prec.ne.path_end) then
                        prec_thresh=t2_prec_thresh(i)
+      write(*,*) 'Residual threshold for increasing precision: ',
+     &                      prec_thresh
                     endif
                     exit
                  endif
