@@ -3005,7 +3005,7 @@ endif
 	$(NWFC) -c $(FFLAGS) $<
 
 (%.o): %.c
-	$(NWCC) -c $(CPPFLAGS) $(CFLAGS) -o $% $<
+	$(NWCC) -c $(CPPFLAGS) $(CFLAGS) -march=native -o $% $<
 
 ifdef GPU_ARCH
   CUDA_ARCH =  -arch=$(GPU_ARCH) 
