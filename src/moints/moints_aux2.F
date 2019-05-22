@@ -1363,12 +1363,16 @@ c$$$       end
       if (.not.ga_create(MT_DBL,(n1*n2),noper,label,
      $                    row_dist,col_dist,g_a)) then
          write(6,*) ' ga_create_JKblocked: ', label
+         if (ga_nodeid().eq.0) then
+            write(6,*) 'ga_create_JKblocked failed to ga_create(',
+     &                 'MT_DBL',(n1*n2),noper,label,row_dist,col_dist,
+     &                 ') where n1=',n1,' and n2=',n2
+         endif
          call util_flush(6)
          call errquit('ga_create_JKblocked: cannot allocate',0,
      &       GA_ERR)
       endif
       ga_create_JKblocked = g_a
-      
       return
       end
 
