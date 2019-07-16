@@ -463,7 +463,6 @@ c      double precision f2m(50,50)
       double precision alphaani         ! Anisotropic dipole polarizability
       double precision alphaevr(3)      ! Dipole polarizability tensor eigenvalues (real)
       double precision alphaevi(3)      ! Dipole polarizability tensor eigenvalues (imag)
-      double precision aeigvec(3,3)     ! dummy dgeev eigenvectors
 !      integer iter             ! Iteration counter
 !
 !     Excited-state CI, CC, & MBPT
@@ -703,29 +702,14 @@ cold        rec_mem=1
        if (.not.rtdb_get(rtdb,'tce:maxioprocs',mt_int,1,max_ioprocs_in)) 
      4      max_ioprocs_in=4
 !QuantumComputing
-       res_log=.false.
        if (.not.rtdb_get(rtdb,'tce:ucc4',
-     4  mt_log,1,res_log)) then
-        ucc4=.false.
-       else
-        ucc4=res_log
-       end if
+     4  mt_log,1,ucc4)) ucc4=.false.
 !QuantumComputing
-       res_log=.false.
        if (.not.rtdb_get(rtdb,'tce:print_integrals',
-     4  mt_log,1,res_log)) then
-        quantumc=.false.
-       else
-        quantumc=res_log
-       end if
+     4  mt_log,1,quantumc)) quantumc=.false.
 !QuantumComputing
-       res_log=.false.
        if (.not.rtdb_get(rtdb,'tce:qducc',
-     4  mt_log,1,res_log)) then
-        qducc=.false.
-       else
-        qducc=res_log
-       end if
+     4  mt_log,1,qducc)) qducc=.false.
 !QuantumComputing
        if(qducc) then 
        nactv=0
@@ -735,15 +719,8 @@ cold        rec_mem=1
         end if
        end if ! if qducc
 !QuantumComputing qrotation
-      if(quantumc) then
-       res_log=.false.
        if (.not.rtdb_get(rtdb,'tce:qrotation',
-     4  mt_log,1,res_log)) then
-        qrotation=.false.
-       else
-        qrotation=res_log
-       end if
-      endif
+     4  mt_log,1,qrotation)) qrotation=.false.
       if(qrotation) then
        nacto=0
         if (.not.rtdb_get(rtdb,'tce:nacto',mt_int,1,nacto))
@@ -3032,6 +3009,8 @@ c
           call tce_string_x2(d_t2,k_t2_offset,0.10d0,irrep_t,xnorm)
           if(nodezero) write(6,*)'-------------------------------------'
 c
+          endif !quantumc
+c
 c qducc starts here 
 c
           if(qducc) then 
@@ -3046,6 +3025,51 @@ c
            nvas=nvs/2
            nvbs=nvs/2
 c -------------------
+c DUCC SECTION
+c
+           if (.not. geom_nuc_rep_energy(geom, enrep_tce))
+     &      call errquit('TCE:unable to get nuclear rep ',geom, 
+     &      GEOM_ERR)
+c
+          if(nodezero) then
+           write(6,*)'Ground state specification:'
+           write(6,*)'exp(T)|Ref>~(1+T)|Ref>'
+           call util_flush(6)
+          endif
+          if(nodezero) write(6,*)'------- a(p)+/a(q) strings ----------'
+           xnorm1 = 0.0d0
+           xnorm2 = 0.0d0
+           xnorm  = 0.0d0
+c
+           call tce_string_x1_norm(d_t1,k_t1_offset,0.10d0,irrep_t,
+     &                             xnorm1)
+           call tce_string_x2_norm(d_t2,k_t2_offset,0.10d0,irrep_t,
+     &                             xnorm2)
+c normalization only on nodezero / reference included
+           if(nodezero)  then
+            xnorm=(1.0d0)/(dsqrt(1.0d0+xnorm1+xnorm2))
+           endif
+c
+          call tce_string_ref(xnorm)
+          call tce_string_x1(d_t1,k_t1_offset,0.10d0,irrep_t,xnorm)
+          call tce_string_x2(d_t2,k_t2_offset,0.10d0,irrep_t,xnorm)
+          if(nodezero) write(6,*)'-------------------------------------'
+c
+      if(nodezero) then
+c yaml enerep_tce - coulomb_repulsion
+       write(6,*)'enrep_tce = ',enrep_tce
+c yaml red - this is hf_energy
+       write(6,6888) ref
+c yaml scf_energy_offset
+       write(6,6889) 0.0d0
+       write(6,*)'ALL OCCUPIED ORBITALS ARE ACTIVE IN DUCC --> NO SHIFT'
+       write(6,*)'Number of active orbitals',nactv+(nos/2)
+       write(6,*)'Number of active alpha electrons',noas
+       write(6,*)'Number of active beta electrons',nobs
+c
+      call util_flush(6)
+      endif 
+
          if(nodezero) then
           write(6,*)' nos ',nos
           write(6,*)' nvs ',nvs
@@ -3066,10 +3090,10 @@ c -------------------
         if (.not.MA_PUSH_GET(mt_int,(nos+nvs)**2,'prt1',
      1      l_prt1,k_prt1))
      1      call errquit('transform',102,MA_ERR)
-        if (.not.MA_PUSH_GET(mt_int,(nos+nvs)**4,'act2',
+        if (.not.MA_PUSH_GET(mt_byte,(nos+nvs)**4,'act2',
      1      l_act2,k_act2))
      1      call errquit('act2',103,MA_ERR)
-        if (.not.MA_PUSH_GET(mt_int,(nos+nvs)**4,'prt2',
+        if (.not.MA_PUSH_GET(mt_byte,(nos+nvs)**4,'prt2',
      1      l_prt2,k_prt2))
      1      call errquit('prt2',104,MA_ERR)
         if (.not.MA_PUSH_GET(mt_dbl,(nos+nvs)**2,'h',
@@ -3097,7 +3121,7 @@ c -------------------
      &    d_v2,k_v2_offset,dbl_mb(k_evl_sorted),
      &    nos,nvs,noas,nobs,nvas,nvbs,nactv,
      D        int_mb(k_transf),int_mb(k_act1),int_mb(k_prt1),
-     D        int_mb(k_act2),int_mb(k_prt2),
+     D        byte_mb(k_act2),byte_mb(k_prt2),
      D        dbl_mb(k_h),dbl_mb(k_horb),dbl_mb(k_v),
      D        dbl_mb(k_t1),dbl_mb(k_t2),
      D        dbl_mb(k_ht),dbl_mb(k_vt))
@@ -3106,7 +3130,6 @@ c -------------------
           endif ! qducc
 c
 c
-          endif !quantumc
 !QuantumComputing
 #endif
 ! === jaguar ===
@@ -3464,6 +3487,8 @@ c
               write(LuOut,9070) "CCSD(2)_T",corr+pt3_1
               write(LuOut,9080) "CCSD(2)_T",ref+corr+pt3_1
             elseif (perturbative.eq.'2_tq') then
+	      write(LuOut,9070) "CCSD(2)_T",corr+pt3_1
+              write(LuOut,9080) "CCSD(2)_T",ref+corr+pt3_1
               write(LuOut,9070) "CCSD(2)",corr+pt3_1+pt3_2
               write(LuOut,9080) "CCSD(2)",ref+corr+pt3_1+pt3_2
             endif

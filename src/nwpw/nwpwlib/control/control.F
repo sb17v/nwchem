@@ -1660,6 +1660,7 @@ c      end if
          mtensor(3,3) = Izz
  
 c        **** longest dimension is along a1 ****
+         ierr = 0
          call DSYEV('V','U',3,mtensor,3,meig,work,lwork,ierr)
 
 
@@ -3551,6 +3552,32 @@ c     >            (ispin.eq.ispin_wf))
      >  mp2 = .false.
 
       control_MP2 = mp2
+      return
+      end
+
+      
+*     *****************************
+*     *                           *
+*     *     control_2qintegrals   *
+*     *                           *
+*     *****************************
+      logical function control_2qintegrals()
+      implicit none
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+#include "util.fh"
+
+      logical q2
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      if( .not. btdb_get(rtdb,'nwpw:2qintegrals',mt_log,1,q2))
+     >  q2 = .false.
+
+      control_2qintegrals = q2
       return
       end
 
@@ -5500,6 +5527,85 @@ c     >            (ispin.eq.ispin_wf))
       return
       end
 
+*     ***********************************
+*     *                                 *
+*     *  control_gradient_virtual_fac   *
+*     *                                 *
+*     ***********************************
+      integer function control_gradient_virtual_fac()
+      implicit none 
+      
+#include "bafdecls.fh"
+#include "btdb.fh"
+            
+*     **** control_rtdb common block ****   
+      integer rtdb
+      common / control_rtdb1 / rtdb
+            
+      integer fac
+              
+      fac = 19
+      if (.not.btdb_get(rtdb,'nwpw:gradient_virtual_fac',mt_log,1,fac))
+     >   fac = 19
+            
+      control_gradient_virtual_fac = fac
+      return   
+      end
+
+      
+*     ***********************************
+*     *                                 *
+*     *     control_bound_virtual       *
+*     *                                 *
+*     ***********************************
+      logical function control_bound_virtual()
+      implicit none
+      
+#include "bafdecls.fh"
+#include "btdb.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+            
+      logical value
+
+      value = .false.
+      if (.not.btdb_get(rtdb,'nwpw:bound_virtual',mt_log,1,value))
+     >   value = .false.
+
+      control_bound_virtual = value
+      return
+      end   
+
+*     ***********************************
+*     *                                 *
+*     *     control_confine_virtual     *
+*     *                                 *   
+*     ***********************************
+      logical function control_confine_virtual()
+      implicit none
+            
+#include "bafdecls.fh"
+#include "btdb.fh"
+            
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+               
+      logical value
+                 
+      value = .false.
+      if (.not.btdb_get(rtdb,'nwpw:confine_virtual',mt_log,1,value))
+     >   value = .false.
+                 
+      control_confine_virtual = value
+      return
+      end   
+              
+              
+           
+
 
 
 
@@ -6524,4 +6630,41 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 
 
+
+
+
+*     ***********************************
+*     *                                 *
+*     *    control_fetch_confine        *
+*     *                                 *
+*     ***********************************
+      subroutine control_fetch_confine(symbol,q1,rs,re)
+      implicit none
+      character*4 symbol
+      real*8 q1,rs,re
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical value
+      integer l
+      real*8 rrr(3)
+
+      l = index(symbol,' ') - 1
+      if (.not.btdb_get(rtdb,'nwpw:confine:'//symbol(1:l),
+     >                  mt_dbl,3,rrr)) then
+
+         rrr(1) = 1.0d0
+         rrr(2) = 6.0d0
+         rrr(3) = 14.0d0
+      end if
+      q1 = rrr(1)
+      rs = rrr(2)
+      re = rrr(3)
+      return
+      end
 

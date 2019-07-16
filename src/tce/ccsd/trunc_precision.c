@@ -34,8 +34,7 @@ void truncate_sp2hp_(float* s_arr, int* sizeP)
 void truncate_sp2bf_(float* s_arr, int* sizeP)
 {
   const int size = *sizeP;
-  int i = 0;
-  for (i=0; i<size; i++) {
+  for (int i=0; i<size; i++) {
 #if 0
     // shift is the right way to convert to/from BF16...
     uint32_t tmp = (*(uint32_t*)&s_arr[i] >> 16) << 16;
