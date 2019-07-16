@@ -63,6 +63,8 @@ C     i1 ( h6 p3 h1 p5 )_vt + = -1/2 * Sum ( h8 p7 ) * t ( p3 p7 h1 h8 )_t * v (
       real(kind=sp), allocatable :: sf_b(:)
       real(kind=sp), allocatable :: sf_c(:)
       integer :: e_a,e_b,e_c,e_t
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)
@@ -214,8 +216,37 @@ C     i1 ( h6 p3 h1 p5 )_vt + = -1/2 * Sum ( h8 p7 ) * t ( p3 p7 h1 h8 )_t * v (
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhpp)
       endif
+*     prec = 1: BF16x1
+*     prec = 2: FP16x1
+*     prec = 3: FP32
+*     prec = 4: FP64: I have no idea how this is done...
+*     prec = 5: BF16x2
+*     prec = 6: BF16x3
+*     prec = 7: FP16x2
+*     prec = 8: FP16x3
+      if ( (prec .eq. 1) .or. (prec .eq. 5) .or. (prec .eq. 6) ) then
+         modetype = 'B'
+      else if ( (prec.eq.2) .or. (prec.eq.7) .or. (prec .eq. 8) ) then
+         modetype = 'F'
+      endif
+      if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+         splita = 2
+         splitb = 2
+         muls = 3
+      endif
+      if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+         splita = 3
+         splitb = 3
+         muls = 6
+      endif
+      if ( prec .eq. 3 ) then
       CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
      &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
+      else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+      call sgemmreplacement('T','N',dima_sort,dimb_sort,dim_common,1.0
+     &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort,splita,splitb
+     &,muls,modetype)
+      endif
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhpp)
       else if(prec.eq.1) then
@@ -409,8 +440,37 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
         call truncate_sp2bf(sf_a, dimhhpp)
         call truncate_sp2bf(sf_b, dimhhpp)
       endif
-      CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
-     &,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     prec = 1: BF16x1
+*     prec = 2: FP16x1
+*     prec = 3: FP32
+*     prec = 4: FP64: I have no idea how this is done...
+*     prec = 5: BF16x2
+*     prec = 6: BF16x3
+*     prec = 7: FP16x2
+*     prec = 8: FP16x3
+      if ( (prec .eq. 1) .or. (prec .eq. 5) .or. (prec .eq. 6) ) then
+         modetype = 'B'
+      else if ( (prec.eq.2) .or. (prec.eq.7) .or. (prec .eq. 8) ) then
+         modetype = 'F'
+      endif
+      if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+         splita = 2
+         splitb = 2
+         muls = 3
+      endif
+      if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+         splita = 3
+         splitb = 3
+         muls = 6
+      endif
+      if ( prec .eq. 3 ) then
+         CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
+     &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
+      else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+         call sgemmreplacement('T','N',dima_sort,dimb_sort,dim_common,1.0
+     &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort,splita,splitb
+     &,muls,modetype)
+      endif
       if(prec.eq.2) then
         call truncate_sp2hp(sf_c, dimhhpp)
       else if(prec.eq.1) then
@@ -642,8 +702,39 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1 * P( 2 ) * Sum ( h7 p9 ) * t ( p3 p9 h1 h7 )_
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhhp)
       endif
-      CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
-     &,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
+*    &,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     prec = 1: BF16x1
+*     prec = 2: FP16x1
+*     prec = 3: FP32
+*     prec = 4: FP64: I have no idea how this is done...
+*     prec = 5: BF16x2
+*     prec = 6: BF16x3
+*     prec = 7: FP16x2
+*     prec = 8: FP16x3
+      if ( (prec .eq. 1) .or. (prec .eq. 5) .or. (prec .eq. 6) ) then
+         modetype = 'B'
+      else if ( (prec.eq.2) .or. (prec.eq.7) .or. (prec .eq. 8) ) then
+         modetype = 'F'
+      endif
+      if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+         splita = 2
+         splitb = 2
+         muls = 3
+      endif
+      if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+         splita = 3
+         splitb = 3
+         muls = 6
+      endif
+      if ( prec .eq. 3 ) then
+         CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
+     &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
+      else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+         call sgemmreplacement('T','N',dima_sort,dimb_sort,dim_common,1.0
+     &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort,splita,splitb
+     &,muls,modetype)
+      endif
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhp)
       else if(prec.eq.1) then
@@ -849,8 +940,39 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhhp)
       endif
-      CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
-     &,sf_a,dim_common,sf_b,dim_common,1.0, sf_c, dima_sort)
+*     CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
+*    &,sf_a,dim_common,sf_b,dim_common,1.0, sf_c, dima_sort)
+*     prec = 1: BF16x1
+*     prec = 2: FP16x1
+*     prec = 3: FP32
+*     prec = 4: FP64: I have no idea how this is done...
+*     prec = 5: BF16x2
+*     prec = 6: BF16x3
+*     prec = 7: FP16x2
+*     prec = 8: FP16x3
+      if ( (prec .eq. 1) .or. (prec .eq. 5) .or. (prec .eq. 6) ) then
+         modetype = 'B'
+      else if ( (prec.eq.2) .or. (prec.eq.7) .or. (prec .eq. 8) ) then
+         modetype = 'F'
+      endif
+      if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+         splita = 2
+         splitb = 2
+         muls = 3
+      endif
+      if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+         splita = 3
+         splitb = 3
+         muls = 6
+      endif
+      if ( prec .eq. 3 ) then
+         CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0,sf_a
+     &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
+      else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+         call sgemmreplacement('T','N',dima_sort,dimb_sort,dim_common,1.0
+     &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort,splita,splitb
+     &,muls,modetype)
+      endif
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhp)
       else if(prec.eq.1) then
@@ -1019,9 +1141,43 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
                       call truncate_sp2bf(sf_a, dimhhpp)
                       call truncate_sp2bf(sf_b, dimpppp)
                    endif
+*                  CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,
+*    &                        alpha,sf_a,dim_common,sf_b,
+*    &                        dim_common,1.0,sf_c,dima_sort)
+*                  prec = 1: BF16x1
+*                  prec = 2: FP16x1
+*                  prec = 3: FP32
+*                  prec = 4: FP64: I have no idea how this is done...
+*                  prec = 5: BF16x2
+*                  prec = 6: BF16x3
+*                  prec = 7: FP16x2
+*                  prec = 8: FP16x3
+                   if ( (prec .eq. 1) .or. (prec .eq. 5) .or.
+     &                  (prec .eq. 6) ) then
+                      modetype = 'B'
+                   else if ( (prec.eq.2) .or. (prec.eq.7) .or.
+     &                  (prec .eq. 8) ) then
+                      modetype = 'F'
+                   endif
+                   if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+                      splita = 2
+                      splitb = 2
+                      muls = 3
+                   endif
+                   if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+                      splita = 3
+                      splitb = 3
+                      muls = 6
+                   endif
+                   if ( prec .eq. 3 ) then
                    CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &                        alpha,sf_a,dim_common,sf_b,
      &                        dim_common,1.0,sf_c,dima_sort)
+                   else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+                   CALL sgemmreplacement('T','N',dima_sort,dimb_sort,
+     &                        dim_common,alpha,sf_a,dim_common,sf_b,
+     &                        dim_common,1.0,sf_c,dima_sort)
+                   endif
                    if(prec.eq.2) then
                       call truncate_sp2hp(sf_c, dimhhpp)
                    else if(prec.eq.1) then
@@ -1207,8 +1363,39 @@ C     i1 ( h9 h11 h1 h2 )_vt + = -1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v 
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhpp)
       endif
-      CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
-     &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
+*    &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     prec = 1: BF16x1
+*     prec = 2: FP16x1
+*     prec = 3: FP32
+*     prec = 4: FP64: I have no idea how this is done...
+*     prec = 5: BF16x2
+*     prec = 6: BF16x3
+*     prec = 7: FP16x2
+*     prec = 8: FP16x3
+      if ( (prec .eq. 1) .or. (prec .eq. 5) .or. (prec .eq. 6) ) then
+         modetype = 'B'
+      else if ( (prec.eq.2) .or. (prec.eq.7) .or. (prec .eq. 8) ) then
+         modetype = 'F'
+      endif
+      if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+         splita = 2
+         splitb = 2
+         muls = 3
+      endif
+      if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+         splita = 3
+         splitb = 3
+         muls = 6
+      endif
+      if ( prec .eq. 3 ) then
+         CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha,sf_a
+     &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
+      else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+         call sgemmreplacement('T','N',dima_sort,dimb_sort,dim_common
+     &,alpha,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort,splita
+     &,splitb,muls,modetype)
+      endif
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhh)
       else if(prec.eq.1) then
@@ -1385,8 +1572,39 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1/2 * Sum ( h11 h9 ) * t ( p3 p4 h9 h11 )_t * i
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhhh)
       endif
-      CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
-     &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
+*    &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     prec = 1: BF16x1
+*     prec = 2: FP16x1
+*     prec = 3: FP32
+*     prec = 4: FP64: I have no idea how this is done...
+*     prec = 5: BF16x2
+*     prec = 6: BF16x3
+*     prec = 7: FP16x2
+*     prec = 8: FP16x3
+      if ( (prec .eq. 1) .or. (prec .eq. 5) .or. (prec .eq. 6) ) then
+         modetype = 'B'
+      else if ( (prec.eq.2) .or. (prec.eq.7) .or. (prec .eq. 8) ) then
+         modetype = 'F'
+      endif
+      if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+         splita = 2
+         splitb = 2
+         muls = 3
+      endif
+      if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+         splita = 3
+         splitb = 3
+         muls = 6
+      endif
+      if ( prec .eq. 3 ) then
+         CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha,sf_a
+     &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
+      else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+         call sgemmreplacement('T','N',dima_sort,dimb_sort,dim_common
+     &,alpha,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort,splita
+     &,splitb,muls,modetype)
+      endif
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhpp)
       else if(prec.eq.1) then
@@ -1572,8 +1790,39 @@ C     i2 ( h10 h11 h1 h2 )_vt + = -1/2 * Sum ( p7 p8 ) * t ( p7 p8 h1 h2 )_t * v
          call truncate_sp2bf(sf_a, dimhhpp)
          call truncate_sp2bf(sf_b, dimhhpp)
       endif
-      CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
-     &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha
+*    &,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort)
+*     prec = 1: BF16x1
+*     prec = 2: FP16x1
+*     prec = 3: FP32
+*     prec = 4: FP64: I have no idea how this is done...
+*     prec = 5: BF16x2
+*     prec = 6: BF16x3
+*     prec = 7: FP16x2
+*     prec = 8: FP16x3
+      if ( (prec .eq. 1) .or. (prec .eq. 5) .or. (prec .eq. 6) ) then
+         modetype = 'B'
+      else if ( (prec.eq.2) .or. (prec.eq.7) .or. (prec .eq. 8) ) then
+         modetype = 'F'
+      endif
+      if ( (prec .eq. 5) .or. (prec .eq. 7) ) then
+         splita = 2
+         splitb = 2
+         muls = 3
+      endif
+      if ( (prec .eq. 6) .or. (prec .eq. 8) ) then
+         splita = 3
+         splitb = 3
+         muls = 6
+      endif
+      if ( prec .eq. 3 ) then
+         CALL SGEMM('T','N',dima_sort,dimb_sort,dim_common,alpha,sf_a
+     &,dim_common,sf_b,dim_common,1.0,sf_c, dima_sort)
+      else if ( (prec .ge. 5) .and. (prec .le. 8) ) then
+         call sgemmreplacement('T','N',dima_sort,dimb_sort,dim_common
+     &,alpha,sf_a,dim_common,sf_b,dim_common,1.0,sf_c,dima_sort,splita
+     &,splitb,muls,modetype)
+      endif
       if(prec.eq.2) then
          call truncate_sp2hp(sf_c, dimhhhh)
       else if(prec.eq.1) then
