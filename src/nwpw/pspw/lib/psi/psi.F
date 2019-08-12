@@ -740,8 +740,9 @@ c         call Pack_c_SMul(1,de0,dcpl_mb(t(1)),dcpl_mb(t(1)))
 *     *      psi_gen_hml_virtual        *
 *     *                                 *
 *     ***********************************
-      subroutine psi_gen_hml_virtual()
+      subroutine psi_gen_hml_virtual(assending)
       implicit none
+      logical assending
 
 #include "bafdecls.fh"
 #include "psi.fh"
@@ -783,22 +784,27 @@ c         call Pack_c_SMul(1,de0,dcpl_mb(t(1)),dcpl_mb(t(1)))
             jjend   = ii
             mshift = ne_excited(1)*ne_excited(1)
          end if
-         call Pack_cc_dot(1,
-     >               dcpl_mb(psi1_excited(1) +(ii-1)*npack1),
-     >               dcpl_mb(psi1_excited(1) +(ii-1)*npack1),
-     >               tsum)
-         write(*,*) "ii,norm=",ii,tsum
+c         call Pack_cc_dot(1,
+c     >               dcpl_mb(psi1_excited(1) +(ii-1)*npack1),
+c     >               dcpl_mb(psi1_excited(1) +(ii-1)*npack1),
+c     >               tsum)
+         !write(*,*) "ii,norm=",ii,tsum
 
          call electron_get_gradient_virtual(ms,
      >             dcpl_mb(psi1_excited(1)+(ii-1)*npack1),
      >             dcpl_mb(Horb(1)))
 
          do jj=jjstart,jjend
+c         call Pack_cc_dot(1,
+c     >               dcpl_mb(psi1_excited(1) +(ii-1)*npack1),
+c     >               dcpl_mb(psi1_excited(1) +(jj-1)*npack1),
+c     >               tsum)
+         !write(*,*) "ii,jj,norm=",ii,jj,tsum
             call Pack_cc_dot(1,
      >               dcpl_mb(psi1_excited(1) +(jj-1)*npack1),
      >               dcpl_mb(Horb(1)),
      >               tsum)
-            write(*,*) "ii,jj,e=",ii,jj,tsum
+            !write(*,*) "ii,jj,e=",ii,jj,tsum
             indx  = (ii-jjstart)+(jj-jjstart)*ne_excited(ms)+mshift
             dbl_mb(hml_excited(1)+indx)  = tsum
             if (ii.ne.jj) then
@@ -812,9 +818,12 @@ c         call Pack_c_SMul(1,de0,dcpl_mb(t(1)),dcpl_mb(t(1)))
       if (.not.BA_pop_stack(Horb(2)))
      >   call errquit('psi_gen_hml_virtual:popping stack',0,MA_ERR)
 
+c      call Dnexall_m_diagonalize(0,ispin,ne_excited,
+c     >                           dbl_mb(hml_excited(1)),
+c     >                           dbl_mb(eig_excited(1)),.true.)
       call Dnexall_m_diagonalize(0,ispin,ne_excited,
      >                           dbl_mb(hml_excited(1)),
-     >                           dbl_mb(eig_excited(1)),.true.)
+     >                           dbl_mb(eig_excited(1)),assending)
       call  Dnexall_fmf_Multiply(0,ispin,ne_excited,
      >                           dcpl_mb(psi1_excited(1)),npack1,
      >                           dbl_mb(hml_excited(1)),1.0d0,
@@ -1295,7 +1304,9 @@ c         call Pack_c_SMul(1,de0,dcpl_mb(t(1)),dcpl_mb(t(1)))
       if (.not.BA_push_get(mt_dcpl,npack1,'etmp',etmp(2),etmp(1)))
      > call errquit('psi_project_out_virtual1: out of stack',0,MA_ERR)
 
-         call dcopy(2*npack1,0.0d0,0,dcpl_mb(etmp(1)),1)
+         !call dcopy(2*npack1,0.0d0,0,dcpl_mb(etmp(1)),1)
+         call Parallel_shared_vector_zero(.true.,
+     >                                    2*npack1,dcpl_mb(etmp(1)))
          do i=1,neq(ms)
            call Pack_cc_dot(1,
      >            dcpl_mb(psi1(1) +(i-1)*npack1+shift),
@@ -1306,7 +1317,7 @@ c         call Pack_c_SMul(1,de0,dcpl_mb(t(1)),dcpl_mb(t(1)))
      >            dcpl_mb(etmp(1)))
          end do
          call D1dB_Vector_SumAll(2*npack1,dcpl_mb(etmp(1)))
-         call daxpy(2*npack1,1.0d0,dcpl_mb(etmp(1)),1,Horb,1)
+         call daxpy_omp(2*npack1,1.0d0,dcpl_mb(etmp(1)),1,Horb,1)
 
       if (.not.BA_pop_stack(etmp(2)))
      > call errquit('psi_project_out_virtual1:popping stack',0,MA_ERR)
@@ -1386,7 +1397,9 @@ c         call Pack_c_SMul(1,de0,dcpl_mb(t(1)),dcpl_mb(t(1)))
       if (.not.BA_push_get(mt_dcpl,npack1,'etmp',etmp(2),etmp(1)))
      > call errquit('psi_project_out_virtual1: out of stack',0,MA_ERR)
 
-         call dcopy(2*npack1,0.0d0,0,dcpl_mb(etmp(1)),1)
+         !call dcopy(2*npack1,0.0d0,0,dcpl_mb(etmp(1)),1)
+         call Parallel_shared_vector_zero(.true.,
+     >                       2*npack1,dcpl_mb(etmp(1)))
          do i=1,neq(ms)
            call Pack_cc_dot(1,
      >            dcpl_mb(psi1(1) +(i-1)*npack1+shift),
@@ -2445,9 +2458,9 @@ c     >           rho,1)
 *    This routine sets the densities and potentials in psi and electron.  
 * This routine is needed for a band by band minimizer.
 *
-      subroutine psi_gen_density_potentials(psi_number)
+      subroutine psi_gen_density_potentials(psi_number0)
       implicit none
-      integer psi_number
+      integer psi_number0
 
 
 #include "bafdecls.fh"
@@ -2459,7 +2472,18 @@ c     >           rho,1)
       common / rhoall_block / rho1_all,rho2_all
 
 *     **** local variables ****
+      logical zeroscf
       integer psi_ptr,rho_ptr,dng_ptr,rho_all_ptr,occ_ptr
+      integer psi_number
+
+*     *** hacky for now ***
+      psi_number = psi_number0
+      zeroscf = .false.
+      if (psi_number.gt.2) then
+         psi_number = psi_number - 2
+         zeroscf = .true.
+      end if
+      !write(*,*) "psi_number,zeroscf=",psi_number,zeroscf
 
       if (psi_number.eq.1) then
         psi_ptr     = psi1(1)
@@ -2476,15 +2500,22 @@ c     >           rho,1)
       end if
 
 
-      call electron_gen_densities(dcpl_mb(psi_ptr),
+      if (zeroscf) then
+          call electron_gen_vall0()
+      else
+         call electron_gen_densities(dcpl_mb(psi_ptr),
      >                            dbl_mb(rho_ptr),
      >                            dcpl_mb(dng_ptr),
      >                            dbl_mb(rho_all_ptr),
      >                            occupation_on,dbl_mb(occ_ptr))
-      call electron_gen_scf_potentials(dbl_mb(rho_ptr),
+         call electron_gen_scf_potentials(dbl_mb(rho_ptr),
      >                            dcpl_mb(dng_ptr),
      >                            dbl_mb(rho_all_ptr))
-      call electron_gen_vall()
+         !if (zeroscf) then
+         !   call electron_zero_scf_potentials()
+         !end if
+         call electron_gen_vall()
+      end if
       return
       end
 
@@ -2647,13 +2678,19 @@ c      call OrthoCheck(ispin,ne,dcpl_mb(psi1(1)))
       integer rho2_all(2)
       common / rhoall_block / rho1_all,rho2_all
 
-      call dcopy(4*nfft3d,
-     >           dbl_mb(rho2(1)),1,
-     >           dbl_mb(rho1(1)),1)
+c      call dcopy(4*nfft3d,
+c     >           dbl_mb(rho2(1)),1,
+c     >           dbl_mb(rho1(1)),1)
+      call Parallel_shared_vector_copy(.true.,4*nfft3d,
+     >                    dbl_mb(rho2(1)),
+     >                    dbl_mb(rho1(1)))
 
-      call dcopy(4*nfft3d,
-     >           dbl_mb(rho2_all(1)),1,
-     >           dbl_mb(rho1_all(1)),1)
+c      call dcopy(4*nfft3d,
+c     >           dbl_mb(rho2_all(1)),1,
+c     >           dbl_mb(rho1_all(1)),1)
+      call Parallel_shared_vector_copy(.true.,4*nfft3d,
+     >           dbl_mb(rho2_all(1)),
+     >           dbl_mb(rho1_all(1)))
 
       return
       end
@@ -6494,8 +6531,12 @@ c     >        BA_alloc_get(mt_dbl,(2*nemax*nemax),'hml',hml(2),hml(1))
      >        BA_alloc_get(mt_dbl,4*nfft3d,
      >                     'rho2_all',rho2_all(2),rho2_all(1))
       if (.not. value) call errquit('out of heap memory',0, MA_ERR)
-      call dcopy(4*nfft3d,0.0d0,0,dbl_mb(rho1_all(1)),1)
-      call dcopy(4*nfft3d,0.0d0,0,dbl_mb(rho2_all(1)),1)
+c      call dcopy(4*nfft3d,0.0d0,0,dbl_mb(rho1_all(1)),1)
+c      call dcopy(4*nfft3d,0.0d0,0,dbl_mb(rho2_all(1)),1)
+      call Parallel_shared_vector_zero(.true.,4*nfft3d,
+     >                    dbl_mb(rho1_all(1)))
+      call Parallel_shared_vector_zero(.true.,4*nfft3d,
+     >                    dbl_mb(rho2_all(1)))
 
 *     *****  read initial wavefunctions into psi1  ****
       rtdb = control_rtdb()
@@ -6828,6 +6869,8 @@ c         call Dneall_f_ortho(0,dcpl_mb(psi1(1)),npack1)
          nfac = 9
       else if (gn.eq.3) then
          nfac = 19
+      else 
+         nfac = gn
       end if
       nex(1) = ne(1)*nfac
       nex(2) = ne(2)*nfac
@@ -6920,10 +6963,18 @@ c         call Dneall_f_ortho(0,dcpl_mb(psi1(1)),npack1)
       if (.not.value) 
      >   call errquit('epsi_initialize: out of heap memory',0,MA_ERR)
 
-      call dcopy(2*npack1*nemax,0.0d0,0,dcpl_mb(psi2_excited(1)),1)
-      call dcopy(2*npack1*nemax,0.0d0,0,dcpl_mb(psi1_excited(1)),1)
-      call dcopy(2*nemax,0.0d0,0,dbl_mb(eig_excited(1)),1)
-      call dcopy(nn,0.0d0,0,dbl_mb(hml_excited(1)),1)
+      !call dcopy(2*npack1*nemax,0.0d0,0,dcpl_mb(psi2_excited(1)),1)
+      !call dcopy(2*npack1*nemax,0.0d0,0,dcpl_mb(psi1_excited(1)),1)
+      !call dcopy(2*nemax,0.0d0,0,dbl_mb(eig_excited(1)),1)
+      !call dcopy(nn,0.0d0,0,dbl_mb(hml_excited(1)),1)
+      call Parallel_shared_vector_zero(.true.,2*npack1*nemax,
+     >                    dcpl_mb(psi2_excited(1)))
+      call Parallel_shared_vector_zero(.true.,2*npack1*nemax,
+     >                    dcpl_mb(psi1_excited(1)))
+      call Parallel_shared_vector_zero(.true.,2*nemax,
+     >                    dbl_mb(eig_excited(1)))
+      call Parallel_shared_vector_zero(.true.,nn,
+     >                    dbl_mb(hml_excited(1)))
 
 
 *     *****  read initial wavefunctions into psi1  ****
@@ -7386,7 +7437,8 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccc
 
 
       vshift = Dneall_mne_size(0,neall)
-      call dcopy(3*vshift,0.0d0,0,vnm,1)
+      !call dcopy(3*vshift,0.0d0,0,vnm,1)
+      call Parallel_shared_vector_zero(.true.,3*vshift,vnm)
 
       do ms=1,ispin
          ishift = (ms-1)*ne(1)
@@ -7524,7 +7576,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccc
       integer vpsi_r(2),v1h(2),v2h(2)
 
 *     **** allocate memory from heap ****
-      call D3dB_n2ft3d(1,n2ft3d)
+      n2ft3d = 2*nfft3d
       value = BA_alloc_get(mt_dcpl,nfft3d,'v1h',v1h(2),v1h(1))
       value = value.and.
      >        BA_alloc_get(mt_dcpl,nfft3d,'v2h',v2h(2),v2h(1))
@@ -7575,6 +7627,263 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccc
 
       if (oprint) then
          write(luout,*) "EMP2 = ", e2, " icount=",icount
+      end if
+
+      return
+      end
+
+
+
+*     ***********************
+*     *                     *
+*     *  psi_2q_integrals   *
+*     *                     *
+*     ***********************
+      subroutine psi_2q_integrals(rtdb)
+      implicit none
+      integer rtdb
+      
+#include "stdio.fh"
+#include "bafdecls.fh"
+#include "errquit.fh"
+#include "psi.fh"
+      
+*     **** local variables ****
+      integer taskid,MASTER,taskid_j,pj
+      parameter (MASTER=0)
+      
+      logical oprint,value
+      integer icount,iicount,version
+      integer i,j,k,l,ij,kl
+      integer nall,nnall,n4all,nx,ny,nz
+      integer psiij
+      integer ipackm(2),jpackm(2)
+      integer h1_integrals(2),h2_integrals(2)
+      integer vij(2),dnij(2),orbi(2),orbj(2)
+      real*8 e1,e2,scal1,scal2,dv
+
+*     **** external functions ****
+      integer  control_version
+      external control_version
+      real*8   lattice_omega
+      external lattice_omega
+
+      call Parallel_taskid(taskid)
+      call Parallel2d_taskid_j(taskid_j)
+      oprint = (taskid.eq.MASTER)
+      version = control_version()
+      if (version.eq.4) then
+
+         if (oprint) then
+            write(luout,*) 
+     >      "== Generating One-Electron and Two-Electron Integrals =="
+            write(luout,*) 
+         end if
+         call D3dB_nx(1,nx)
+         call D3dB_ny(1,ny)
+         call D3dB_nz(1,nz)
+         scal1 = 1.0d0/dble(nx*ny*nz)
+         scal2 = 1.0d0/lattice_omega()
+         dv    = scal1*lattice_omega()
+
+         nall = ne(1) + ne_excited(1)
+         nnall = (nall*(nall+1))/2
+         n4all = (nnall*(nnall+1))/2
+
+         value = BA_alloc_get(mt_dcpl,nfft3d,'vij',vij(2),vij(1))
+         value = value.and.
+     >           BA_alloc_get(mt_dcpl,nfft3d,'dnij',dnij(2),dnij(1))
+         value = value.and.
+     >           BA_alloc_get(mt_dcpl,nfft3d,'orbi',orbi(2),orbi(1))
+         value = value.and.
+     >           BA_alloc_get(mt_dcpl,nfft3d,'orbj',orbj(2),orbj(1))
+         value = value.and.
+     >           BA_alloc_get(mt_dbl,nnall,'h1_integrals',
+     >                        h1_integrals(2),h1_integrals(1))
+         value = value.and.
+     >           BA_alloc_get(mt_dbl,n4all,'h2_integrals',
+     >                        h2_integrals(2),h2_integrals(1))
+         value = value.and.
+     >           BA_alloc_get(mt_int,nnall,'ipackm',
+     >                        ipackm(2),ipackm(1))
+         value = value.and.
+     >           BA_alloc_get(mt_int,nnall,'jpackm',
+     >                        jpackm(2),jpackm(1))
+         if (.not.value)
+     >   call errquit('psi_2q_integrals:error allocating heap',0,MA_ERR)
+
+         call Parallel_shared_vector_zero(.true.,nnall,
+     >                                    dbl_mb(h1_integrals(1)))
+         call Parallel_shared_vector_zero(.true.,n4all,
+     >                                    dbl_mb(h2_integrals(1)))
+
+         !**** generate 1e integrals - H1 only contains kinetic + ion-electron potentials ****
+         call electron_gen_vall0()
+         icount = 0
+         do i=1,nall
+            call psi_fetch_orbi_replicated(i,dcpl_mb(orbi(1)))
+            call electron_get_H0psi_k_orb(dcpl_mb(orbi(1)),
+     >                                    dcpl_mb(vij(1)))
+
+            do j=i,nall
+               call psi_fetch_orbj_indx(j,psiij,pj)
+               if (pj.eq.taskid_j) then
+                  call Pack_cc_idot(1,dcpl_mb(psiij),dcpl_mb(vij(1)),e1)
+                  dbl_mb(h1_integrals(1)+icount) = e1
+               end if
+               int_mb(ipackm(1) + icount) = i
+               int_mb(jpackm(1) + icount) = j
+               icount = icount + 1
+            end do
+            call ga_sync()
+         end do
+         call Parallel_Vector_SumAll(nall,dbl_mb(h1_integrals(1)))
+
+         if (oprint) then
+            write(luout,*) "begin_one_electron_integrals"
+            icount = 0
+            do i=1,nall
+               do j=i,nall
+                  write(luout,'(I5,I5,F21.10)') 
+     >            j,i,dbl_mb(h1_integrals(1)+icount)
+                  icount = icount + 1
+               end do
+            end do
+            write(luout,*) "end_one_electron_integrals"
+         end if
+
+         !*** generate 2e integrals ***
+         iicount = 0
+         do ij=1,nnall
+            i = int_mb(ipackm(1)+ij-1)
+            j = int_mb(jpackm(1)+ij-1)
+            call psi_fetch_orbi_replicated(i,dcpl_mb(orbi(1)))
+            call Pack_c_unpack(1,   dcpl_mb(orbi(1)))
+            call D3dB_cr_pfft3b(1,1,dcpl_mb(orbi(1)))
+            call psi_fetch_orbi_replicated(j,dcpl_mb(orbj(1)))
+            call Pack_c_unpack(1,   dcpl_mb(orbj(1)))
+            call D3dB_cr_pfft3b(1,1,dcpl_mb(orbj(1)))
+
+*           **** generate dnij for Vij  ****
+            call D3dB_rr_Mul(1,dcpl_mb(orbi(1)),
+     >                         dcpl_mb(orbj(1)), 
+     >                         dcpl_mb(dnij(1)))
+            call D3dB_r_SMul1(1,scal2,dcpl_mb(dnij(1)))
+            call coulomb2_v(dcpl_mb(dnij(1)),dcpl_mb(vij(1)))
+
+
+            do kl=ij,nnall
+               k = int_mb(ipackm(1)+kl-1)
+               l = int_mb(jpackm(1)+kl-1)
+               call psi_fetch_orbi_replicated(k,dcpl_mb(orbi(1)))
+               call Pack_c_unpack(1,   dcpl_mb(orbi(1)))
+               call D3dB_cr_pfft3b(1,1,dcpl_mb(orbi(1)))
+               call psi_fetch_orbi_replicated(l,dcpl_mb(orbj(1)))
+               call Pack_c_unpack(1,   dcpl_mb(orbj(1)))
+               call D3dB_cr_pfft3b(1,1,dcpl_mb(orbj(1)))
+
+               call D3dB_rr_Mul(1,dcpl_mb(orbi(1)),
+     >                            dcpl_mb(orbj(1)), 
+     >                            dcpl_mb(dnij(1)))
+               call D3dB_r_SMul1(1,scal2,dcpl_mb(dnij(1)))
+
+               call D3dB_rr_dot(1,dcpl_mb(dnij(1)),dcpl_mb(vij(1)),e2)
+               !e2 = 0.5d0*e2*dv
+               e2 = e2*dv
+               dbl_mb(h2_integrals(1)+iicount) = e2
+            
+               !write(*,*) "i,j,k,l,e2=",i,j,k,l,e2
+               iicount = iicount + 1
+            end do
+         end do
+
+
+         if (oprint) then
+            write(luout,*)
+            write(luout,*) "begin_two_electron_integrals"
+            iicount = 0
+            do ij=1,nnall
+               i = int_mb(ipackm(1)+ij-1)
+               j = int_mb(jpackm(1)+ij-1)
+               do kl=ij,nnall
+                  k = int_mb(ipackm(1)+kl-1)
+                  l = int_mb(jpackm(1)+kl-1)
+                  write(luout,'(I5,I5,I5,I5,F20.10)') 
+     >            j,i,l,k,dbl_mb(h2_integrals(1)+iicount)
+                  iicount = iicount + 1
+               end do
+            end do
+            write(luout,*) "end_two_electron_integrals"
+            write(luout,*)
+         end if
+
+
+*        **** deallocate memory from heap ****
+         value = BA_free_heap(vij(2))
+         value = value.and.BA_free_heap(dnij(2))
+         value = value.and.BA_free_heap(orbi(2))
+         value = value.and.BA_free_heap(orbj(2))
+         value = value.and.BA_free_heap(h1_integrals(2))
+         value = value.and.BA_free_heap(h2_integrals(2))
+         value = value.and.BA_free_heap(ipackm(2))
+         value = value.and.BA_free_heap(jpackm(2))
+         if (.not. value)
+     >   call errquit('psi_2q_integrals:error freeing heap',1,MA_ERR)
+      end if
+
+      return
+      end
+
+      subroutine psi_fetch_orbi_replicated(i,orbi)
+      implicit none
+      integer i
+      complex*16 orbi(*)
+
+#include "bafdecls.fh"
+#include "errquit.fh"
+#include "psi.fh"
+
+*     **** local variables ****
+      integer pi,q,taskid_j,psii_ptr
+
+      call Parallel2d_taskid_j(taskid_j)
+
+      if (i.le.ne(1)) then
+         call Dneall_ntoqp(i,q,pi)
+         call Pack_c_Zero(1,orbi)
+         if (pi.eq.taskid_j) then
+            psii_ptr = psi1(1) + (q-1)*npack1
+            call Pack_c_Copy(1,dcpl_mb(psii_ptr),orbi)
+         end if
+         call D1dB_Vector_SumAll(2*npack1,orbi)
+      else
+         psii_ptr = psi1_excited(1) + (i-1-ne(1))*npack1
+         call Pack_c_Copy(1,dcpl_mb(psii_ptr),orbi)
+      end if
+
+      return
+      end
+
+      subroutine psi_fetch_orbj_indx(j,orbj_indx,pj)
+      implicit none
+      integer j
+      integer orbj_indx
+      integer pj
+
+#include "bafdecls.fh"
+#include "errquit.fh"
+#include "psi.fh"
+
+*     **** local variables ****
+      integer q,np_j
+
+      call Parallel2d_np_j(np_j)
+      if (j.le.ne(1)) then
+         call Dneall_ntoqp(j,q,pj)
+         orbj_indx = psi1(1) + (q-1)*npack1
+      else
+         orbj_indx = psi1_excited(1) + (j-1-ne(1))*npack1
+         pj = mod(pj+1,np_j)
       end if
 
       return

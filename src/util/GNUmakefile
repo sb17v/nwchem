@@ -173,7 +173,7 @@ endif
                  util_jacobi.o util_rsg.o stpr_sjacobi.o util_memcpy.o ga_accback.o \
                  ga_asymmetr.o util_gnxtval.o nxtask.o util_mirror.o  \
                  ga_copy_dz.o dgami.o util_eri_cholesky.o \
-                 util_test_cholesky.o util_sillysort.o
+                 util_test_cholesky.o util_sillysort.o util_talker.o
 
   SUBDIRS = md5
 
@@ -226,7 +226,7 @@ endif
 	      util_mygabcast.o util_getppn.o util_units.o util_align.o\
               util_intrsc2008.o util_fadvise.o  util_scalapack_info.o\
               ga_conjg.o nwmolden.o ao_1prdm_read.o ao_1prdm_write.o\
-              util_strips.o util_poltensor.o\
+              util_strips.o util_poltensor.o  util_mygop.o\
               $(EXTRA_OBJ)
 ifndef USE_MLIB
               OBJ_OPTIMIZE += icopy.o dsum.o dgefa.o zsum.o
