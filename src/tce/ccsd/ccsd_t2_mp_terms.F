@@ -351,6 +351,8 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
       real(kind=sp), allocatable :: sf_b(:)
       real(kind=sp), allocatable :: sf_c(:)
       integer :: e_a,e_b,e_c,e_t
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)
@@ -601,6 +603,8 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1 * P( 2 ) * Sum ( h7 p9 ) * t ( p3 p9 h1 h7 )_
       real(kind=sp), allocatable :: sf_b(:)
       real(kind=sp), allocatable :: sf_c(:)
       integer :: e_a,e_b,e_c,e_t
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)
@@ -853,6 +857,8 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
       real(kind=sp), allocatable :: sf_c(:)
       integer :: e_a,e_b,e_c,e_t
       real(kind=sp) alpha
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)
@@ -1047,6 +1053,8 @@ C     i1 ( h10 p3 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v (
       integer p5b_in,p6b_in
       INTEGER NXTASK
       EXTERNAL NXTASK
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)
@@ -1286,6 +1294,8 @@ C     i1 ( h9 h11 h1 h2 )_vt + = -1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v 
       real(kind=sp), allocatable :: sf_c(:)
       integer :: e_a,e_b,e_c,e_t
       real(kind=sp) alpha
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)
@@ -1502,6 +1512,8 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1/2 * Sum ( h11 h9 ) * t ( p3 p4 h9 h11 )_t * i
       real(kind=sp), allocatable :: sf_c(:)
       integer :: e_a,e_b,e_c,e_t
       real(kind=sp) alpha
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)
@@ -1713,6 +1725,8 @@ C     i2 ( h10 h11 h1 h2 )_vt + = -1/2 * Sum ( p7 p8 ) * t ( p7 p8 h1 h2 )_t * v
       integer :: e_a,e_b,e_c,e_t
       integer :: i
       real(kind=sp) alpha
+      integer :: splita, splitb, muls
+      character*1 modetype
       nprocs = GA_NNODES()
       count = 0
       next = NXTASK(nprocs, 1)

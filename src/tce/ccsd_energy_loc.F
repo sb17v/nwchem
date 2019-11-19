@@ -31,8 +31,8 @@ c
       integer unitn
       integer fldgts
       character*255 filename
-      integer, dimension(4) :: t2_prec_path
-      double precision, dimension(3) :: t2_prec_thresh
+      integer, dimension(8) :: t2_prec_path
+      double precision, dimension(8) :: t2_prec_thresh
       integer i
       integer path_end
       integer prec
@@ -44,12 +44,12 @@ c
         return
       endif
 c
-      if(.not.rtdb_get(rtdb,'tce:t2_prec_path',mt_int,4, 
+      if(.not.rtdb_get(rtdb,'tce:t2_prec_path',mt_int,8,
      &     t2_prec_path)) then
-      t2_prec_path = (/ 0, 0, 0, 1/)
+      t2_prec_path = (/ 0,0,0,1,0,0,0,0 /)
       endif
 
-      if(.not.rtdb_get(rtdb,'tce:t2_prec_thresh',mt_dbl,3, 
+      if(.not.rtdb_get(rtdb,'tce:t2_prec_thresh',mt_dbl,8,
      &     t2_prec_thresh)) then
       t2_prec_thresh = (/ 0, 0, 0 /)
       endif
