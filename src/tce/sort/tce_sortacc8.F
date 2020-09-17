@@ -1,16 +1,6 @@
       subroutine tce_sortacc_8(unsorted,sorted,a,b,c,d,e,f,g,h,
      1                         i,j,k,l,m,n,o,p,factor)
-c
-c $Id$
-c
       implicit none
-#include "global.fh"
-#include "mafdecls.fh"
-#include "sym.fh"
-#include "util.fh"
-#include "stdio.fh"
-#include "errquit.fh"
-#include "tce_main.fh"
       integer a,b,c,d,e,f,g,h
       integer i,j,k,l,m,n,o,p
       integer id(8),jd(8),ia,ib,j1,j2,j3,j4,j5,j6,j7,j8
