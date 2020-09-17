@@ -1,16 +1,6 @@
       subroutine tce_sort_6(unsorted,sorted,a,b,c,d,e,f,
      1                      i,j,k,l,m,n,factor)
-c
-c $Id$
-c
       implicit none
-c#include "global.fh"
-c#include "mafdecls.fh"
-c#include "sym.fh"
-#include "util.fh"
-c#include "stdio.fh"
-c#include "errquit.fh"
-#include "tce_main.fh"
       integer a,b,c,d,e,f
       integer i,j,k,l,m,n
       integer id(6),jd(6),ia,ib,j1,j2,j3,j4,j5,j6
@@ -18,12 +8,9 @@ c#include "errquit.fh"
       double precision unsorted(a*b*c*d*e*f)
       double precision factor
       double precision cpu
-c
-c     Plain original algorithm
-c
-      cpusecs(7) = cpusecs(7) - util_cpusec()
-      cpusecs(57) = cpusecs(57) - util_wallsec()
-      cpu = -util_cpusec()
+!
+!     Plain original algorithm
+!
       ia = 0
       jd(1) = a
       jd(2) = b
@@ -152,9 +139,5 @@ c
        enddo
       enddo
       endif
-      cpusecs(7) = cpusecs(7) + util_cpusec()
-      cpusecs(57) = cpusecs(57) + util_wallsec()
-      cpu = cpu + util_cpusec()
-c     write(*,*) cpu
       return
       end
