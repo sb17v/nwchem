@@ -1,4 +1,3 @@
-
       subroutine tce_sort_4(unsorted,sorted,a,b,c,d,
      1                      i,j,k,l,factor)
       implicit none
