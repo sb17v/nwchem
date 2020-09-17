@@ -1,11 +1,6 @@
       subroutine tce_sortacc_4(unsorted,sorted,a,b,c,d,
      1                         i,j,k,l,factor)
-c
-c $Id: tce_sortacc.F 26500 2014-12-10 05:05:57Z jhammond $
-c
       implicit none
-#include "util.fh"
-#include "tce_main.fh"
       integer a,b,c,d
       integer i,j,k,l
       integer id(4),jd(4),ia,ib,j1,j2,j3,j4
@@ -15,8 +10,6 @@ c
 c
 c     Plain original algorithm
 c
-      cpusecs(7) = cpusecs(7) - util_cpusec()
-      cpusecs(57) = cpusecs(57) - util_wallsec()
       jd(1) = a
       jd(2) = b
       jd(3) = c
@@ -70,7 +63,5 @@ c
        enddo
       enddo
       endif
-      cpusecs(7) = cpusecs(7) + util_cpusec()
-      cpusecs(57) = cpusecs(57) + util_wallsec()
       return
       end

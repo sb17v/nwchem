@@ -1,36 +1,19 @@
       subroutine tce_sortacc_0(unsorted,sorted,factor)
-c
-c $Id$
-c
       implicit none
       double precision sorted
       double precision unsorted
       double precision factor
-c
-c     Plain original algorithm
-c
       sorted = sorted + unsorted * factor
       return
       end
-      subroutine tce_sortacc_2(unsorted,sorted,a,b,
-     1                         i,j,factor)
-c
-c $Id$
-c
+      subroutine tce_sortacc_2(unsorted,sorted,a,b,i,j,factor)
       implicit none
-#include "util.fh"
-#include "tce_main.fh"
       integer a,b
       integer i,j
       integer id(2),jd(2),ia,ib,j1,j2
       double precision sorted(a*b)
       double precision unsorted(a*b)
       double precision factor
-c
-c     Plain original algorithm
-c
-      cpusecs(7) = cpusecs(7) - util_cpusec()
-      cpusecs(57) = cpusecs(57) - util_wallsec()
       ia = 0
       jd(1) = a
       jd(2) = b
@@ -43,29 +26,17 @@ c
         sorted(ib) = sorted(ib) + unsorted(ia) * factor
        enddo
       enddo
-      cpusecs(7) = cpusecs(7) + util_cpusec()
-      cpusecs(57) = cpusecs(57) + util_wallsec()
       return
       end
       subroutine tce_sortacc_4(unsorted,sorted,a,b,c,d,
      1                         i,j,k,l,factor)
-c
-c $Id$
-c
       implicit none
-#include "util.fh"
-#include "tce_main.fh"
       integer a,b,c,d
       integer i,j,k,l
       integer id(4),jd(4),ia,ib,j1,j2,j3,j4
       double precision sorted(a*b*c*d)
       double precision unsorted(a*b*c*d)
       double precision factor
-c
-c     Plain original algorithm
-c
-      cpusecs(7) = cpusecs(7) - util_cpusec()
-      cpusecs(57) = cpusecs(57) - util_wallsec()
       jd(1) = a
       jd(2) = b
       jd(3) = c
@@ -119,18 +90,11 @@ c
        enddo
       enddo
       endif
-      cpusecs(7) = cpusecs(7) + util_cpusec()
-      cpusecs(57) = cpusecs(57) + util_wallsec()
       return
       end
       subroutine tce_sortacc_6(unsorted,sorted,a,b,c,d,e,f,
      1                         i,j,k,l,m,n,factor)
-c
-c $Id$
-c
       implicit none
-#include "util.fh"
-#include "tce_main.fh"
       integer a,b,c,d,e,f
       integer i,j,k,l,m,n
       integer id(6),jd(6),ia,ib,j1,j2,j3,j4,j5,j6
@@ -138,12 +102,6 @@ c
       double precision unsorted(a*b*c*d*e*f)
       double precision factor
       double precision cpu
-c
-c     Plain original algorithm
-c
-      cpusecs(7) = cpusecs(7) - util_cpusec()
-      cpusecs(57) = cpusecs(57) - util_wallsec()
-      cpu = -util_cpusec()
       ia = 0
       jd(1) = a
       jd(2) = b
@@ -272,34 +230,17 @@ c
        enddo
       enddo
       endif
-      cpusecs(7) = cpusecs(7) + util_cpusec()
-      cpusecs(57) = cpusecs(57) + util_wallsec()
-      cpu = cpu + util_cpusec()
-c     write(*,*) cpu
       return
       end
       subroutine tce_sortacc_8(unsorted,sorted,a,b,c,d,e,f,g,h,
      1                         i,j,k,l,m,n,o,p,factor)
-c
-c $Id$
-c
       implicit none
-#include "global.fh"
-#include "mafdecls.fh"
-#include "sym.fh"
-#include "util.fh"
-#include "stdio.fh"
-#include "errquit.fh"
-#include "tce_main.fh"
       integer a,b,c,d,e,f,g,h
       integer i,j,k,l,m,n,o,p
       integer id(8),jd(8),ia,ib,j1,j2,j3,j4,j5,j6,j7,j8
       double precision sorted(a*b*c*d*e*f*g*h)
       double precision unsorted(a*b*c*d*e*f*g*h)
       double precision factor
-c
-c     Plain original algorithm
-c
       jd(1) = a
       jd(2) = b
       jd(3) = c
