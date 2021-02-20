@@ -103,4 +103,8 @@ echo "Congratulations! ARMCI-MPI was built successfully."
 echo "Please set the following environment variables when you build NWChem:"
 echo "ARMCI_NETWORK=ARMCI"
 echo "EXTERNAL_ARMCI_PATH=${NWCHEM_TOP}/external-armci"
-
+echo ""
+echo "You may find that you need to add -lpthread to the LIBMPI variable."
+echo "Make sure that LIBMPI, MPI_INCLUDE and MPI_LIB match the following:"
+echo ${ARMCIMPICC} -show
+${ARMCIMPICC} -show
