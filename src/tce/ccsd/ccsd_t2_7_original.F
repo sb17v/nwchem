@@ -9,38 +9,15 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      INTEGER d_a
-      INTEGER k_a_offset
-      INTEGER d_b
-      INTEGER k_b_offset
-      INTEGER d_c
-      INTEGER k_c_offset
-      INTEGER NXTASK
-      INTEGER next
-      INTEGER nprocs
-      INTEGER count
-      INTEGER p3b
-      INTEGER p4b
-      INTEGER h1b
-      INTEGER h2b
-      INTEGER dimc
+      integer, intent(in) :: d_a,d_b,d_c
+      integer, intent(in) :: k_a_offset,k_b_offset,k_c_offset
+      integer :: p5b,h6b,p3b,p4b,h1b,h2b
+      integer :: p5b_1,h6b_1,h1b_1,h2b_2
+      integer :: p3b_1,p4b_2,p5b_2,h6b_2
+      integer :: dima,dimb,dimc,dim_common,dima_sort,dimb_sort
+      integer :: next,nprocs,count
       INTEGER l_cs
       INTEGER k_cs
-      INTEGER p5b
-      INTEGER h6b
-      INTEGER p3b_1
-      INTEGER p5b_1
-      INTEGER h1b_1
-      INTEGER h6b_1
-      INTEGER p4b_2
-      INTEGER h6b_2
-      INTEGER h2b_2
-      INTEGER p5b_2
-      INTEGER dim_common
-      INTEGER dima_sort
-      INTEGER dima
-      INTEGER dimb_sort
-      INTEGER dimb
       INTEGER l_as
       INTEGER k_as
       INTEGER l_a
@@ -51,6 +28,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
       INTEGER k_b
       INTEGER l_c
       INTEGER k_c
+      INTEGER NXTASK
       EXTERNAL NXTASK
       nprocs = GA_NNODES()
       count = 0
