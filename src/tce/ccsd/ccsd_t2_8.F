@@ -1730,14 +1730,17 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
                    else
                     alpha = 2.0d0
                    end if
-                   call t2_p8_dgemm(int_mb(k_range+h1b-1),
-     &                              int_mb(k_range+h2b-1),
-     &                              int_mb(k_range+p3b-1),
-     &                              int_mb(k_range+p4b-1),
-     &                              int_mb(k_range+p5b-1),
-     &                              int_mb(k_range+p6b-1),
-     &                              f_a,f_b,f_c,
-     &                              0.5d0*alpha)
+      CALL DGEMM('N','N',int_mb(k_range+h1b-1)*int_mb(k_range+h2b-1), ! M
+     &                   int_mb(k_range+p3b-1)*int_mb(k_range+p4b-1), ! N
+     &                   int_mb(k_range+p5b-1)*int_mb(k_range+p6b-1), ! K
+     &                   0.5d0*alpha,                                 ! alpha
+     &                   f_a,                                         ! A
+     &                   int_mb(k_range+h1b-1)*int_mb(k_range+h2b-1), ! LDA = M
+     &                   f_b,                                         ! B
+     &                   int_mb(k_range+p5b-1)*int_mb(k_range+p6b-1), ! LDB = K
+     &                   1.0d0,                                       ! beta = 1
+     &                   f_c,                                         ! C
+     &                   int_mb(k_range+h1b-1)*int_mb(k_range+h2b-1)) ! LDC = M
                   END IF
                  END IF
                 END IF
@@ -1767,26 +1770,3 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       if (e_c.ne.0) call errquit("dealloc c",0,MA_ERR)
       RETURN
       END
-
-      subroutine t2_p8_dgemm(h1d,h2d,p3d,p4d,p5d,p6d,
-     &                       t2sub,v2sub,r2sub,factor)
-      IMPLICIT NONE
-      integer, intent(in)             :: h1d,h2d,p3d,p4d,p5d,p6d
-      double precision, intent(in)    :: t2sub(h2d*h1d,p6d*p5d)
-      double precision, intent(in)    :: v2sub(p6d*p5d,p4d*p3d)
-      double precision, intent(inout) :: r2sub(h2d*h1d,p4d*p3d)
-      double precision, intent(in)    :: factor
-      !r2sub = r2sub + factor * matmul(t2sub,v2sub)
-      CALL DGEMM('N','N',h2d*h1d, ! M
-     &                   p4d*p3d, ! N
-     &                   p6d*p5d, ! K
-     &                   factor,  ! alpha = factor
-     &                   t2sub,   ! A
-     &                   h2d*h1d, ! LDA = M
-     &                   v2sub,   ! B
-     &                   p6d*p5d, ! LDB = K
-     &                   1.0d0,   ! beta = 1
-     &                   r2sub,   ! C
-     &                   h2d*h1d) ! LDC = M
-      return
-      end
