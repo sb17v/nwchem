@@ -207,5 +207,3 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
       call GA_SYNC()
       RETURN
       END
-
-
