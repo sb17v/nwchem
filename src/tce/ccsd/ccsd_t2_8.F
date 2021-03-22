@@ -1513,10 +1513,10 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       allocate(f_a(1:dimhhpp),stat=e_a)
       allocate(f_b(1:dimpppp),stat=e_b)
       allocate(f_c(1:dimhhpp),stat=e_c)
-
       if (e_a.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
       if (e_b.ne.0) call errquit("alloc b",dimpppp,MA_ERR)
       if (e_c.ne.0) call errquit("alloc c",dimhhpp,MA_ERR)
+
       DO p3b = noab+1,noab+nvab
        DO p4b = p3b,noab+nvab
         DO h1b = 1,noab
@@ -1609,6 +1609,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       if (e_a.ne.0) call errquit("dealloc a",0,MA_ERR)
       if (e_b.ne.0) call errquit("dealloc b",0,MA_ERR)
       if (e_c.ne.0) call errquit("dealloc c",0,MA_ERR)
+
       RETURN
       END
 
