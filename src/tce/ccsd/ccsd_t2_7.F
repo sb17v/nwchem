@@ -23,12 +23,8 @@
       double precision, allocatable :: f_a(:)
       double precision, allocatable :: f_b(:)
       double precision, allocatable :: f_c(:)
-      !double precision, allocatable :: f_as(:)
-      !double precision, allocatable :: f_bs(:)
-      double precision, allocatable :: f_cs(:)
       double precision, allocatable :: f_t(:)
       integer :: e_a,e_b,e_c,e_t
-      integer :: e_as,e_bs,e_cs
       INTEGER NXTASK
       EXTERNAL NXTASK
       nprocs = GA_NNODES()
@@ -42,16 +38,10 @@
       allocate(f_a(1:dimhhpp),stat=e_a)
       allocate(f_b(1:dimhhpp),stat=e_b)
       allocate(f_c(1:dimhhpp),stat=e_c)
-      !allocate(f_as(1:dimhhpp),stat=e_as)
-      !allocate(f_bs(1:dimhhpp),stat=e_bs)
-      allocate(f_cs(1:dimhhpp),stat=e_cs)
       allocate(f_t(1:dimhhpp),stat=e_t)
       if (e_a.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
       if (e_b.ne.0) call errquit("alloc b",dimhhpp,MA_ERR)
       if (e_c.ne.0) call errquit("alloc c",dimhhpp,MA_ERR)
-      !if (e_as.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
-      !if (e_bs.ne.0) call errquit("alloc b",dimhhpp,MA_ERR)
-      if (e_cs.ne.0) call errquit("alloc c",dimhhpp,MA_ERR)
       if (e_t.ne.0) call errquit("alloc t",dimhhpp,MA_ERR)
 
       DO p3b = noab+1,noab+nvab
@@ -71,7 +61,7 @@
               dimb_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h2b-1)
               dimc = int_mb(k_range+p3b-1) * int_mb(k_range+p4b-1) ! pphh 
      &             * int_mb(k_range+h1b-1) * int_mb(k_range+h2b-1)
-              CALL DFILL(dimc,0.0d0,f_cs,1)
+              CALL DFILL(dimc,0.0d0,f_c,1)
               DO p5b = noab+1,noab+nvab
                DO h6b = 1,noab
                 IF (int_mb(k_spin+p3b-1)+int_mb(k_spin+p5b-1) .eq. 
@@ -140,48 +130,48 @@
                    CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &                        1.0d0,f_a,dim_common,
      &                        f_b,dim_common,
-     &                        1.0d0,f_cs,dima_sort)
+     &                        1.0d0,f_c,dima_sort)
                   END IF
                  END IF
                 END IF
                END DO
               END DO
               IF ((p3b .le. p4b) .and. (h1b .le. h2b)) THEN
-               CALL TCE_SORT_4(f_cs,f_c,
+               CALL TCE_SORT_4(f_c,f_t,
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              4,2,3,1,-1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,
+               CALL ADD_HASH_BLOCK(d_c,f_t,
      &              dimc,int_mb(k_c_offset),
      &              (h2b-1+noab*(h1b-1+noab*(p4b-noab-1+nvab*
      &              (p3b-noab-1)))))
               END IF
               IF ((p3b .le. p4b) .and. (h2b .le. h1b)) THEN
-               CALL TCE_SORT_4(f_cs,f_c,
+               CALL TCE_SORT_4(f_c,f_t,
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              4,2,1,3,1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,
+               CALL ADD_HASH_BLOCK(d_c,f_t,
      &              dimc,int_mb(k_c_offset),
      &              (h1b-1+noab*(h2b-1+noab*(p4b-noab-1+nvab*
      &              (p3b-noab-1)))))
               END IF
               IF ((p4b .le. p3b) .and. (h1b .le. h2b)) THEN
-               CALL TCE_SORT_4(f_cs,f_c,
+               CALL TCE_SORT_4(f_c,f_t,
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              2,4,3,1,1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,
+               CALL ADD_HASH_BLOCK(d_c,f_t,
      &              dimc,int_mb(k_c_offset),
      &              (h2b-1+noab*(h1b-1+noab*(p3b-noab-1+nvab*
      &              (p4b-noab-1)))))
               END IF
               IF ((p4b .le. p3b) .and. (h2b .le. h1b)) THEN
-               CALL TCE_SORT_4(f_cs,f_c,
+               CALL TCE_SORT_4(f_c,f_t,
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              2,4,1,3,-1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,
+               CALL ADD_HASH_BLOCK(d_c,f_t,
      &              dimc,int_mb(k_c_offset),
      &              (h1b-1+noab*(h2b-1+noab*(p3b-noab-1+nvab*
      &              (p4b-noab-1)))))
@@ -202,16 +192,10 @@
       deallocate(f_a,stat=e_a)
       deallocate(f_b,stat=e_b)
       deallocate(f_c,stat=e_c)
-      !deallocate(f_as,stat=e_as)
-      !deallocate(f_bs,stat=e_bs)
-      deallocate(f_cs,stat=e_cs)
       deallocate(f_t,stat=e_t)
       if (e_a.ne.0) call errquit("dealloc a",0,MA_ERR)
       if (e_b.ne.0) call errquit("dealloc b",0,MA_ERR)
       if (e_c.ne.0) call errquit("dealloc c",0,MA_ERR)
-      !if (e_as.ne.0) call errquit("dealloc a",0,MA_ERR)
-      !if (e_bs.ne.0) call errquit("dealloc b",0,MA_ERR)
-      if (e_cs.ne.0) call errquit("dealloc c",0,MA_ERR)
       if (e_t.ne.0) call errquit("dealloc t",0,MA_ERR)
 
       RETURN
