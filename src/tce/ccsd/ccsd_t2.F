@@ -90,6 +90,7 @@ c ---------------------------------------
       logical nodezero         ! True if node 0
       double precision cpu     ! CPU sec counter
       double precision wall    ! WALL sec counter
+      integer ccsd_t2_7_alg
       integer ccsd_t2_8_alg
       integer p,h,maxp,maxh
       integer profile
@@ -279,7 +280,22 @@ c -----------------------
       CALL ccsd_t2_7_3(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                 d_i1,k_i1_offset)
       CALL RECONCILEFILE(d_i1,size_i1)
-      CALL ccsd_t2_7(d_t2,k_t2_offset,d_i1,k_i1_offset,d_i0,k_i0_offset)
+
+      if (.not.rtdb_get(rtdb,'tce:ccsd_t2_7_alg',mt_int,1,
+     1                  ccsd_t2_7_alg)) then
+        ccsd_t2_7_alg = 1
+      endif
+      if (ccsd_t2_7_alg.eq.1) then
+        CALL ccsd_t2_7(d_t2,k_t2_offset,d_i1,k_i1_offset,
+     1                 d_i0,k_i0_offset)
+      else if (ccsd_t2_7_alg.eq.2) then
+        CALL ccsd_t2_7_stdpar(d_t2,k_t2_offset,d_i1,k_i1_offset,
+     1                        d_i0,k_i0_offset,maxh,maxp)
+      else
+        CALL errquit('ccsd_t2_7_alg',ccsd_t2_7_alg,INPUT_ERR)
+      endif
+c
+c
       CALL DELETEFILE(d_i1)
       IF (.not.MA_POP_STACK(l_i1_offset)) 
      1    CALL ERRQUIT('ccsd_t2',-1,MA_ERR)
