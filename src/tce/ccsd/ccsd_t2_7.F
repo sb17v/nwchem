@@ -82,11 +82,12 @@
      &                                  p4b_2,h6b_2,h2b_2,p5b_2)
                   dim_common = int_mb(k_range+p5b-1)
      &                       * int_mb(k_range+h6b-1)
-                  dima = dim_common * dima_sort ! phph
-                  dimb = dim_common * dimb_sort ! phph
+                  dima = dim_common * dima_sort
+                  dimb = dim_common * dimb_sort
                   IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
                    IF ((p5b .lt. p3b) .and. (h6b .lt. h1b)) THEN
-                    CALL GET_HASH_BLOCK(d_a,f_t,dima,int_mb(k_a_offset),
+                    CALL GET_HASH_BLOCK(d_a,f_t,
+     &                   dima,int_mb(k_a_offset),
      &                   (h1b_1-1+noab*(h6b_1-1+noab*(p3b_1-noab-1+nvab*
      &                   (p5b_1-noab-1)))))
                     CALL TCE_SORT_4(f_t,f_a,
@@ -95,7 +96,8 @@
      &                   4,2,3,1,1.0d0)
                    END IF
                    IF ((p5b .lt. p3b) .and. (h1b .le. h6b)) THEN
-                    CALL GET_HASH_BLOCK(d_a,f_t,dima,int_mb(k_a_offset),
+                    CALL GET_HASH_BLOCK(d_a,f_t,
+     &                   dima,int_mb(k_a_offset),
      &                   (h6b_1-1+noab*(h1b_1-1+noab*(p3b_1-noab-1+nvab*
      &                   (p5b_1-noab-1)))))
                     CALL TCE_SORT_4(f_t,f_a,
@@ -104,7 +106,8 @@
      &                   3,2,4,1,-1.0d0)
                    END IF
                    IF ((p3b .le. p5b) .and. (h6b .lt. h1b)) THEN
-                      CALL GET_HASH_BLOCK(d_a,f_t,dima,
+                      CALL GET_HASH_BLOCK(d_a,f_t,
+     &                     dima,
      &                     int_mb(k_a_offset),(h1b_1-1+noab*
      &                     (h6b_1-1+noab*(p5b_1-noab-1+nvab*
      &                     (p3b_1-noab-1)))))
@@ -114,7 +117,8 @@
      &                     4,1,3,2,-1.0d0)
                    END IF
                    IF ((p3b .le. p5b) .and. (h1b .le. h6b)) THEN
-                      CALL GET_HASH_BLOCK(d_a,f_t,dima,
+                      CALL GET_HASH_BLOCK(d_a,f_t,
+     &                     dima,
      &                     int_mb(k_a_offset),(h6b_1-1+noab*
      &                     (h1b_1-1+noab*(p5b_1-noab-1+nvab*
      &                     (p3b_1-noab-1)))))
@@ -123,7 +127,8 @@
      &                     int_mb(k_range+h1b-1),int_mb(k_range+h6b-1),
      &                     3,1,4,2,1.0d0)
                    END IF
-                   CALL GET_HASH_BLOCK(d_b,f_t,dimb,
+                   CALL GET_HASH_BLOCK(d_b,f_t,
+     &                  dimb,
      &                  int_mb(k_b_offset),(h6b_2-1+noab*
      &                  (p5b_2-noab-1+nvab*(h2b_2-1+noab*
      &                  (p4b_2-noab-1)))))
@@ -132,8 +137,9 @@
      &                  int_mb(k_range+h2b-1),int_mb(k_range+p5b-1),
      &                  3,1,2,4,1.0d0)
                    CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
-     &                        1.0d0,f_a,dim_common,f_b,
-     &                        dim_common,1.0d0,f_t,dima_sort)
+     &                        1.0d0,f_a,dim_common,
+     &                        f_b,dim_common,
+     &                        1.0d0,f_t,dima_sort)
                   END IF
                  END IF
                 END IF
@@ -144,7 +150,8 @@
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              4,2,3,1,-1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,dimc,int_mb(k_c_offset),
+               CALL ADD_HASH_BLOCK(d_c,f_c,
+     &              dimc,int_mb(k_c_offset),
      &              (h2b-1+noab*(h1b-1+noab*(p4b-noab-1+nvab*
      &              (p3b-noab-1)))))
               END IF
@@ -153,7 +160,8 @@
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              4,2,1,3,1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,dimc,int_mb(k_c_offset),
+               CALL ADD_HASH_BLOCK(d_c,f_c,
+     &              dimc,int_mb(k_c_offset),
      &              (h1b-1+noab*(h2b-1+noab*(p4b-noab-1+nvab*
      &              (p3b-noab-1)))))
               END IF
@@ -162,7 +170,8 @@
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              2,4,3,1,1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,dimc,int_mb(k_c_offset),
+               CALL ADD_HASH_BLOCK(d_c,f_c,
+     &              dimc,int_mb(k_c_offset),
      &              (h2b-1+noab*(h1b-1+noab*(p3b-noab-1+nvab*
      &              (p4b-noab-1)))))
               END IF
@@ -171,7 +180,8 @@
      &              int_mb(k_range+h2b-1),int_mb(k_range+p4b-1),
      &              int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &              2,4,1,3,-1.0d0)
-               CALL ADD_HASH_BLOCK(d_c,f_c,dimc,int_mb(k_c_offset),
+               CALL ADD_HASH_BLOCK(d_c,f_c,
+     &              dimc,int_mb(k_c_offset),
      &              (h1b-1+noab*(h2b-1+noab*(p3b-noab-1+nvab*
      &              (p4b-noab-1)))))
               END IF
