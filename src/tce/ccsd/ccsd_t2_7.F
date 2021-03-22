@@ -23,10 +23,10 @@
       double precision, allocatable :: f_a(:)
       double precision, allocatable :: f_b(:)
       double precision, allocatable :: f_c(:)
-      double precision, allocatable :: f_as(:)
+      !double precision, allocatable :: f_as(:)
       double precision, allocatable :: f_bs(:)
       double precision, allocatable :: f_cs(:)
-      !double precision, allocatable :: f_t(:)
+      double precision, allocatable :: f_t(:)
       integer :: e_a,e_b,e_c,e_t
       integer :: e_as,e_bs,e_cs
       INTEGER NXTASK
@@ -42,24 +42,17 @@
       allocate(f_a(1:dimhhpp),stat=e_a)
       allocate(f_b(1:dimhhpp),stat=e_b)
       allocate(f_c(1:dimhhpp),stat=e_c)
-      allocate(f_as(1:dimhhpp),stat=e_as)
+      !allocate(f_as(1:dimhhpp),stat=e_as)
       allocate(f_bs(1:dimhhpp),stat=e_bs)
       allocate(f_cs(1:dimhhpp),stat=e_cs)
-      !allocate(f_t(1:dimhhpp),stat=e_t)
+      allocate(f_t(1:dimhhpp),stat=e_t)
       if (e_a.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
       if (e_b.ne.0) call errquit("alloc b",dimhhpp,MA_ERR)
       if (e_c.ne.0) call errquit("alloc c",dimhhpp,MA_ERR)
-      if (e_as.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
+      !if (e_as.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
       if (e_bs.ne.0) call errquit("alloc b",dimhhpp,MA_ERR)
       if (e_cs.ne.0) call errquit("alloc c",dimhhpp,MA_ERR)
-      !if (e_t.ne.0) call errquit("alloc t",dimhhpp,MA_ERR)
-
-      !IF (.not.MA_PUSH_GET(mt_dbl,dimc,'cs',l_cs,k_cs)) CALL ERRQUIT('ccsd_t2_7',0,MA_ERR)
-      !IF (.not.MA_PUSH_GET(mt_dbl,dima,'as',l_as,k_as)) CALL ERRQUIT('ccsd_t2_7',1,MA_ERR)
-      !IF (.not.MA_PUSH_GET(mt_dbl,dima,'a',l_a,k_a)) CALL ERRQUIT('ccsd_t2_7',2,MA_ERR)
-      !IF (.not.MA_PUSH_GET(mt_dbl,dimb,'bs',l_bs,k_bs)) CALL ERRQUIT('ccsd_t2_7',4,MA_ERR)
-      !IF (.not.MA_PUSH_GET(mt_dbl,dimb,'b',l_b,k_b)) CALL ERRQUIT('ccsd_t2_7',5,MA_ERR)
-      !IF (.not.MA_PUSH_GET(mt_dbl,dimc,'c',l_c,k_c)) CALL ERRQUIT('ccsd_t2_7',9,MA_ERR)
+      if (e_t.ne.0) call errquit("alloc t",dimhhpp,MA_ERR)
 
       DO p3b = noab+1,noab+nvab
        DO p4b = noab+1,noab+nvab
@@ -96,41 +89,41 @@
                   dimb = dim_common * dimb_sort
                   IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
                    IF ((p5b .lt. p3b) .and. (h6b .lt. h1b)) THEN
-                    CALL GET_HASH_BLOCK(d_a,f_a,
+                    CALL GET_HASH_BLOCK(d_a,f_t,
      &                   dima,int_mb(k_a_offset),
      &                   (h1b_1-1+noab*(h6b_1-1+noab*(p3b_1-noab-1+nvab*
      &                   (p5b_1-noab-1)))))
-                    CALL TCE_SORT_4(f_a,f_as,
+                    CALL TCE_SORT_4(f_t,f_a,
      &                   int_mb(k_range+p5b-1),int_mb(k_range+p3b-1),
      &                   int_mb(k_range+h6b-1),int_mb(k_range+h1b-1),
      &                   4,2,3,1,1.0d0)
                    END IF
                    IF ((p5b .lt. p3b) .and. (h1b .le. h6b)) THEN
-                    CALL GET_HASH_BLOCK(d_a,f_a,
+                    CALL GET_HASH_BLOCK(d_a,f_t,
      &                   dima,int_mb(k_a_offset),
      &                   (h6b_1-1+noab*(h1b_1-1+noab*(p3b_1-noab-1+nvab*
      &                   (p5b_1-noab-1)))))
-                    CALL TCE_SORT_4(f_a,f_as,
+                    CALL TCE_SORT_4(f_t,f_a,
      &                   int_mb(k_range+p5b-1),int_mb(k_range+p3b-1),
      &                   int_mb(k_range+h1b-1),int_mb(k_range+h6b-1),
      &                   3,2,4,1,-1.0d0)
                    END IF
                    IF ((p3b .le. p5b) .and. (h6b .lt. h1b)) THEN
-                      CALL GET_HASH_BLOCK(d_a,f_a,
+                      CALL GET_HASH_BLOCK(d_a,f_t,
      &                     dima,int_mb(k_a_offset),
      &                     (h1b_1-1+noab*(h6b_1-1+noab*
      &                     (p5b_1-noab-1+nvab*(p3b_1-noab-1)))))
-                      CALL TCE_SORT_4(f_a,f_as,
+                      CALL TCE_SORT_4(f_t,f_a,
      &                     int_mb(k_range+p3b-1),int_mb(k_range+p5b-1),
      &                     int_mb(k_range+h6b-1),int_mb(k_range+h1b-1),
      &                     4,1,3,2,-1.0d0)
                    END IF
                    IF ((p3b .le. p5b) .and. (h1b .le. h6b)) THEN
-                      CALL GET_HASH_BLOCK(d_a,f_a,
+                      CALL GET_HASH_BLOCK(d_a,f_t,
      &                     dima,int_mb(k_a_offset),(h6b_1-1+noab*
      &                     (h1b_1-1+noab*(p5b_1-noab-1+nvab*
      &                     (p3b_1-noab-1)))))
-                      CALL TCE_SORT_4(f_a,f_as,
+                      CALL TCE_SORT_4(f_t,f_a,
      &                     int_mb(k_range+p3b-1),int_mb(k_range+p5b-1),
      &                     int_mb(k_range+h1b-1),int_mb(k_range+h6b-1),
      &                     3,1,4,2,1.0d0)
@@ -145,7 +138,7 @@
      &                  int_mb(k_range+h2b-1),int_mb(k_range+p5b-1),
      &                  3,1,2,4,1.0d0)
                    CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
-     &                        1.0d0,f_as,dim_common,
+     &                        1.0d0,f_a,dim_common,
      &                        f_bs,dim_common,
      &                        1.0d0,f_cs,dima_sort)
                   END IF
@@ -206,27 +199,20 @@
       next = NXTASK(-nprocs, 1)
       call GA_SYNC()
 
-      !IF (.not.MA_POP_STACK(l_a)) CALL ERRQUIT('ccsd_t2_7',3,MA_ERR)
-      !IF (.not.MA_POP_STACK(l_b)) CALL ERRQUIT('ccsd_t2_7',6,MA_ERR)
-      !IF (.not.MA_POP_STACK(l_bs)) CALL ERRQUIT('ccsd_t2_7',7,MA_ERR)
-      !IF (.not.MA_POP_STACK(l_as)) CALL ERRQUIT('ccsd_t2_7',8,MA_ERR)
-      !IF (.not.MA_POP_STACK(l_c)) CALL ERRQUIT('ccsd_t2_7',10,MA_ERR)
-      !IF (.not.MA_POP_STACK(l_cs)) CALL ERRQUIT('ccsd_t2_7',11,MA_ERR)
-
       deallocate(f_a,stat=e_a)
       deallocate(f_b,stat=e_b)
       deallocate(f_c,stat=e_c)
-      deallocate(f_as,stat=e_as)
+      !deallocate(f_as,stat=e_as)
       deallocate(f_bs,stat=e_bs)
       deallocate(f_cs,stat=e_cs)
-      !deallocate(f_t,stat=e_t)
+      deallocate(f_t,stat=e_t)
       if (e_a.ne.0) call errquit("dealloc a",0,MA_ERR)
       if (e_b.ne.0) call errquit("dealloc b",0,MA_ERR)
       if (e_c.ne.0) call errquit("dealloc c",0,MA_ERR)
-      if (e_as.ne.0) call errquit("dealloc a",0,MA_ERR)
+      !if (e_as.ne.0) call errquit("dealloc a",0,MA_ERR)
       if (e_bs.ne.0) call errquit("dealloc b",0,MA_ERR)
       if (e_cs.ne.0) call errquit("dealloc c",0,MA_ERR)
-      !if (e_t.ne.0) call errquit("dealloc t",0,MA_ERR)
+      if (e_t.ne.0) call errquit("dealloc t",0,MA_ERR)
 
       RETURN
       END
