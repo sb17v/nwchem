@@ -64,10 +64,8 @@
      &          ieor(int_mb(k_sym+h1b-1),int_mb(k_sym+h2b-1)))) 
      &                 .eq. ieor(irrep_v,irrep_t)) THEN
              IF (next.eq.count) THEN
-              dima_sort = int_mb(k_range+p3b-1)
-     &                  * int_mb(k_range+h1b-1)
-              dimb_sort = int_mb(k_range+p4b-1)
-     &                  * int_mb(k_range+h2b-1)
+              dima_sort = int_mb(k_range+p3b-1) * int_mb(k_range+h1b-1)
+              dimb_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h2b-1)
               dimc = int_mb(k_range+p3b-1) * int_mb(k_range+p4b-1) ! pphh 
      &             * int_mb(k_range+h1b-1) * int_mb(k_range+h2b-1)
               CALL DFILL(dimc,0.0d0,f_c,1)
@@ -179,7 +177,7 @@
               END IF
               next = NXTASK(nprocs, 1)
              END IF
-             count = count+1
+             count = count + 1
             END IF
            END IF
           END IF
@@ -208,4 +206,3 @@
 
       RETURN
       END
-
