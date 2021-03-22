@@ -24,7 +24,7 @@
       double precision, allocatable :: f_b(:)
       double precision, allocatable :: f_c(:)
       !double precision, allocatable :: f_as(:)
-      double precision, allocatable :: f_bs(:)
+      !double precision, allocatable :: f_bs(:)
       double precision, allocatable :: f_cs(:)
       double precision, allocatable :: f_t(:)
       integer :: e_a,e_b,e_c,e_t
@@ -43,14 +43,14 @@
       allocate(f_b(1:dimhhpp),stat=e_b)
       allocate(f_c(1:dimhhpp),stat=e_c)
       !allocate(f_as(1:dimhhpp),stat=e_as)
-      allocate(f_bs(1:dimhhpp),stat=e_bs)
+      !allocate(f_bs(1:dimhhpp),stat=e_bs)
       allocate(f_cs(1:dimhhpp),stat=e_cs)
       allocate(f_t(1:dimhhpp),stat=e_t)
       if (e_a.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
       if (e_b.ne.0) call errquit("alloc b",dimhhpp,MA_ERR)
       if (e_c.ne.0) call errquit("alloc c",dimhhpp,MA_ERR)
       !if (e_as.ne.0) call errquit("alloc a",dimhhpp,MA_ERR)
-      if (e_bs.ne.0) call errquit("alloc b",dimhhpp,MA_ERR)
+      !if (e_bs.ne.0) call errquit("alloc b",dimhhpp,MA_ERR)
       if (e_cs.ne.0) call errquit("alloc c",dimhhpp,MA_ERR)
       if (e_t.ne.0) call errquit("alloc t",dimhhpp,MA_ERR)
 
@@ -128,18 +128,18 @@
      &                     int_mb(k_range+h1b-1),int_mb(k_range+h6b-1),
      &                     3,1,4,2,1.0d0)
                    END IF
-                   CALL GET_HASH_BLOCK(d_b,f_b,
+                   CALL GET_HASH_BLOCK(d_b,f_t,
      &                  dimb,
      &                  int_mb(k_b_offset),(h6b_2-1+noab*
      &                  (p5b_2-noab-1+nvab*(h2b_2-1+noab*
      &                  (p4b_2-noab-1)))))
-                   CALL TCE_SORT_4(f_b,f_bs,
+                   CALL TCE_SORT_4(f_t,f_b,
      &                  int_mb(k_range+p4b-1),int_mb(k_range+h6b-1),
      &                  int_mb(k_range+h2b-1),int_mb(k_range+p5b-1),
      &                  3,1,2,4,1.0d0)
                    CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &                        1.0d0,f_a,dim_common,
-     &                        f_bs,dim_common,
+     &                        f_b,dim_common,
      &                        1.0d0,f_cs,dima_sort)
                   END IF
                  END IF
@@ -203,14 +203,14 @@
       deallocate(f_b,stat=e_b)
       deallocate(f_c,stat=e_c)
       !deallocate(f_as,stat=e_as)
-      deallocate(f_bs,stat=e_bs)
+      !deallocate(f_bs,stat=e_bs)
       deallocate(f_cs,stat=e_cs)
       deallocate(f_t,stat=e_t)
       if (e_a.ne.0) call errquit("dealloc a",0,MA_ERR)
       if (e_b.ne.0) call errquit("dealloc b",0,MA_ERR)
       if (e_c.ne.0) call errquit("dealloc c",0,MA_ERR)
       !if (e_as.ne.0) call errquit("dealloc a",0,MA_ERR)
-      if (e_bs.ne.0) call errquit("dealloc b",0,MA_ERR)
+      !if (e_bs.ne.0) call errquit("dealloc b",0,MA_ERR)
       if (e_cs.ne.0) call errquit("dealloc c",0,MA_ERR)
       if (e_t.ne.0) call errquit("dealloc t",0,MA_ERR)
 
