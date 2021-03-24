@@ -3071,7 +3071,7 @@ endif
 
 MKDIR = mkdir
 #extract defines to be used with linear algebra libraries
-      ifdef USE_INTERNALBLAS
+ifdef USE_INTERNALBLAS
       DEFINES += -DINTERNALBLAS
 endif
 ifdef BUILD_OPENBLAS

@@ -41,6 +41,7 @@ C
 #endif
       integer alloc_error
 #else
+#error BAD
       integer k_singles,l_singles
       integer k_doubles,l_doubles
 #endif
