@@ -34,7 +34,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
       count = 0
       next = NXTASK(nprocs, 1)
 
-      print*,'CCSD_T2_7_ORIGINAL'
+      if (ga_nodeid().eq.0) print*,'CCSD_T2_7_ORIGINAL'
 
       DO p3b = noab+1,noab+nvab
        DO p4b = noab+1,noab+nvab
@@ -243,7 +243,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = -1 * P( 4 ) * Sum ( h6 p5 ) * t ( p3 p5 h1 h6 )_
       count = 0
       next = NXTASK(nprocs, 1)
 
-      print*,'CCSD_T2_7_STDPAR'
+      if (ga_nodeid().eq.0) print*,'CCSD_T2_7_STDPAR'
 
       dimhhpp = maxh*maxh*maxp*maxp
 

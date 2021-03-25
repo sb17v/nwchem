@@ -94,7 +94,7 @@ c ---------------------------------------
       integer ccsd_t2_8_alg
       integer p,h,maxp,maxh
       integer profile
-      double precision tt0,tt1,t2timers(50)
+      !double precision tt0,tt1,t2timers(50)
       nodezero=(ga_nodeid().eq.0)
 c
       if (.not.rtdb_get(rtdb,'tce:term_profiling',mt_int,1,
@@ -344,9 +344,11 @@ c
       else if (ccsd_t2_8_alg.eq.8) then
         CALL ccsd_t2_8_stdpar(d_t2,k_t2_offset,d_v2,k_v2_offset,
      1                        d_i0,k_i0_offset,maxh,maxp)
+#ifdef USE_CUDA_FORTRAN
       else if (ccsd_t2_8_alg.eq.9) then
-        CALL ccsd_t2_8_stdpar2(d_t2,k_t2_offset,d_v2,k_v2_offset,
-     1                         d_i0,k_i0_offset,maxh,maxp)
+        CALL ccsd_t2_8_cufort(d_t2,k_t2_offset,d_v2,k_v2_offset,
+     1                        d_i0,k_i0_offset,maxh,maxp)
+#endif
       else
         CALL errquit('ccsd_t2_8_alg',ccsd_t2_8_alg,INPUT_ERR)
       endif
