@@ -2475,6 +2475,10 @@ ifeq ($(_CPU),$(findstring $(_CPU), ppc64 ppc64le))
         endif
       endif
 
+      ifdef USE_CUDA_FORTRAN
+	      FOPTIONS += -DUSE_CUDA_FORTRAN -cuda
+      endif
+
 ifeq ($(NWCHEM_TARGET),CATAMOUNT)
         DEFINES  += -DCATAMOUNT
 endif
