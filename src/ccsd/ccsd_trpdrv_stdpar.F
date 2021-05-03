@@ -1,11 +1,12 @@
-      subroutine ccsd_trpdrv_omp(t1,
+      subroutine ccsd_trpdrv_stdpar(t1,
      &     f1n,f1t,f2n,f2t,f3n,f3t,f4n,f4t,eorb,
      &     g_objo,g_objv,g_coul,g_exch,
      &     ncor,nocc,nvir,iprt,emp4,emp5,
      &     oseg_lo,oseg_hi, kchunk,
      &     Tij, Tkj, Tia, Tka, Xia, Xka, Jia, Jka, Kia, Kka,
      &     Jij, Jkj, Kij, Kkj, Dja, Djka, Djia)
-!     $Id$
+      use cudafor
+      use cublas
       implicit none
 !
 #include "errquit.fh"
@@ -23,25 +24,29 @@
       integer, intent(in) :: g_objo,g_objv,g_coul,g_exch
       integer, intent(in) :: oseg_lo,oseg_hi, kchunk
 ! FYI: f[1234][nt] parent routine allocates these on the heap (+fastmem)
-      double precision, intent(in) :: f1n(nvir,nvir),f1t(nvir,nvir)
-      double precision, intent(in) :: f2n(nvir,nvir),f2t(nvir,nvir)
-      double precision, intent(in) :: f3n(nvir,nvir),f3t(nvir,nvir)
-      double precision, intent(in) :: f4n(nvir,nvir),f4t(nvir,nvir)
+      double precision, intent(in), managed :: f1n(nvir,nvir)
+      double precision, intent(in), managed :: f2n(nvir,nvir)
+      double precision, intent(in), managed :: f3n(nvir,nvir)
+      double precision, intent(in), managed :: f4n(nvir,nvir)
+      double precision, intent(in), managed :: f1t(nvir,nvir)
+      double precision, intent(in), managed :: f2t(nvir,nvir)
+      double precision, intent(in), managed :: f3t(nvir,nvir)
+      double precision, intent(in), managed :: f4t(nvir,nvir)
 ! TODO: allocate a copy of eorb on heap with fastmem for KNL
-      double precision, intent(in) :: eorb(*)
+      double precision, intent(in), managed :: eorb(*)
 ! TODO: determine if these should be allocated w/ fastmem in parent subroutine
-      double precision, intent(in) :: Tij(*), Tkj(*), Tia(*), Tka(*)
-      double precision, intent(in) :: Xia(*), Xka(*)
-      double precision, intent(in) :: Jia(*), Jka(*), Jij(*), Jkj(*)
-      double precision, intent(in) :: Kia(*), Kka(*), Kij(*), Kkj(*)
-      double precision, intent(in) :: Dja(*), Djka(*), Djia(*)
+      double precision, intent(in), managed :: Tij(*), Tkj(*), Tia(*), Tka(*)
+      double precision, intent(in), managed :: Xia(*), Xka(*)
+      double precision, intent(in), managed :: Jia(*), Jka(*), Jij(*), Jkj(*)
+      double precision, intent(in), managed :: Kia(*), Kka(*), Kij(*), Kkj(*)
+      double precision, intent(in), managed :: Dja(*), Djka(*), Djia(*)
 ! used to make inline threaded tengy correct - for now
 ! it is correct that dint[cx]1 are paired with t1v2 and vice versa
 ! in the inlined tengy loops.  see ccsd_tengy in ccsd_trpdrv.F for
 ! verification of the i-k and k-i pairing of these.
-      double precision, allocatable :: dintc1(:),dintc2(:)
-      double precision, allocatable :: dintx1(:),dintx2(:)
-      double precision, allocatable :: t1v1(:),t1v2(:)
+      double precision, allocatable, managed :: dintc1(:),dintc2(:)
+      double precision, allocatable, managed :: dintx1(:),dintx2(:)
+      double precision, allocatable, managed :: t1v1(:),t1v2(:)
       integer :: alloc_error
 !
       double precision :: emp4i,emp5i,emp4k,emp5k
@@ -192,18 +197,24 @@
                      call ga_nbget(g_objv,1+2*lnoov+(i-1)*lnov,
      &                    2*lnoov+i*lnov,av,av,Xia,lnov,nbh_objv7)
 
-                     call dcopy(nvir,t1((i-1)*nvir+1),1,t1v2,1)
+!                     call dcopy(nvir,t1((i-1)*nvir+1),1,t1v2,1)
+                     t1v2(:) = t1((i-1)*nvir+1:i*nvir)
                      call ga_nbwait(nbh_objv1) ! Dja
-                     call dcopy(nvir,Dja(1+(i-1)*nvir),1,dintc1,1)
+!                     call dcopy(nvir,Dja(1+(i-1)*nvir),1,dintc1,1)
+                     dintc1(:) = Dja(1+(i-1)*nvir:i*nvir)
                      call ga_nbwait(nbh_objv5) ! Djia
-                     call dcopy(nvir,Djia,1,dintx1,1)
+!                     call dcopy(nvir,Djia,1,dintx1,1)
+                     dintx1(:) = Djia(1:nvir)
 
                      do k=klo,min(khi,i)
 
-                        call dcopy(nvir,t1((k-1)*nvir+1),1,t1v1,1)
-                        call dcopy(nvir,Dja(1+(k-1)*nvir),1,dintc2,1)
+                        !call dcopy(nvir,t1((k-1)*nvir+1),1,t1v1,1)
+                        t1v1(:) = t1((k-1)*nvir+1:k*nvir)
+                        !call dcopy(nvir,Dja(1+(k-1)*nvir),1,dintc2,1)
+                        dintc2(:) = Dja(1+(k-1)*nvir:k*nvir)
                         call ga_nbwait(nbh_objv4(k)) ! Djka
-                        call dcopy(nvir,Djka(1+(k-klo)*nvir),1,dintx2,1)
+                        !call dcopy(nvir,Djka(1+(k-klo)*nvir),1,dintx2,1)
+                        dintx2(:) = Djka(1+(k-klo)*nvir:(k-klo+1)*nvir)
                         emp4i = 0.0d0
                         emp5i = 0.0d0
                         emp4k = 0.0d0
@@ -214,7 +225,7 @@
                            call qenter('doxxx',0)
                         endif
 !
-!  These are the input dependencies for the DGEMM calls below.
+!  These are the input dependencies for the cublasDgemm calls below.
 !  We wait on all of them here because GA is not even remotely thread-safe.
 !  All of these are independent of k, so we wait on them only
 !  at the first trip of the loop.
@@ -235,59 +246,59 @@
                             call ga_nbwait(nbh_coul1)
                             call ga_nbwait(nbh_coul2)
                         endif
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Jia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f1n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tia,nvir,Kkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f1n,nvir)
 
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Kia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f2n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xia,nvir,Kkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f2n,nvir)
 
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Jia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f3n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tia,nvir,Jkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f3n,nvir)
 
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Kia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f4n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xia,nvir,Jkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f4n,nvir)
 
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Jka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f1t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tka(1+(k-klo)*lnov),nvir,Kij,nocc,1.0d0,
      2                       f1t,nvir)
 
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Kka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f2t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xka(1+(k-klo)*lnov),nvir,Kij,nocc,1.0d0,
      2                       f2t,nvir)
 
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Jka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f3t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tka(1+(k-klo)*lnov),nvir,Jij,nocc,1.0d0,
      2                       f3t,nvir)
 
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Kka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f4t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xka(1+(k-klo)*lnov),nvir,Jij,nocc,1.0d0,
      2                       f4t,nvir)
 
