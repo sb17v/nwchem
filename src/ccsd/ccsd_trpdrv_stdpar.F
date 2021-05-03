@@ -35,10 +35,13 @@
 ! TODO: allocate a copy of eorb on heap with fastmem for KNL
       double precision, intent(in), managed :: eorb(*)
 ! TODO: determine if these should be allocated w/ fastmem in parent subroutine
-      double precision, intent(in), managed :: Tij(*), Tkj(*), Tia(*), Tka(*)
+      double precision, intent(in), managed :: Tij(*), Tkj(*)
+      double precision, intent(in), managed :: Tia(*), Tka(*)
       double precision, intent(in), managed :: Xia(*), Xka(*)
-      double precision, intent(in), managed :: Jia(*), Jka(*), Jij(*), Jkj(*)
-      double precision, intent(in), managed :: Kia(*), Kka(*), Kij(*), Kkj(*)
+      double precision, intent(in), managed :: Jia(*), Jka(*)
+      double precision, intent(in), managed :: Jij(*), Jkj(*)
+      double precision, intent(in), managed :: Kia(*), Kka(*)
+      double precision, intent(in), managed :: Kij(*), Kkj(*)
       double precision, intent(in), managed :: Dja(*), Djka(*), Djia(*)
 ! used to make inline threaded tengy correct - for now
 ! it is correct that dint[cx]1 are paired with t1v2 and vice versa

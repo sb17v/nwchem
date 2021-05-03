@@ -120,7 +120,7 @@ endif
 
  LIBRARY = libccsd.a
 
-FOPTIONS += -stdpar -acc -gpu=managed
+FOPTIONS += -stdpar -acc -gpu=managed -cuda -cudalib=cublas
 
 include ../config/makelib.h
 
