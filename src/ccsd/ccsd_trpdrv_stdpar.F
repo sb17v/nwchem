@@ -5,6 +5,7 @@
      &     oseg_lo,oseg_hi, kchunk,
      &     Tij, Tkj, Tia, Tka, Xia, Xka, Jia, Jka, Kia, Kka,
      &     Jij, Jkj, Kij, Kkj, Dja, Djka, Djia)
+      use iso_fortran_env
       use cudafor
       use cublas
       implicit none
@@ -20,6 +21,7 @@
       double precision, intent(inout) :: emp4,emp5
       double precision, intent(in) :: t1(*)
       integer, intent(in) :: ncor,nocc,nvir
+      integer(INT32) :: nv4, no4 ! cublasDgemm requires 32-bit integers
       integer, intent(in) :: iprt
       integer, intent(in) :: g_objo,g_objv,g_coul,g_exch
       integer, intent(in) :: oseg_lo,oseg_hi, kchunk
@@ -249,61 +251,63 @@
                             call ga_nbwait(nbh_coul1)
                             call ga_nbwait(nbh_coul2)
                         endif
-                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
-     1                       Jia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
-     2                       f1n,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Tia,nvir,Kkj(1+(k-klo)*lnov),nocc,1.0d0,
-     2                       f1n,nvir)
+                        nv4 = nvir ! no possibility of overflow
+                        no4 = nocc
+                        call cublasDgemm('n','t',nv4,nv4,nv4,1.0d0,
+     1                       Jia,nv4,Tkj(1+(k-klo)*lnvv),nv4,0.0d0,
+     2                       f1n,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Tia,nv4,Kkj(1+(k-klo)*lnov),no4,1.0d0,
+     2                       f1n,nv4)
 
-                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
-     1                       Kia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
-     2                       f2n,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Xia,nvir,Kkj(1+(k-klo)*lnov),nocc,1.0d0,
-     2                       f2n,nvir)
+                        call cublasDgemm('n','t',nv4,nv4,nv4,1.0d0,
+     1                       Kia,nv4,Tkj(1+(k-klo)*lnvv),nv4,0.0d0,
+     2                       f2n,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Xia,nv4,Kkj(1+(k-klo)*lnov),no4,1.0d0,
+     2                       f2n,nv4)
 
-                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
-     1                       Jia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
-     2                       f3n,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Tia,nvir,Jkj(1+(k-klo)*lnov),nocc,1.0d0,
-     2                       f3n,nvir)
+                        call cublasDgemm('n','n',nv4,nv4,nv4,1.0d0,
+     1                       Jia,nv4,Tkj(1+(k-klo)*lnvv),nv4,0.0d0,
+     2                       f3n,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Tia,nv4,Jkj(1+(k-klo)*lnov),no4,1.0d0,
+     2                       f3n,nv4)
 
-                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
-     1                       Kia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
-     2                       f4n,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Xia,nvir,Jkj(1+(k-klo)*lnov),nocc,1.0d0,
-     2                       f4n,nvir)
+                        call cublasDgemm('n','n',nv4,nv4,nv4,1.0d0,
+     1                       Kia,nv4,Tkj(1+(k-klo)*lnvv),nv4,0.0d0,
+     2                       f4n,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Xia,nv4,Jkj(1+(k-klo)*lnov),no4,1.0d0,
+     2                       f4n,nv4)
 
-                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
-     1                       Jka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
-     2                       f1t,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Tka(1+(k-klo)*lnov),nvir,Kij,nocc,1.0d0,
-     2                       f1t,nvir)
+                        call cublasDgemm('n','t',nv4,nv4,nv4,1.0d0,
+     1                       Jka(1+(k-klo)*lnvv),nv4,Tij,nv4,0.0d0,
+     2                       f1t,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Tka(1+(k-klo)*lnov),nv4,Kij,no4,1.0d0,
+     2                       f1t,nv4)
 
-                        call cublasDgemm('n','t',nvir,nvir,nvir,1.0d0,
-     1                       Kka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
-     2                       f2t,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Xka(1+(k-klo)*lnov),nvir,Kij,nocc,1.0d0,
-     2                       f2t,nvir)
+                        call cublasDgemm('n','t',nv4,nv4,nv4,1.0d0,
+     1                       Kka(1+(k-klo)*lnvv),nv4,Tij,nv4,0.0d0,
+     2                       f2t,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Xka(1+(k-klo)*lnov),nv4,Kij,no4,1.0d0,
+     2                       f2t,nv4)
 
-                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
-     1                       Jka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
-     2                       f3t,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Tka(1+(k-klo)*lnov),nvir,Jij,nocc,1.0d0,
-     2                       f3t,nvir)
+                        call cublasDgemm('n','n',nv4,nv4,nv4,1.0d0,
+     1                       Jka(1+(k-klo)*lnvv),nv4,Tij,nv4,0.0d0,
+     2                       f3t,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Tka(1+(k-klo)*lnov),nv4,Jij,no4,1.0d0,
+     2                       f3t,nv4)
 
-                        call cublasDgemm('n','n',nvir,nvir,nvir,1.0d0,
-     1                       Kka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
-     2                       f4t,nvir)
-                        call cublasDgemm('n','n',nvir,nvir,nocc,-1.0d0,
-     1                       Xka(1+(k-klo)*lnov),nvir,Jij,nocc,1.0d0,
-     2                       f4t,nvir)
+                        call cublasDgemm('n','n',nv4,nv4,nv4,1.0d0,
+     1                       Kka(1+(k-klo)*lnvv),nv4,Tij,nv4,0.0d0,
+     2                       f4t,nv4)
+                        call cublasDgemm('n','n',nv4,nv4,no4,-1.0d0,
+     1                       Xka(1+(k-klo)*lnov),nv4,Jij,no4,1.0d0,
+     2                       f4t,nv4)
 
                         if (occsdps) then
                            call pstat_off(ps_doxxx)
