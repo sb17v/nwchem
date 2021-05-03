@@ -605,7 +605,7 @@ ifdef USE_GAGITHUB
 #to get develop, set GA_BRANCH-develop
     ifdef DEV_GA
       GA_DIR = ga-develop
-      GA_BRANCH = develop
+      GA_BRANCH = cudaMallocManaged
     else
       GA_DIR0=ga-$(GA_BRANCH)
       GA_DIR=$(shell echo $(GA_DIR0) | sed -e 's/\//_/g')
@@ -629,6 +629,10 @@ endif
 ifndef ARMCI_NETWORK
     ARMCI_NETWORK=MPI-TS
     MAYBE_ARMCI = --with-mpi-ts
+endif
+# CUDA UM support
+ifdef NWCHEM_LINK_CUDA
+    MAYBE_ARMCI +=  --enable-cuda-mem
 endif
 #
 # Apparently weak bindings do not work with CYGWIN64 at the moment. There seems
