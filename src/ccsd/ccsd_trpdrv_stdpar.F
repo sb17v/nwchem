@@ -25,7 +25,6 @@
       integer, intent(in) :: iprt
       integer, intent(in) :: g_objo,g_objv,g_coul,g_exch
       integer, intent(in) :: oseg_lo,oseg_hi, kchunk
-! FYI: f[1234][nt] parent routine allocates these on the heap (+fastmem)
       double precision, intent(in), managed :: f1n(nvir,nvir)
       double precision, intent(in), managed :: f2n(nvir,nvir)
       double precision, intent(in), managed :: f3n(nvir,nvir)
@@ -34,9 +33,7 @@
       double precision, intent(in), managed :: f2t(nvir,nvir)
       double precision, intent(in), managed :: f3t(nvir,nvir)
       double precision, intent(in), managed :: f4t(nvir,nvir)
-! TODO: allocate a copy of eorb on heap with fastmem for KNL
       double precision, intent(in), managed :: eorb(*)
-! TODO: determine if these should be allocated w/ fastmem in parent subroutine
       double precision, intent(in), managed :: Tij(*), Tkj(*)
       double precision, intent(in), managed :: Tia(*), Tka(*)
       double precision, intent(in), managed :: Xia(*), Xka(*)
@@ -52,7 +49,7 @@
       double precision, allocatable, managed :: dintc1(:),dintc2(:)
       double precision, allocatable, managed :: dintx1(:),dintx2(:)
       double precision, allocatable, managed :: t1v1(:),t1v2(:)
-      integer :: alloc_error
+      integer :: alloc_error, err
 !
       double precision :: emp4i,emp5i,emp4k,emp5k
       double precision :: eaijk,denom
@@ -230,7 +227,7 @@
                            call qenter('doxxx',0)
                         endif
 !
-!  These are the input dependencies for the cublasDgemm calls below.
+!  These are the input dependencies for the DGEMM calls below.
 !  We wait on all of them here because GA is not even remotely thread-safe.
 !  All of these are independent of k, so we wait on them only
 !  at the first trip of the loop.
@@ -309,6 +306,9 @@
      1                       Xka(1+(k-klo)*lnov),nv4,Jij,no4,1.0d0,
      2                       f4t,nv4)
 
+! this is necessary if OpenACC is not used below
+!                        err = cudaDeviceSynchronize()
+
                         if (occsdps) then
                            call pstat_off(ps_doxxx)
                            call pstat_on(ps_tengy)
@@ -328,8 +328,11 @@
      E                       11 ) +
      5                       2*27 )
 #endif
-           do concurrent (b=1:nvir, c=1:nvir) local(denom) 
-!     &                   reduction(+:emp4i,emp4k,emp5i,emp5k)
+
+!$acc parallel loop collapse(2) private(denom) 
+!$acc&         reduction(+:emp4i,emp4k,emp5i,emp5k)
+           do b=1,nvir
+             do c=1,nvir
                    denom=-1.0d0/( eorb(ncor+nocc+b)
      &                           +eorb(ncor+nocc+c)+eaijk )
                    emp4i=emp4i+denom*
@@ -366,7 +369,8 @@
      &                        +denom*t1v2(b)*dintc2(c)*
      &                 (     f1t(b,c)+f4t(b,c)+f1n(c,b)
      &                   -2*(f2t(b,c)+f3t(b,c)+f2n(c,b)))
-           end do ! concurrent
+             end do
+           end do
                          if (occsdps) then
                             call pstat_off(ps_tengy)
                          else
