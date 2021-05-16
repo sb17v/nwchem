@@ -46,6 +46,7 @@ c
       !common / cgsd_block / Enew,Eold,alpha
 
       integer it,it_in,i,ispin,bfgscount,icount,sd_it,cg_it
+      integer maxit_orbs
 
       logical value,precondition,done,stalled,deltav_bad(4),oprint
       logical ks_block
@@ -55,7 +56,7 @@ c
       real*8 e_lj,e_q,e_spring
       real*8 ehfx,phfx
       
-      logical cosmo_on,cosmo1_on,V_APC_on
+      logical cosmo_on,cosmo1_on,V_APC_on,field_exist
       real*8  eapc,papc
 
 *     **** external functions ****
@@ -100,6 +101,10 @@ c
       real*8   pspw_charge_Energy_ion,pspw_charge_Energy_charge
       external pspw_charge_found,control_precondition,pspw_HFX
       external pspw_charge_Energy_ion,pspw_charge_Energy_charge
+      logical  pspw_Efield_found
+      external pspw_Efield_found
+      real*8   pspw_Efield_Energy_ion
+      external pspw_Efield_Energy_ion
 
       real*8   psi_1_noupdate_energy,psi_eigenvalue
       external psi_1_noupdate_energy,psi_eigenvalue
@@ -115,8 +120,10 @@ c
       real*8   psi_1vl_cosmo,nwpw_cosmo_EQionq,nwpw_cosmo_Eqq
       external psi_1vl_cosmo,nwpw_cosmo_EQionq,nwpw_cosmo_Eqq
 
-      integer  control_ks_maxit_orb
-      external control_ks_maxit_orb
+      integer  control_ks_maxit_orb,control_ks_maxit_orbs
+      external control_ks_maxit_orb,control_ks_maxit_orbs
+      integer  control_diis_histories
+      external control_diis_histories
 
    
       Ein = E(1)
@@ -125,6 +132,7 @@ c
       cosmo_on  = nwpw_cosmo_on()
       cosmo1_on = nwpw_cosmo1_on()
       V_APC_on  = pspw_V_APC_on()
+      field_exist = pspw_charge_found().or.pspw_Efield_found()
 
       call D3dB_nx(1,nx)
       call D3dB_ny(1,ny)
@@ -139,6 +147,7 @@ c
         sd_it = 10
         cg_it = 10
       end if
+      maxit_orbs = control_ks_maxit_orbs() 
       tole  = control_tole()
       tolc  = control_tolc()
       precondition = control_precondition()
@@ -219,7 +228,8 @@ c      call dcopy(2*n2ft3d,0.0d0,0,dbl_mb(rho_in(1)),1)
   
 *     **** iniitialize SCF Mixing ****    
       call nwpw_scf_mixing_init(control_scf_algorithm(),alpha,
-     >                5,ispin,n2ft3d,dbl_mb(vall_out(1)))
+     >                          control_diis_histories(),
+     >                          ispin,n2ft3d,dbl_mb(vall_out(1)))
 
 *     **** iniitialize RMM-DIIS ****
       if (control_ks_algorithm().eq.1) call pspw_rmmdiis_init(5)
@@ -239,7 +249,7 @@ c      call dcopy(2*n2ft3d,0.0d0,0,dbl_mb(rho_in(1)),1)
       
 *     **** diaganolize KS matrix ****
       if (ks_block) then
-         call psi_KS_block_update(e00,deltae,it,ks_deltae)
+         call psi_KS_block_update(e00,deltae,it,maxit_orbs,ks_deltae)
       else
          call psi_KS_update(1,
      >                      control_ks_algorithm(),
@@ -472,23 +482,24 @@ c      call psi_check()
             E(48) = nwpw_cosmo_Eqq()    !** E(q|q)
 
             !E(1)  = E(1) + E(22) - E(23) + E(47) + E(48)
-            E(1)  = E(1) + E(22) - E(23)
+            E(1)  = E(1) + E(22) - E(23) !*** probably NOT CORRECT ***
          end if
 
       else if (V_APC_on) then
          call electron_apc_energies(eapc,papc)
          E(22) = eapc
          E(23) = papc
-         E(1)  = E(1) + eapc - papc
+         E(1)  = E(1) + eapc - papc !*** probably NOT CORRECT ***
       end if
 
 
-*     **** get pspw_charge  energies ****
-      if (pspw_charge_found()) then
-         E(19)  = psi_1v_field()
-         E(20)  = pspw_charge_Energy_ion()
-         E(21)  = pspw_charge_Energy_charge()
-         E(1)   = E(1) + E(20) + E(21)
+*     **** get pspw_charge pspw_Efield energies ****
+      if (field_exist) then
+         E(49)  = psi_1v_field()
+         E(50)  = pspw_charge_Energy_ion()
+     >          + pspw_Efield_Energy_ion()
+         E(51)  = pspw_charge_Energy_charge()
+         E(1)   = E(1) + E(50) + E(51)
       end if
 
 *     **** HFX terms ****

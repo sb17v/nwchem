@@ -64,6 +64,7 @@ c
       real*8 ehartree,eorbit,exc,pxc,eion,eke,evl,evnl
 
       integer it,it_in,i,j,ispin,bfgscount,icount,sd_it,cg_it,it2
+      integer maxit_orb,maxit_orbs
 
       logical value,precondition,done,stalled,deltav_bad(4),oprint
       logical dohfx,assending,ks_block
@@ -73,7 +74,7 @@ c
       real*8 e_lj,e_q,e_spring
       real*8 ehfx,phfx
       
-      logical cosmo_on,cosmo1_on,V_APC_on
+      logical cosmo_on,cosmo1_on,V_APC_on,field_exist
       real*8  eapc,papc
 
 
@@ -123,6 +124,10 @@ c
       external pspw_charge_found,control_precondition,pspw_HFX
       external pspw_HFX_relaxed,psp_U_psputerm,meta_found
       external pspw_charge_Energy_ion,pspw_charge_Energy_charge
+      logical  pspw_Efield_found
+      external pspw_Efield_found
+      real*8   pspw_Efield_Energy_ion
+      external pspw_Efield_Energy_ion
 
       real*8   psi_1_noupdate_energy,psi_eigenvalue
       external psi_1_noupdate_energy,psi_eigenvalue
@@ -139,9 +144,11 @@ c
       external nwpw_cosmo_on,nwpw_cosmo1_on,pspw_V_APC_on
       real*8   psi_1vl_cosmo,nwpw_cosmo_EQionq,nwpw_cosmo_Eqq
       external psi_1vl_cosmo,nwpw_cosmo_EQionq,nwpw_cosmo_Eqq
-      integer  control_ks_maxit_orb
-      external control_ks_maxit_orb
+      integer  control_ks_maxit_orb,control_ks_maxit_orbs
+      external control_ks_maxit_orb,control_ks_maxit_orbs
 
+      integer   control_diis_histories
+      external  control_diis_histories
 
       Ein = E(1)
       call Parallel_taskid(taskid)
@@ -150,6 +157,7 @@ c
       cosmo_on  = nwpw_cosmo_on()
       cosmo1_on = nwpw_cosmo1_on()
       V_APC_on  = pspw_V_APC_on()
+      field_exist = pspw_charge_found().or.pspw_Efield_found()
 
       call D3dB_nx(1,nx)
       call D3dB_ny(1,ny)
@@ -164,6 +172,8 @@ c
         sd_it = 10
         cg_it = 10
       end if
+      maxit_orb  = control_ks_maxit_orb()
+      maxit_orbs = control_ks_maxit_orbs()
       tole  = control_tole()
       tolc  = control_tolc()
       precondition = control_precondition()
@@ -212,12 +222,8 @@ c
 
          ks_deltae = tole
          value = .false.
+
          if (rho_read) call rho_2to1()
-c         if (control_fractional()) then
-c            if (control_use_fractional_rho()) then
-c               value = psi_try_read_density(1)
-c            end if
-c         end if
          call electron_gen_vall()
          call psi_get_density(1,dbl_mb(rho_in(1)))
          call psi_get_density(1,dbl_mb(rho_out(1)))
@@ -233,7 +239,8 @@ c         end if
          if (dohfx) call psi_1genrho()
          if (control_fractional()) then
             call psi_1assending_occupation()
-            call psi_1define_occupation(0.0d0,.false.)
+            !call psi_1define_occupation(0.0d0,.false.)
+            call psi_1define_occupation(-1.0d0,.false.)
             Enew1 = Enew1 + psi_smearcorrection()
          end if
 !$OMP MASTER
@@ -258,7 +265,8 @@ c         end if
   
 *     **** iniitialize SCF Mixing ****    
       call nwpw_scf_mixing_init(control_scf_algorithm(),alpha,
-     >                5,ispin,n2ft3d,dbl_mb(rho_out(1)))
+     >                          control_diis_histories(),
+     >                          ispin,n2ft3d,dbl_mb(rho_out(1)))
 
 *     **** iniitialize RMM-DIIS ****
       if (control_ks_algorithm().eq.1) call pspw_rmmdiis_init(5)
@@ -278,7 +286,8 @@ c         end if
       
 *     **** diaganolize KS matrix - note that Hpsik set to last application of H(rho)|psi> ****
       if (ks_block) then
-         call psi_KS_block_update(e00_shared,deltae,it,ks_deltae)
+         call psi_KS_block_update(e00_shared,deltae,it,
+     >                            maxit_orbs,ks_deltae)
       else
          call psi_KS_update(1,
      >                      control_ks_algorithm(),
@@ -294,6 +303,7 @@ c         end if
       call psi_1rotate2()
       call psi_2to1()
 
+
 !$OMP BARRIER
 
 *     **** define fractional occupation ****
@@ -301,6 +311,7 @@ c         end if
      >   call psi_1define_occupation(-1.0d0,.false.)
 
 !$OMP BARRIER
+
 
       e00 = psi_1energy()
 !$OMP MASTER
@@ -311,13 +322,11 @@ c         end if
       deltae = Enew_shared - Eold_shared
 !$OMP END MASTER
 
+
       !call electron_gen_vall()
       call psi_get_density(1,dbl_mb(rho_in(1)))
 
 *     **** compute deltaV ****
-c      call dcopy(ispin*n2ft3d,
-c     >           dbl_mb(rho_in(1)),1,
-c     >           dbl_mb(rho_junk(1)),1)
       call Parallel_shared_vector_copy(.true.,ispin*n2ft3d,
      >                                 dbl_mb(rho_in(1)), 
      >                                 dbl_mb(rho_junk(1)))
@@ -447,6 +456,25 @@ c         call D3dB_SumAll(deltav)
 !$OMP END MASTER
  1310 FORMAT(I8,E20.11,3E15.5)
 
+*     *** reduce ks iterations in block cg ***
+      if (ks_block.and.(deltae.gt.0.0d0).and.
+     >    (deltac.lt.1.0d-4).and.
+     >    (deltav.lt.1.0d-4)) then
+         if ((maxit_orb.gt.1).and.(maxit_orb.gt.maxit_orbs)) then
+            maxit_orb = maxit_orb - 1
+            call linesearch_maxiter_set(maxit_orb)
+            if ((oprint).and.(.not.set_iterations)) then 
+               write(luout,1311) maxit_orb,maxit_orbs
+            end if
+         else if (maxit_orbs.gt.1) then
+            maxit_orbs = maxit_orbs - 1
+            if ((oprint).and.(.not.set_iterations)) then 
+               write(luout,1311) maxit_orb,maxit_orbs
+            end if
+         end if
+      end if
+ 1311 FORMAT(5X, '     - Reducing Kohn-Sham iterations = ',I3,
+     >           ' (',I3,' outer)')
 
       !**** set ks_deltae ****
       ks_deltae = 0.001d0*dabs(deltae)
@@ -587,7 +615,7 @@ c         E(14) = E(14) + dng_1vl_mm()
             E(48) = e00  !** E(q|q)
 
             !E(1)  = E(1) + E(22) - E(23) + E(47) + E(48)
-            E(1)  = E(1) + E(22) - E(23)
+            E(1)  = E(1) + E(22) - E(23) !*** probably NOT CORRECT ***
 !$OMP END MASTER
          end if
 
@@ -596,22 +624,23 @@ c         E(14) = E(14) + dng_1vl_mm()
 !$OMP MASTER
          E(22) = eapc
          E(23) = papc
-         E(1)  = E(1) + eapc - papc
+         E(1)  = E(1) + eapc - papc !*** probably NOT CORRECT ***
 !$OMP END MASTER
       end if
 
 
-*     **** get pspw_charge  energies ****
-      if (pspw_charge_found()) then
+*     **** get pspw_charge and pspw_Efield  energies ****
+      if (field_exist) then
          evl  = psi_1v_field()
          evnl = pspw_charge_Energy_ion()
+     >        + pspw_Efield_Energy_ion()
          e00  = pspw_charge_Energy_charge()
 
 !$OMP MASTER
-         E(19)  = evl
-         E(20)  = evnl
-         E(21)  = e00
-         E(1)   = E(1) + E(20) + E(21)
+         E(49)  = evl
+         E(50)  = evnl
+         E(51)  = e00
+         E(1)   = E(1) + E(50) + E(51)
 !$OMP END MASTER
       end if
 
