@@ -65,7 +65,7 @@
       else if (gga.eq.115) then
          call v_bwexc(15,n2ft3d,ispin,dn,0.80d0,1.0d0,xcp,xce)
       end if
-        
+
       return
       end
 
@@ -204,6 +204,14 @@
          write(luout,1131) 'TPSS03'
       ELSE IF (gga.eq.302) THEN
          write(luout,1131) 'SCAN'
+      ELSE IF (gga.eq.303) THEN
+         write(luout,1131) 'PKZB'
+      ELSE IF (gga.eq.304) THEN
+         write(luout,1131) 'M06-L'
+      ELSE IF (gga.eq.305) THEN
+         write(luout,1131) 'M06'
+      ELSE IF (gga.eq.306) THEN
+         write(luout,1131) 'M06-2X'
       ELSE
          write(luout,1131) 'unknown parameterization'
          call errquit('bad exchange_correlation',0, INPUT_ERR)
@@ -218,12 +226,17 @@
       end if
 
       if (control_has_disp()) then
-        if (index(control_options_disp(),'-old').ne.0) 
-     >    write(luout,1132) 'Grimme2'
-        if (index(control_options_disp(),'-zero').ne.0) 
-     >    write(luout,1132) 'Grimme3'
-        if (index(control_options_disp(),'-bj').ne.0) 
-     >    write(luout,1132) 'Grimme4'
+        if (index(control_options_disp(),'-old').ne.0) then
+          write(luout,1132) 'Grimme2'
+        else if (index(control_options_disp(),'-zerom').ne.0)  then
+          write(luout,1132) 'Grimme5'
+        else if (index(control_options_disp(),'-zero').ne.0)  then
+          write(luout,1132) 'Grimme3'
+        else if (index(control_options_disp(),'-bjm').ne.0) then
+           write(luout,1132) 'Grimme6'
+        else if (index(control_options_disp(),'-bj').ne.0) then
+          write(luout,1132) 'Grimme4'
+        end if
       end if
       
 

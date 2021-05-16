@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #if !defined(__MINGW32__)
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -19,14 +20,14 @@
 
 
 
-#if defined(CRAY) || defined(CRAY_T3D)
+#if defined(CRAY)
 #include <fortran.h>
 #if !defined(__crayx1)
 #define USE_FCD
 #endif
 #endif
 
-#if (defined(CRAY)  || defined(CRAY_T3D) || defined(WIN32)) &&!defined(__crayx1) &&!defined(__MINGW32__)
+#if (defined(CRAY) || defined(WIN32)) &&!defined(__crayx1) &&!defined(__MINGW32__)
 #define nwpw_talker_ nwpw_talker
 #define nwpw_talker_close_ nwpw_talker_close
 #define nwpw_talker_write_ nwpw_talker_write
@@ -36,6 +37,7 @@
 void FATR nwpw_talker_
 #if defined(USE_FCD)
 ( const _fcd fcd_addr_name,
+ Integer *inet,
  Integer *n1,
  Integer *portin,
  Integer *sockout)
@@ -43,8 +45,9 @@ void FATR nwpw_talker_
     char *addr_name = _fcdtocp(fcd_addr_name);
 
 #else
-(addr_name,n1,portin,sockout)
+(addr_name,inet,n1,portin,sockout)
 char	addr_name[];
+Integer *inet;
 Integer	*n1;
 Integer *portin;
 Integer *sockout;
@@ -57,35 +60,58 @@ Integer *sockout;
         exit(1);
 #else
     int sock = 0, valread; 
-    struct sockaddr_in serv_addr; 
     int na   = ((int) *n1);
-    int port = ((int) *portin);
-    
+
     addr_name[na]   = 0;
     addr_name[na+1] = 0;
-    
-    printf("nwpw_talker: addr_name=%s\n",addr_name);
-    printf("nwpw_talker: port=%d\n",port);
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
-    { 
-        printf("\nnwpw_talker:Socket creation error \n"); 
-        exit(1);
-    } 
-    serv_addr.sin_family = AF_INET; 
-    serv_addr.sin_port = htons(port); 
+    if (*inet>0)
+    {
+        struct sockaddr_in serv_addr; 
+        int port = ((int) *portin);
+        
+        printf("nwpw_talker: addr_name=%s\n",addr_name);
+        printf("nwpw_talker: port=%d\n",port);
 
-    // Convert IPv4 and IPv6 addresses from text to binary form 
-    if(inet_pton(AF_INET, addr_name, &serv_addr.sin_addr)<=0)  
-    { 
-        printf("\nnwpw_talker:Invalid address/ Address not supported \n"); 
-        exit(1);
-    } 
-    if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
-    { 
-        printf("\nnwpw_talker:Connection Failed \n"); 
-        exit(1);
-    } 
+        if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+        { 
+            printf("\nnwpw_talker:Socket creation error \n"); 
+            exit(1);
+        } 
+        serv_addr.sin_family = AF_INET; 
+        serv_addr.sin_port = htons(port); 
+
+        // Convert IPv4 and IPv6 addresses from text to binary form 
+        if(inet_pton(AF_INET, addr_name, &serv_addr.sin_addr)<=0)  
+        { 
+            printf("\nnwpw_talker:Invalid address/ Address not supported \n"); 
+            exit(1);
+        } 
+        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) 
+        { 
+            printf("\nnwpw_talker:Connection Failed \n"); 
+            exit(1);
+        } 
+    }
+    else
+    {
+        struct sockaddr_un serv_addr;
+        memset(&serv_addr, 0, sizeof(struct sockaddr_un));
+        serv_addr.sun_family = AF_UNIX;
+        strcpy(serv_addr.sun_path, "/tmp/ipi_");
+        strcpy(serv_addr.sun_path+9, addr_name);
+        if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+        {
+            printf("\nnwpw_talker:Socket creation error \n");
+            exit(1);
+        }
+        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+        {
+            printf("\nnwpw_talker:Failed to connect to UNIX socket \n");
+            exit(1);
+        }
+    }
+
     printf("nwpw_talker: sockid=%d\n",sock);
     *sockout = ((Integer) sock);
 #endif
@@ -190,7 +216,7 @@ Integer *n1;
 
 
 
-#if (defined(CRAY)  || defined(CRAY_T3D) || defined(WIN32)) &&!defined(__crayx1) &&!defined(__MINGW32__)
+#if (defined(CRAY) || defined(WIN32)) &&!defined(__crayx1) &&!defined(__MINGW32__)
 #define nwpw_listener_ nwpw_listener
 #endif
 

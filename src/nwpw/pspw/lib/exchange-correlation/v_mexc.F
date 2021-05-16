@@ -81,8 +81,10 @@ c        *****                          agr,fn,fdn      *****
      >        BA_push_get(mt_dbl, 2*n2ft3d,'fdn',fdn(2),fdn(1))
         tmp(1) = fdn(1)
       if (.not. value) call errquit('out of stack memory',0, MA_ERR)
-      call dcopy(n2ft3d,0.0d0,0,dbl_mb(rho(1)),1)
-      call dcopy(n2ft3d,0.0d0,0,dbl_mb(agr(1)),1)
+      call Parallel_shared_vector_zero(.false.,n2ft3d,dbl_mb(rho(1)))
+      call Parallel_shared_vector_zero(.true.,n2ft3d,dbl_mb(agr(1)))
+      !call dcopy(n2ft3d,0.0d0,0,dbl_mb(rho(1)),1)
+      !call dcopy(n2ft3d,0.0d0,0,dbl_mb(agr(1)),1)
 
 
 
@@ -161,6 +163,50 @@ c              ***** calculate xce,fn=df/dn, and fdn=df/d|grad n|, fdtau=df/dtau
      >                                dbl_mb(fn(1)),
      >                                dbl_mb(fdn(1)),
      >                                dbl_mb(dfdtau(1)))
+               else if (gga.eq.303) then
+                write(*,*) "pkzb not implemented!"
+                stop
+c                call gen_M06_restricted(n2ft3d,
+c     >                                dbl_mb(rho(1)),
+c     >                                dbl_mb(agr(1)),
+c     >                                dbl_mb(tau(1)),
+c     >                                x_parameter,c_parameter,
+c     >                                xce,
+c     >                                dbl_mb(fn(1)),
+c     >                                dbl_mb(fdn(1)),
+c     >                                dbl_mb(dfdtau(1)))
+               else if (gga.eq.304) then
+                call gen_M06L_restricted(n2ft3d,
+     >                                dbl_mb(rho(1)),
+     >                                dbl_mb(agr(1)),
+     >                                dbl_mb(tau(1)),
+     >                                x_parameter,c_parameter,
+     >                                xce,
+     >                                dbl_mb(fn(1)),
+     >                                dbl_mb(fdn(1)),
+     >                                dbl_mb(dfdtau(1)))
+               else if (gga.eq.305) then
+                call gen_M06_restricted(n2ft3d,
+     >                                dbl_mb(rho(1)),
+     >                                dbl_mb(agr(1)),
+     >                                dbl_mb(tau(1)),
+     >                                0.73d0,c_parameter,
+     >                                xce,
+     >                                dbl_mb(fn(1)),
+     >                                dbl_mb(fdn(1)),
+     >                                dbl_mb(dfdtau(1)))
+               else if (gga.eq.306) then
+                write(*,*) "m06-2x not implemented!"
+                stop
+c                call gen_M06_2x_restricted(n2ft3d,
+c     >                                dbl_mb(rho(1)),
+c     >                                dbl_mb(agr(1)),
+c     >                                dbl_mb(tau(1)),
+c     >                                0.46d0,c_parameter,
+c     >                                xce,
+c     >                                dbl_mb(fn(1)),
+c     >                                dbl_mb(fdn(1)),
+c     >                                dbl_mb(dfdtau(1)))
                else
                  call errquit('bad gga',0,0)
                end if
@@ -333,9 +379,12 @@ c        *****                          agr,fn,fdn      *****
         fdn(3) = xfdn(1) + 2*n2ft3d
         tmp(1) = xfdn(1)
       if (.not. value) call errquit('out of stack memory',0, MA_ERR)
-      call dcopy(n2ft3d,0.0d0,0,dbl_mb(rhoup(1)),1)
-      call dcopy(n2ft3d,0.0d0,0,dbl_mb(rhodn(1)),1)
-      call dcopy(3*n2ft3d,0.0d0,0,dbl_mb(xagr(1)),1)
+      call Parallel_shared_vector_zero(.false.,n2ft3d,dbl_mb(rhoup(1)))
+      call Parallel_shared_vector_zero(.false.,n2ft3d,dbl_mb(rhodn(1)))
+      call Parallel_shared_vector_zero(.true.,3*n2ft3d,dbl_mb(xagr(1)))
+      !call dcopy(n2ft3d,0.0d0,0,dbl_mb(rhoup(1)),1)
+      !call dcopy(n2ft3d,0.0d0,0,dbl_mb(rhodn(1)),1)
+      !call dcopy(3*n2ft3d,0.0d0,0,dbl_mb(xagr(1)),1)
 
 c        ***** calculate rhoup  ****
          call D3dB_r_Copy(1,dn(1,1),dbl_mb(rhoup(1)))
@@ -496,6 +545,50 @@ c
      >                                    dbl_mb(fn(1)),
      >                                    dbl_mb(fdn(1)),
      >                                    dbl_mb(dfdtau(1)))
+               else if (gga.eq.303) then
+                write(*,*) "pkzb not implemented!"
+                stop
+c               call gen_M06_unrestricted(n2ft3d,
+c     >                                    dn,
+c     >                                    dbl_mb(agr(1)),
+c     >                                    dbl_mb(tau(1)),
+c     >                                    x_parameter,c_parameter,
+c     >                                    xce,
+c     >                                    dbl_mb(fn(1)),
+c     >                                    dbl_mb(fdn(1)),
+c     >                                    dbl_mb(dfdtau(1)))
+               else if (gga.eq.304) then
+               call gen_M06L_unrestricted(n2ft3d,
+     >                                    dn,
+     >                                    dbl_mb(agr(1)),
+     >                                    dbl_mb(tau(1)),
+     >                                    x_parameter,c_parameter,
+     >                                    xce,
+     >                                    dbl_mb(fn(1)),
+     >                                    dbl_mb(fdn(1)),
+     >                                    dbl_mb(dfdtau(1)))
+               else if (gga.eq.305) then
+               call gen_M06_unrestricted(n2ft3d,
+     >                                    dn,
+     >                                    dbl_mb(agr(1)),
+     >                                    dbl_mb(tau(1)),
+     >                                    0.73d0,c_parameter,
+     >                                    xce,
+     >                                    dbl_mb(fn(1)),
+     >                                    dbl_mb(fdn(1)),
+     >                                    dbl_mb(dfdtau(1)))
+               else if (gga.eq.306) then
+                write(*,*) "m06-2x not implemented!"
+                stop
+c               call gen_M06_2x_unrestricted(n2ft3d,
+c     >                                    dn,
+c     >                                    dbl_mb(agr(1)),
+c     >                                    dbl_mb(tau(1)),
+c     >                                    0.46d0,c_parameter,
+c     >                                    xce,
+c     >                                    dbl_mb(fn(1)),
+c     >                                    dbl_mb(fdn(1)),
+c     >                                    dbl_mb(dfdtau(1)))
                else
                  call errquit('bad gga',0,0)
                end if
@@ -531,9 +624,11 @@ c
 c
 c             Replace f with the energy density f/n
 c
+!$OMP DO
               do k = 1, n2ft3d
                 xce(k) = xce(k)/(dn(k,1)+dn(k,2)+dncut)
-              enddo
+              end do
+!$OMP END DO
 c          
 c             Replace (df/d|grad nup|^2) with (df/d|grad nup|)
 c
@@ -552,11 +647,15 @@ c
      +                         dbl_mb(gtmp(1)+2*n2ft3d))
 c
 c             Put the results back into fdn
+              call Parallel_shared_vector_copy(.false.,n2ft3d,
+     >                       dbl_mb(gtmp(1)+n2ft3d),dbl_mb(fdn(2))) 
+              call Parallel_shared_vector_copy(.true.,n2ft3d,
+     >                       dbl_mb(gtmp(1)+2*n2ft3d),dbl_mb(fdn(3)))
 c
-              call dcopy(n2ft3d,dbl_mb(gtmp(1)+n2ft3d),1,
-     +                       dbl_mb(fdn(2)),1) 
-              call dcopy(n2ft3d,dbl_mb(gtmp(1)+2*n2ft3d),1,
-     +                       dbl_mb(fdn(3)),1) 
+c              call dcopy(n2ft3d,dbl_mb(gtmp(1)+n2ft3d),1,
+c     +                       dbl_mb(fdn(2)),1) 
+c              call dcopy(n2ft3d,dbl_mb(gtmp(1)+2*n2ft3d),1,
+c     +                       dbl_mb(fdn(3)),1) 
 c
             end if
          else
