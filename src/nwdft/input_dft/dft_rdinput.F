@@ -443,7 +443,7 @@ c
 c
 c     case with multiple tasks and we changed iterations ... (increased)
 c
-      else  if(ncysh.eq.30.and.iterations.gt.30) then
+      else  if(iterations.gt.30) then
          ncysh=iterations
       endif
       if (.not. rtdb_put(rtdb, 'dft:ncysh',
@@ -460,7 +460,7 @@ c
 c
 c     case with multiple tasks and we changed iterations ... (increased)
 c
-      else  if(ncyds.eq.30.and.iterations.gt.30) then
+      else  if(iterations.gt.30) then
          ncyds=iterations
       endif
       if (.not. rtdb_put(rtdb, 'dft:ncyds',
@@ -603,7 +603,10 @@ c
       cname(67)='            SCAN-L Correlation Potential'
       cname(68)='            revM06 Correlation Potential'
       cname(69)='          revM06-L Correlation Potential'
-      cname(71)='           regSCAN Correlation Potential'
+      cname(71)='             rSCAN Correlation Potential'
+      cname(73)='           r^2SCAN Correlation Potential'
+      cname(74)='         r^2SCAN-L Correlation Potential'
+      cname(75)='     HCTH147@TZ2P Correlation Functional'
 c
 c     Exchange functional name defaults.
 c
@@ -670,8 +673,11 @@ c
       xname(68)='              revM06 Exchange Functional'
       xname(69)='            revM06-L Exchange Functional'
       xname(70)='                LB94 Exchange Functional'
-      xname(71)='     regSCAN metaGGA Exchange Functional'
+      xname(71)='       rSCAN metaGGA Exchange Functional'
       xname(72)='            NCAP GGA Exchange Functional'
+      xname(73)='     r^2SCAN metaGGA Exchange Functional'
+      xname(74)='   r^2SCAN-L metaGGA Exchange Functional'
+      xname(75)='       HCTH147@TZ2P  Exchange Functional'
 c
 c     Exchange-Correlation combination functional name defaults.
 c
@@ -738,8 +744,11 @@ c
       xcname(68)='             revM06 Method XC Functional'
       xcname(69)='           revM06-L Method XC Functional'
       xcname(70)='              SCAN0 Method XC Functional'
-      xcname(71)='            regSCAN Method XC Functional'
+      xcname(71)='              rSCAN Method XC Functional'
       xcname(72)='               NCAP Method XC Functional'
+      xcname(73)='            r^2SCAN Method XC Functional'
+      xcname(74)='          r^2SCAN-L Method XC Functional'
+      xcname(75)='      HCTH147@TZ2P  Method XC Functional'
 c     
 c     place character XC parameters in rtdb
 c     
@@ -1206,6 +1215,7 @@ c
       if (movecs_out.eq.' ')then
          if (movecs_in.eq.'atomic' .or. movecs_in.eq.'hcore' .or. 
      $        movecs_in.eq.'project' .or. movecs_in.eq.'fragment'.or.
+     $        movecs_in.eq.'molden'.or.
      $        movecs_in.eq.'rotate')then
             call util_file_name('movecs', .false.,.false.,movecs_out)
          else
@@ -1229,7 +1239,7 @@ c     permanent directory
 c
       if (movecs_in.eq.'atomic' .or. movecs_in.eq.'hcore' .or. 
      $        movecs_in.eq.'project' .or. movecs_in.eq.'fragment'.or.
-     $        movecs_in.eq.'rotate')then
+     $        movecs_in.eq.'rotate'.or.movecs_in.eq.'molden')then
          movecs_guess = movecs_in
       else
          call util_file_name_resolve(movecs_in, .false.)

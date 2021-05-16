@@ -41,12 +41,15 @@
 
       !*** set y-axis ***
       do j=1,MaxRow
-         Point(j,11+ascii_xscale(0.0d0) ) = ":" ! y-axis
+         Point(j,min(maxcol,11+ascii_xscale(0.0d0))) = ":" ! y-axis
       end do
 
       !*** set x-axis ***
       do i=12,MaxCol
-         Point(ascii_yscale(0.0d0),i) = "-"  ! x-axis
+         j=min(maxrow,ascii_yscale(0.0d0))
+         if (j.ge.1) Point(j,i) = "-"  ! x-axis
+c         j=max(1,j)
+c         Point(j,i) = "-"  ! x-axis
       end do
 
       !*** set ylabels ***
@@ -55,21 +58,26 @@
          Point(20,i) = nstrd(i:i)
       end do
       if (ascii_yscale(0.0d0).lt.20) then
-         Point(ascii_yscale(0.0d0),1)  = " "
-         Point(ascii_yscale(0.0d0),2)  = "0"
-         Point(ascii_yscale(0.0d0),3)  = "."
-         Point(ascii_yscale(0.0d0),4)  = "0"
-         Point(ascii_yscale(0.0d0),5)  = "0"
-         Point(ascii_yscale(0.0d0),6)  = "0"
-         Point(ascii_yscale(0.0d0),7)  = "E"
-         Point(ascii_yscale(0.0d0),8)  = "+"
-         Point(ascii_yscale(0.0d0),9)  = "0"
-         Point(ascii_yscale(0.0d0),10) = "0"
+         i=min(maxrow,ascii_yscale(0.0d0))
+c         i=max(1,i)
+         if (i.ge.1) then
+            Point(i,1)  = " "
+            Point(i,2)  = "0"
+            Point(i,3)  = "."
+            Point(i,4)  = "0"
+            Point(i,5)  = "0"
+            Point(i,6)  = "0"
+            Point(i,7)  = "E"
+            Point(i,8)  = "+"
+            Point(i,9)  = "0"
+            Point(i,10) = "0"
+         end if
       end if
 
       !**** plot points ****
       do i=1,n
-        Point(ascii_yscale(y(i)),11+ascii_xscale(x(I))) = Symbol
+         Point(min(ascii_yscale(y(i)),maxrow),
+     >        min(11+ascii_xscale(x(i)),maxcol)) = Symbol
       end do
 
       !**** write graph to lunit ****
@@ -117,7 +125,8 @@
       real*8 x
 
       integer MaxRow,MaxCol
-      parameter (MaxRow=20,MaxCol=75)
+!      parameter (MaxRow=20,MaxCol=75)
+      parameter (MaxRow=20,MaxCol=86)
 
       real*8  XL,XR,YD,YU
       common /ascii_pcommon/ XL,XR,YD,YU
@@ -136,7 +145,8 @@
       real*8 y
 
       integer MaxRow,MaxCol
-      parameter (MaxRow=20,MaxCol=75)
+!      parameter (MaxRow=20,MaxCol=75)
+      parameter (MaxRow=20,MaxCol=86)
 
       real*8  XL,XR,YD,YU
       common /ascii_pcommon/ XL,XR,YD,YU

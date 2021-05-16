@@ -83,7 +83,9 @@ c     xps variables
       logical lxps
       integer lenstr
       character*255 inp_vecs
-
+      logical int_forcenwints,gonwxc
+      external int_forcenwints
+      character*20 rtdb_errmsg
       data dirs /'convergence','decomp','dft','direct','semidirect',
      $         'ecp','grid','vectors','incore','iterations', 
      $         'max_ovl','mulliken','mult','noio','noprint','odft', 
@@ -341,7 +343,21 @@ c
       if (test(1:3).eq."old") then
         call xc_input(rtdb, 'dft')
       else if (test(1:3).eq."new") then
-         call nwxc_input(out1)
+         if (.not. rtdb_get(rtdb, 'dft:gonwxc', mt_log, 1, gonwxc))
+     &        gonwxc=.false.
+         if(gonwxc) then
+            call nwxc_input(out1)
+         else
+            write(luout,*) '**************************  '
+            write(luout,*) ' nwxc input disabled '
+            write(luout,*) ' To use this unsupported feature, add the '
+            write(luout,*) ' following line to the input file '
+            write(luout,*) ' before the dft section '
+            write(luout,*) '  '
+            write(luout,*) ' set dft:gonwxc .true. '
+            write(luout,*) '**************************  '
+            out1=.false.
+         endif
         if (.not.out1) then
           call errquit("dft_input: nwxc_input failed",0,UERR)
         endif
@@ -575,10 +591,12 @@ c  get cam_beta
      &     RTDB_ERR)
 c           write(luout,*) "cam_beta:",cam_beta
       end if
+#if 0
 c
 c     Force texas integrals to false for CAM calculations
-      if (.not.rtdb_put(rtdb,'int:cando_txs',mt_log,1,.false.))
-     &   call errquit('cannot set int:cando_txs',0, RTDB_ERR)
+      if(.not.int_forcenwints(rtdb,rtdb_errmsg))
+     &     call errquit(rtdb_errmsg,0, RTDB_ERR)
+#endif
 c
       goto 10
 c
@@ -648,7 +666,9 @@ c
           else if (mp2char.eq.'disk') then
             which_mp2 = 1
           else if (mp2char.eq.'direct') then
-            which_mp2 = 2
+             which_mp2 = 2
+             call errquit('dft_input: dftmp2 direct disabled',0,
+     C            CAPMIS_ERR)
           else if (mp2char.eq.'ri') then
             which_mp2 = 3
           else if (mp2char.eq.'rimp2') then
