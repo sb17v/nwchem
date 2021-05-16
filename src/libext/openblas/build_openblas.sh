@@ -1,19 +1,27 @@
 #!/usr/bin/env bash
 set -v
 arch=`uname -m`
-VERSION=0.3.13
+VERSION=0.3.15
+#COMMIT=974acb39ff86121a5a94be4853f58bd728b56b81
+BRANCH=develop
 if [ -f  OpenBLAS-${VERSION}.tar.gz ]; then
     echo "using existing"  OpenBLAS-${VERSION}.tar.gz
+#if [ -f  OpenBLAS-$COMMIT.zip ]; then
+#    echo "using existing"  OpenBLAS-${COMMIT}.zip
 else
     rm -rf OpenBLAS*
+#    curl -L https://github.com/xianyi/OpenBLAS/archive/$COMMIT.zip -o OpenBLAS-$COMMIT.zip
     curl -L https://github.com/xianyi/OpenBLAS/archive/v${VERSION}.tar.gz -o OpenBLAS-${VERSION}.tar.gz
 fi
-# patch for avx2 detection
+#unzip -n -q OpenBLAS-$COMMIT.zip
+#ln -sf OpenBLAS-$COMMIT OpenBLAS
 tar xzf OpenBLAS-${VERSION}.tar.gz
 ln -sf OpenBLAS-${VERSION} OpenBLAS
-cd OpenBLAS-${VERSION}
+cd OpenBLAS
 # patch for apple clang -fopenmp
 patch -p0 < ../clang_omp.patch
+# patch for pgi/nvfortran missing -march=armv8
+patch -p0 < ../arm64_fopt.patch
 if [[  -z "${FORCETARGET}" ]]; then
 FORCETARGET=" "
 UNAME_S=$(uname -s)
@@ -37,6 +45,9 @@ if [[ "${GOTAVX512}" == "Y" ]]; then
     FORCETARGET=" TARGET=HASWELL "
 fi
 fi #FORCETARGET
+if [[  -z "${BLAS_SIZE}" ]]; then
+   BLAS_SIZE=8
+fi
 if [[ ${BLAS_SIZE} == 8 ]]; then
   sixty4_int=1
 else
@@ -60,6 +71,12 @@ elif  [[ -n ${FC} ]] && [[ "${FC}" == "flang" ]]; then
     LAPACK_FPFLAGS_VAL=" -O1 -g -Kieee"
 elif  [[ -n ${FC} ]] && [[ "${FC}" == "pgf90" ]] || [[ "${FC}" == "nvfortran" ]]; then
     FORCETARGET+=' F_COMPILER=PGI '
+#    if [[ "$arch" == "aarch64" ]]; then
+	LAPACK_FLAGS="-O2  -Mrecursive -Kieee -fPIC"
+        if [[ ${BLAS_SIZE} == 8 ]]; then
+	    LAPACK_FLAGS+=" -i8"
+	fi
+#    fi
     LAPACK_FPFLAGS_VAL=" -O1 -g -Kieee"
 elif  [[ -n ${FC} ]] && [[ "${FC}" == "ifort" ]] || [[ "${FC}" == "ifx" ]]; then
     FORCETARGET+=' F_COMPILER=INTEL '
@@ -81,6 +98,11 @@ if [[ "$FORCETARGET" == *"SKYLAKEX"* ]]; then
 	exit 1
     fi
 fi
+#this fixes avx512 detection for icc
+if [[ "${CC}" == "icc" ]]; then
+    FORCETARGET+=HOSTCC=\"icc -xhost\"
+fi
+
 #disable threading for ppc64le since it uses OPENMP
 echo arch is "$arch"
 if [[ "$arch" == "ppc64le" ]]; then
@@ -100,7 +122,7 @@ if [[  ! -z "${USE_OPENMP}" ]]; then
     unset USE_OPENMP
     NWCHEM_USE_OPENMP=1
 fi
-echo make $FORCETARGET  LAPACK_FPFLAGS="$LAPACK_FPFLAGS_VAL"  INTERFACE64="$sixty4_int" BINARY="$binary" NUM_THREADS=128 NO_CBLAS=1 NO_LAPACKE=1 DEBUG=0 USE_THREAD="$THREADOPT"  libs netlib -j4
+echo make $FORCETARGET  LAPACK_FPFLAGS=$LAPACK_FPFLAGS_VAL  INTERFACE64=$sixty4_int BINARY=$binary NUM_THREADS=128 NO_CBLAS=1 NO_LAPACKE=1 DEBUG=0 USE_THREAD=$THREADOPT  libs netlib -j4
 if [[ ${_FC} == xlf ]]; then
  make FC="xlf -qextname" $FORCETARGET  LAPACK_FPFLAGS="$LAPACK_FPFLAGS_VAL"  INTERFACE64="$sixty4_int" BINARY="$binary" NUM_THREADS=128 NO_CBLAS=1 NO_LAPACKE=1 DEBUG=0 USE_THREAD="$THREADOPT" libs netlib -j4
 else
