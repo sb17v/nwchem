@@ -98,7 +98,7 @@ c
      $                      mt_log,1,diagh))
      $        call errquit('driver_input: rtdb put failed',0, RTDB_ERR)
 c
-c socket ase_client ip:port
+c socket ipi_client ip:port
 c
       else if (inp_compare(.false.,'socket', field)) then
          if (inp_a(f2)) then
@@ -114,9 +114,18 @@ c
      >                           ipname(1:ind)))
      >          call errquit('driver_input: rtdb put failed',8,RTDB_ERR)
                end if
+               diagh = .true.
+               if (.not. rtdb_put(rtdb,'driver:socket',
+     $                      mt_log,1,diagh))
+     $        call errquit('driver_input: rtdb put failed',0, RTDB_ERR)
+c
             else
                if (.not.rtdb_delete(rtdb,'driver:socket_type'))
      >         call errquit('driver_input:rtdbdelete failed',9,RTDB_ERR)
+               diagh = .false.
+               if (.not. rtdb_put(rtdb,'driver:socket',
+     $                      mt_log,1,diagh))
+     $        call errquit('driver_input: rtdb put failed',0, RTDB_ERR)
             end if
          end if
 c
@@ -296,6 +305,12 @@ c
 c
       else if(inp_compare(.false.,'noxyz',field)) then
          ignore = rtdb_delete(rtdb,'driver:xyz')
+c
+      else if (inp_compare(.false.,'fast_diag',field)) then
+         ofast_diag = .true.
+         if (.not. rtdb_put(rtdb,'driver:ofast_diag',
+     M        mt_log,1,ofast_diag))
+     $        call errquit('driver_input: rtdb put failed',0, RTDB_ERR)
 c
       else
          call errquit('driver_input: unknown directive',0, INPUT_ERR)

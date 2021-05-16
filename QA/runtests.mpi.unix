@@ -29,7 +29,29 @@
 
 # A subdirectory of the current directory named scratchdir is deleted
 # and remade for each calculation, and deleted at job end.
-
+export HYDRA_DEBUG=0
+if [[ -z "${NWCHEM_TARGET}" ]]; then
+    UNAME_S=$(uname -s)
+  if [[ ${UNAME_S} == Linux ]]; then
+    NWCHEM_TARGET=LINUX64
+  elif [[ ${UNAME_S} == Darwin ]]; then
+    NWCHEM_TARGET=MACX64
+  else
+      echo
+      echo You must define NWCHEM_TARGET in your environment to be the name
+      echo of the machine you wish to build for ... for example
+      echo     export NWCHEM_TARGET=SOLARIS
+      echo Known targets are SOLARIS, ...
+      echo See the INSTALL instructions for a complete list
+      echo ${UNAME_S}
+      exit 1
+      fi
+fi
+if [[ -z "${NWCHEM_TOP}" ]]; then
+    DIRQA=`dirname "$0"`
+    MYPWD=`pwd`
+    NWCHEM_TOP=`echo ${MYPWD}/${DIRQA} | sed -e 's/\/QA.*//' `
+fi
 # A subdirectory of the current directory name testoutputs is made
 # if necessary and all outputs are routed there.  Existing outputs
 # are overwritten.  The name of the output file is formed by replacing
@@ -93,6 +115,9 @@ if [ -z "$NWPARSE" ];  then
     exit 1
   fi
 fi
+
+#bash script to round ESP
+ROUND_ESP=${CURDIR}/round_esp.sh
 
 if [ $NPROC -gt 0 ]; then
 # find mpirun  
@@ -239,6 +264,16 @@ do
     continue
   fi
   INPUTFILE=${NWCHEM_TOP}/QA/${TESTDIR}/${INPUTFILE}
+  if [[ ! -z "$USE_SIMINT" ]]; then
+      rm -f mynewinput.nw
+      echo 'set int:cando_txs f'  >> mynewinput.nw
+      echo 'set int:cando_nw f'  >> mynewinput.nw
+      cat ${INPUTFILE} >> mynewinput.nw
+      INPUTFILE=`pwd`/mynewinput.nw
+      echo INPUTFILE modified for Simint is ${INPUTFILE}
+  fi
+  # copy movecs for ducc test
+   [ -f ${TESTDIR}/*.movecs ] && cp ${TESTDIR}/*movecs ${SCRATCHDIR}
   if [ $md_test_run -ne 1 ]; then
     if [ ! -f ${TESTDIR}/${OUTPUTFILE} ]; then
       echo failed: Could not find verified output file $TESTDIR/$OUTPUTFILE
@@ -286,8 +321,9 @@ do
   cd ${SCRATCHDIR}
 
   [ -f $TESTOUTPUTS/${STUB}.out ] && /bin/rm -f $TESTOUTPUTS/${STUB}.out
-
-  echo "     running nwchem ($NWCHEM)  with "$NPROC" processors "
+  NPROC_out=$NPROC
+  if [ $NPROC_out == 0 ]; then NPROC_out=1; fi
+  echo "     running nwchem ($NWCHEM)  with "$NPROC_out" processors "
 
    x="%Uu %Ss %E %P (%Xt+%Dds+%Kavg+%Mmax)k %Ii+%Oo %Fpf %Wswaps"
    time=(1 "$x")
@@ -379,7 +415,10 @@ sync
 # Now verify the output
 
     echo -n "     verifying output ... "
-
+# get rid of HYDRA_DEBUG confusing output
+    rm -f hydradebugout.txt
+    grep -v proxy:0:0@ ${STUB}.out > hydradebugout.txt
+    mv hydradebugout.txt ${STUB}.out
     perl $NWPARSE ${STUB}.out >& /dev/null
     if [ $? -ne 0 ]; then
       echo nwparse.pl failed on test output ${STUB}.out
@@ -401,6 +440,12 @@ sync
 
   if [ $diff1status -ne 0 ]; then
     echo "failed"
+    echo "@@@     Comparison of Output Files"  
+    diff -U2 ${STUB}.ok.out.nwparse ${STUB}.out.nwparse | sed 1,2d
+#    echo "@@@     Paste beginning of Output File"  
+#    head -1000 ${STUB}.out
+#    echo "@@@     Paste End of Output File"  
+#    tail -1000 ${STUB}.out
     overall_status=1
     continue 
   else
@@ -413,16 +458,22 @@ sync
 
     cp ${SCRATCHDIR}/$ESPFILE $TESTOUTPUTS/.
 #    echo "doing ls -l " ${STUB}.ok.q ${STUB}.q
-#    echo `ls -l ${STUB}.ok.q ${STUB}.q`
-    diff -w ${STUB}.ok.q ${STUB}.q >& /dev/null
+    #    echo `ls -l ${STUB}.ok.q ${STUB}.q`
+    rm -f esp_temp.ok.q esp_temp.q
+    ${ROUND_ESP} ${STUB}.ok.q > esp_temp.ok.q
+    ${ROUND_ESP} ${STUB}.q > esp_temp.q
+    diff -w esp_temp.ok.q esp_temp.q >& /dev/null
+#    diff -w ${STUB}.ok.q ${STUB}.q >& /dev/null
     espstatus=$?
        if [[ $espstatus -ne 0 ]]; then
          echo "ESP comparison failed"
          overall_status=1
+	 diff -u esp_temp.ok.q esp_temp.q 
          continue 
        else
          echo "ESP charges match"
        fi
+       rm -f esp_temp.ok.q esp_temp.q
        echo
     else
       echo -n "     verifying test ....... "
