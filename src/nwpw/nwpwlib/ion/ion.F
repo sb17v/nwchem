@@ -104,6 +104,7 @@
          value = beom_cent_set(geom,i,t,dbl_mb(r1(1)+(i-1)*3),q)
       end do
 
+
 *     **** if md code then write velocities ****
       if ((control_code().eq.2).or.
      >    (control_code().eq.7).or.
@@ -156,7 +157,7 @@
       else
         value = beom_rtdb_delete(rtdb,'chargepspwgeometry')
         value = beom_rtdb_delete(rtdb,'pspwgeometry')
-        value = beom_rtdb_delete(rtdb,'qmmmgeometry')
+        !value = beom_rtdb_delete(rtdb,'qmmmgeometry')
       end if
       call nwpw_timing_end(50)
       return
@@ -1938,6 +1939,32 @@ c      end if
 #include "ion.fh"
 
       ion_rion_ptr = r1(1)
+      return
+      end
+
+*     ***************************
+*     *                         *
+*     *    ion_rion_indx_ptr    *
+*     *                         *
+*     ***************************
+
+      integer function ion_rion_indx_ptr(indx)
+      implicit none
+      integer indx
+
+#include "bafdecls.fh"
+#include "ion.fh"
+
+      if (indx.eq.0) then
+         ion_rion_indx_ptr = r0(1)
+      else if (indx.eq.1) then
+         ion_rion_indx_ptr = r1(1)
+      else if (indx.eq.2) then
+         ion_rion_indx_ptr = r2(1)
+      else if (indx.eq.3) then
+         ion_rion_indx_ptr = v2(1)
+      end if
+
       return
       end
 
@@ -4770,6 +4797,8 @@ c
       double precision test_norm
       integer i, j, k, l, m, n, mu, nu, indx, iatom, iaxis, itemp
       integer nhess, nhesst,IMAX
+      double precision ddot
+      external ddot
 C****
       nhess = nat3*nat3
       nhesst =  nat3*(nat3+1)/2 ! dimension of lower triangular hessian

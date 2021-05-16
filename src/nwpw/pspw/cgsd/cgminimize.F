@@ -43,7 +43,7 @@ c      complex*16 G1(nfft3d,nemax)
       real*8 tmin,deltat
       real*8 max_sigma
 
-      logical value,pawexist
+      logical value,pawexist,field_exist
       integer neall,npack1
       real*8 e_lj,e_q,e_spring
       real*8 ehfx,phfx
@@ -99,9 +99,17 @@ c      complex*16 G1(nfft3d,nemax)
 
 *     ***** pspw_charge external functions ****
       logical  pspw_charge_found
-      real*8   pspw_charge_Energy_ion,pspw_charge_Energy_charge
       external pspw_charge_found
+      real*8   pspw_charge_Energy_ion,pspw_charge_Energy_charge
       external pspw_charge_Energy_ion,pspw_charge_Energy_charge
+      logical  pspw_Efield_found
+      external pspw_Efield_found
+      integer  pspw_Efield_type
+      external pspw_Efield_type
+      real*8   pspw_Efield_Energy_ion
+      external pspw_Efield_Energy_ion
+      real*8   dipole_Efield_e,dipole_Efield_p
+      external dipole_Efield_e,dipole_Efield_p
 
 *     ***** PAW functions ****
       logical  psp_pawexist
@@ -136,6 +144,7 @@ c      complex*16 G1(nfft3d,nemax)
       cosmo_on  = nwpw_cosmo_on()
       cosmo1_on = nwpw_cosmo1_on()
       V_APC_on  = pspw_V_APC_on()
+      field_exist = pspw_charge_found().or.pspw_Efield_found()
 
       Estart = Enew
       if (current_iteration.eq.1) then
@@ -216,6 +225,7 @@ c     >                     'G0',G0(2),G0(1))
 c        Eold = psi_geodesic_energy(0.0d0)
          tmin0   = tmin
          deltae0 = deltae
+         call nwpw_cosmo_fix_q()
          Enew0 = linesearch(0.0d0,E0,dE0,deltat,
      >                        psi_geodesic_energy,
      >                        psi_geodesic_denergy,
@@ -224,6 +234,7 @@ c        Enew = linesearch(0.0d0,E0,dE0,deltat,
 c    >                        psi_geodesic_energy,
 c    >                        psi_geodesic_denergy,
 c    >                        0.5d0,tmin,deltae,2)
+         call nwpw_cosmo_relax_q()
 !$OMP MASTER
          tmin = tmin0
          deltae = deltae0
@@ -352,10 +363,12 @@ c     >                       dcpl_mb(H0(1)))
 c      Eold = psi_geodesic_energy(0.0d0)
       tmin0   = tmin
       deltae0 = deltae
+      call nwpw_cosmo_fix_q()
       Enew0 = linesearch(0.0d0,E0,dE0,deltat,
      >                        psi_geodesic_energy,
      >                        psi_geodesic_denergy,
      >                        tole,tmin0,deltae0,1)
+      call nwpw_cosmo_relax_q()
 !$OMP MASTER
          tmin = tmin0
          deltae = deltae0
@@ -501,22 +514,29 @@ c     call psi_check()
             E(48) = nwpw_cosmo_Eqq()    !** E(q|q)
 
             !E(1)  = E(1) + E(22) - E(23) + E(47) + E(48)
-            E(1)  = E(1) + E(22) - E(23)
+            E(1)  = E(1) + E(22) - E(23) !*** probably NOT CORRECT ***
          end if
 
       else if (V_APC_on) then
          call electron_apc_energies(eapc,papc)
          E(22) = eapc
          E(23) = papc
-         E(1)  = E(1) + eapc - papc
+         E(1)  = E(1) + eapc - papc !*** probably NOT CORRECT ***
       end if
 
-*     **** get pspw_charge  energies ****
-      if (pspw_charge_found()) then
-         E(19)  = psi_1v_field()
-         E(20)  = pspw_charge_Energy_ion()
-         E(21)  = pspw_charge_Energy_charge()
-         E(1)   = E(1) + E(20) + E(21)
+*     **** get pspw_charge and pspw_Efield energies ****
+      if (field_exist) then
+         if (pspw_Efield_type().eq.0) then
+            E(49) = dipole_Efield_e()
+            E(50) = dipole_Efield_p()
+            E(51) = 0.0d0
+         else
+            E(49)  = psi_1v_field()
+            E(50)  = pspw_charge_Energy_ion()
+     >             + pspw_Efield_Energy_ion()
+            E(51)  = pspw_charge_Energy_charge()
+            E(1)   = E(1) + E(50) + E(51)
+         end if
       end if
 
 *     **** HFX terms ****
