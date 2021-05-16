@@ -116,6 +116,10 @@ ifdef NWCHEM_OPENMP_TARGET_INTEL_GPU
   USES_BLAS += ccsd_trpdrv_omp_fn.F ccsd_trpdrv_omp_body.F
 endif
 
+ifdef MKL
+    LIB_INCLUDES += -I$(MKLROOT)/include
+endif
+
 ifeq ($(ARMCI_NETWORK),MPI-PR)
    LIB_DEFINES += -DACC_STRIPS
 endif
