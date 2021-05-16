@@ -19,9 +19,9 @@ c#include "bafdecls.fh"
       integer MASTER
       parameter (MASTER=0)
 
-      logical stalled,value,gvirtual,bvirtual,confine,oprint
+      logical stalled,value,gvirtual,bvirtual,confine,oprint,gci
       integer taskid
-      integer minimizer
+      integer minimizer,gfac
       integer i,j,ms,neall,NN
       integer nexcited(2),ispin
       integer it_in,it_out,icount,bfgscount
@@ -31,7 +31,7 @@ c#include "bafdecls.fh"
       real*8  gx,gy,gz
       real*8  en(2)
       real*8  E(30)
-      integer rtdb
+      integer rtdb,civirt
 
 *     **** external functions ****
       logical     control_DOS,control_Mulliken,control_MP2
@@ -58,11 +58,18 @@ c#include "bafdecls.fh"
       external    control_confine_virtual
       logical     psi_2epsi_gradients
       external    psi_2epsi_gradients
+      integer     control_gradient_virtual_fac
+      external    control_gradient_virtual_fac
+      integer     control_CI_virtual
+      external    control_CI_virtual
 
       call Parallel_taskid(taskid)
 
       gvirtual = control_gradient_virtual()
+      gfac     = control_gradient_virtual_fac()
       bvirtual = control_bound_virtual()
+      civirt   = control_CI_virtual()
+      gci      = (civirt.gt.0)
       confine  = control_confine_virtual()
       neall = control_excited_ne(1)+control_excited_ne(2)
 
@@ -72,7 +79,7 @@ c#include "bafdecls.fh"
 
 *        **** Using gradients of filled orbitals to define virtual space ****
          if (gvirtual) then
-            value = psi_2epsi_gradients(3)
+            value = psi_2epsi_gradients(gfac)
 
 *        **** calculating regular virtual orbitals ****
          else
@@ -116,6 +123,9 @@ ccccc      call Dnex_init(ispin,nexcited,control_mapping1d())
 
       if (gvirtual) then
          call psi_gen_hml_virtual(.true.)
+      else if (gci) then
+         !call psi_gen_hml_virtual(.true.)
+         call psi_minimize_virtual_CI(civirt)
       else
          call psi_gen_hml_virtual(.true.)
          call psi_minimize_virtual()
