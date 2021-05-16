@@ -99,6 +99,12 @@
       external control_it_in,control_it_out,control_gga,control_version
       external control_ngrid,pack_nwave,ion_nion,ion_natm,ion_katm
       external pspw_charge_nion
+      integer  ion_nion_q
+      external ion_nion_q
+      real*8   nwpw_cosmo_qc0
+      external nwpw_cosmo_qc0
+      character*9 ion_amm
+      external    ion_amm
 
       character*12 control_boundry
       external     control_boundry
@@ -126,8 +132,8 @@
       external  pspw_charge_found,ion_q_FixIon
       integer  control_minimizer,control_scf_algorithm
       external control_minimizer,control_scf_algorithm
-      integer  control_ks_algorithm
-      external control_ks_algorithm
+      integer  control_ks_algorithm,control_diis_histories
+      external control_ks_algorithm,control_diis_histories
       real*8   control_ks_alpha,control_kerker_g0
       external control_ks_alpha,control_kerker_g0
       logical  control_print,control_balance
@@ -173,6 +179,8 @@
       external ion_rion_ptr
       logical  control_runsocket,control_precondition
       external control_runsocket,control_precondition
+      logical  control_gas_energy_set
+      external control_gas_energy_set
 
 
 *                            |************|
@@ -331,6 +339,7 @@
       call pspw_init_APC(rtdb)
       call pspw_qmmm_init(rtdb)
       call pspw_charge_init(rtdb)
+      call pspw_Efield_init(rtdb,psi_ispin(),ne)
 
 *     **** initialize SIC and HFX ****
       ne(1) = psi_ne(1)
@@ -433,10 +442,13 @@ c           call psp_check_print(ia)
          write(luout,1170) (ion_atom(K),ion_natm(K),K=1,ion_nkatm())
          if (hprint) then
          write(luout,1180)
-         do I=1,ion_nion()
-           if (ion_q_FixIon(I)) then
+         do I=1,ion_nion()+ion_nion_q()
+           if (I.gt.ion_nion()) then
+           write(luout,1195) I,ion_aname(I),(ion_rion(K,I),K=1,3),
+     >                       nwpw_cosmo_qc0(I-ion_nion()),ion_amm(i)
+           else if (ion_q_FixIon(I)) then
            write(luout,1191) I,ion_aname(I),(ion_rion(K,I),K=1,3),
-     >                   ion_amass(I)/1822.89d0
+     >                   ion_amass(I)/1822.89d0,ion_amm(i)
            else
            write(luout,1190) I,ion_aname(I),(ion_rion(K,I),K=1,3),
      >                   ion_amass(I)/1822.89d0
@@ -448,6 +460,7 @@ c           call psp_check_print(ia)
 
          call pspw_charge_Print(luout)
          end if
+         call pspw_Efield_Print(luout)
 
          !write(luout,1220) psi_ne(1),psi_ne(psi_ispin()),' (Fourier space)'
          if (control_fractional()) then
@@ -550,6 +563,14 @@ c           call psp_check_print(ia)
      >                 control_it_in(),control_it_out()
          if ((minimizer.eq.5).or.(minimizer.eq.8)) then
            write(luout,1291)
+           if (control_ks_algorithm().eq.-1)  then
+             if (control_precondition()) then
+                write(luout,1292) 
+     >             "block preconditioned conjugate gradient"
+             else
+                write(luout,1292) "block conjugate gradient"
+             end if
+           end if
            if (control_ks_algorithm().eq.0)  then
              if (control_precondition()) then
                 write(luout,1292) "preconditioned conjugate gradient"
@@ -559,14 +580,16 @@ c           call psp_check_print(ia)
            end if
            if (control_ks_algorithm().eq.1) 
      >       write(luout,1292) "rmm-diis"
+
            write(luout,1295) control_ks_maxit_orb(),
      >                       control_ks_maxit_orbs()
            if (control_scf_algorithm().eq.0) 
      >       write(luout,1293) "simple mixing"
            if (control_scf_algorithm().eq.1) 
-     >       write(luout,1293) "Anderson potential mixing"
+     >       write(luout,1293) "Broyden mixing"
            if (control_scf_algorithm().eq.2) 
-     >       write(luout,1293) "Johnson-Pulay mixing"
+     >       write(luout,1289) "Johnson-Pulay mixing",
+     >                         control_diis_histories()
            if (control_scf_algorithm().eq.3) 
      >       write(luout,1293) "Anderson density mixing"
            if (minimizer.eq.5) write(luout,1296) "potential"
@@ -685,6 +708,7 @@ c     end if
       value = value.and.
      >        btdb_put(rtdb,'pspw:crystal_dipole',mt_dbl,
      >                 3,cdipole)
+      value = value.and.control_gas_energy_set(EV)
       end if
       if (flag.gt.0) then
         value = value.and.
@@ -754,6 +778,7 @@ c     end if
       call pspw_end_HFX()
       call pspw_end_APC()
       call pspw_charge_end()
+      call pspw_Efield_end()
       call pspw_qmmm_end()
 c      call frac_occ_end()
       call meta_finalize(rtdb)
@@ -817,13 +842,13 @@ c      call frac_occ_end()
  1100 FORMAT(//)
  1110 FORMAT(10X,'================ input data ========================')
  1111 FORMAT(/' number of processors used:',I10)
- 1112 FORMAT( ' parallel mapping         :   1d slab')
- 1113 FORMAT( ' parallel mapping         :2d hilbert')
+ 1112 FORMAT( ' parallel mapping         :   1d-slab')
+ 1113 FORMAT( ' parallel mapping         :2d-hilbert')
  1114 FORMAT( ' parallel mapping         :  balanced')
  1115 FORMAT(/' options:')
  1116 FORMAT( ' parallel mapping         : not balanced')
  1117 FORMAT( ' processor grid           :',I4,' x',I4)
- 1118 FORMAT( ' parallel mapping         : 2d hcurve')
+ 1118 FORMAT( ' parallel mapping         : 2d-hcurve')
  1119 FORMAT( ' number of threads        :',I10)
  1120 FORMAT(5X,' ionic motion         = ',A)
  1121 FORMAT(5X,' boundary conditions  = ',A,'(version', I1,')')
@@ -852,7 +877,12 @@ c      call frac_occ_end()
  1180 FORMAT(/' position of ions (au):')
  1190 FORMAT(5X, I4, A5  ,' (',3F11.5,' ) - atomic mass= ',F7.3,' ')
  1191 FORMAT(5X, I4, A5, ' (',3F11.5,
-     >       ' ) - atomic mass= ',F7.3,' - fixed')
+     >       ' ) - atomic mass= ',F7.3,' - fixed',A)
+ 1193 FORMAT(5X, I4, A5, ' (',3F11.5,
+     >       ' ) - atomic mass= ',F7.3,' - z fixed')
+ 1194 FORMAT(5X, I4, A5, ' (',3F11.5,
+     >       ' ) - atomic mass= ',F7.3,A)
+ 1195 FORMAT(5X, I4, A5, ' (',3F11.5,' ) -      charge= ',E13.6,' ',A)
  1200 FORMAT(5X,'   G.C.  ',' (',3F11.5,' )')
  1210 FORMAT(5X,'   C.O.M.',' (',3F11.5,' )')
  1211 FORMAT(5X,'   number of constraints = ', I6,' ( DOF = ',I6,' )' )
@@ -895,6 +925,7 @@ c      call frac_occ_end()
  1280 FORMAT(5X, ' time step=',F10.2,5X,'fictitious mass=',F10.1)
  1281 FORMAT(5X, ' maximum iterations =',I10,
      >           ' ( ',I4,' inner ',I6,' outer )')
+ 1289 FORMAT(5X, ' SCF algorithm        = ',A,' (',I2,' histories)')
  1290 FORMAT(5X, ' tolerance=',E9.3,' (energy)',E12.3,
      &        ' (density)')
  1291 FORMAT(/' Kohn-Sham scf parameters:')
@@ -907,7 +938,7 @@ c      call frac_occ_end()
  1297 FORMAT(/' fractional smearing parameters:')
  1298 FORMAT(5X, ' smearing algorithm   = ',A)
  1299 FORMAT(5X, ' smearing parameter   = ',E9.3,' (',F7.1,' K)'/,
-     >       5X, ' mixing parmameter    = ',F7.4) 
+     >       5X, ' mixing parameter     =',F7.4) 
  1300 FORMAT(//)
  1301 FORMAT(5X, ' Kerker damping       =',F7.4)
  1305 FORMAT(10X,'================ iteration =========================')

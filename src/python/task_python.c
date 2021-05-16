@@ -1,12 +1,13 @@
-/*
- $Id$
-*/
 #include <Python.h>
 #include "macdecls.h"
 #include "ga.h"
 
 #include <import.h>
+#if ( PY_MAJOR_VERSION >= 3 && PY_MINOR_VERSION >= 9)
+/* might require new headers and code */
+#else
 #include <graminit.h>
+#endif
 #include <pythonrun.h>
 #include <stdlib.h>
 #include "typesf2c.h"
@@ -19,7 +20,7 @@ extern void initnwchem();
 extern void util_file_parallel_copy(const char *, const char *);
 
 
-#if (defined(CRAY_T3E) || defined(CRAY_T3D)  || defined(WIN32)) && !defined(__MINGW32__)
+#if (defined(WIN32)) && !defined(__MINGW32__)
 int FATR TASK_PYTHON(Integer *rtdb_ptr)
 #else
 int FATR task_python_(Integer *rtdb_ptr)
