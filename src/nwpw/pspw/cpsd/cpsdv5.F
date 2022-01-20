@@ -195,10 +195,10 @@ c#include "Parallel.fh"
 
       logical  control_mparallelized
       external control_mparallelized
-      logical  nwpw_cosmo_on
-      external nwpw_cosmo_on
-      real*8   nwpw_cosmo_screen
-      external nwpw_cosmo_screen
+      logical  nwpw_cosmo_on,nwpw_born_on
+      external nwpw_cosmo_on,nwpw_born_on
+      real*8   nwpw_cosmo_screen,nwpw_born_screen
+      external nwpw_cosmo_screen,nwpw_born_screen
       logical  pspw_V_APC_on
       external pspw_V_APC_on
       real*8   control_gas_energy
@@ -228,7 +228,7 @@ c#include "Parallel.fh"
       pi = 4.0d0*datan(1.0d0)
 
       call nwpw_timing_init()
-      call dcopy(50,0.0d0,0,E,1)
+      call dcopy(60,0.0d0,0,E,1)
 
 
 *     **** get parallel variables ****
@@ -1038,7 +1038,7 @@ c         end do
            write(luout,1459) E(31),E(31)/ion_nion()
          end if
          if (pspw_V_APC_on()) then
-           write(luout,1505) E(22),E(22)/ion_nion()
+           write(luout,1505) E(52),E(52)/ion_nion()
          end if
 
 
@@ -1062,7 +1062,7 @@ c         end do
            write(luout,1504) E(32),E(32)/n2(ispin)
          end if
          if (pspw_V_APC_on()) then
-           write(luout,1506) E(23),E(23)/n2(ispin)
+           write(luout,1506) E(53),E(53)/n2(ispin)
          end if
 
          virial = (E(10)+E(9)+E(8)+E(7))/E(6)
@@ -1201,6 +1201,25 @@ c            write(luout,1706) E(18)
          end if
       end if
 
+*     **** write out extended Born solvation energies ****
+      if (nwpw_born_on()) then
+         if (pspw_V_APC_on()) then
+            Egas = control_gas_energy()
+            if (oprint) then
+               write(luout,1740)
+               write(luout,1741) nwpw_born_screen()
+               write(luout,1745) E(52),E(52)*27.2116d0*23.06d0
+               if (dabs(Egas).gt.1.0d-6)
+     >            write(luout,1746)  E(1)-Egas,
+     >                           (E(1)-Egas)*27.2116d0*23.06d0
+               call nwpw_born_print(luout,Egas,E(1))
+            end if
+         else
+            call pspw_dngen_APC(ispin,ne,dbl_mb(dn(1)),.false.)
+            call pspw_print_APC(luout)
+         end if
+      end if
+
 
       if (mparallelized) then
           do ms=1,ispin
@@ -1243,8 +1262,8 @@ c            write(luout,1706) E(18)
      >                                   dbl_mb(eig(1)))
 
 *       **** generate APC *****
-        call pspw_dngen_APC(ispin,ne,dbl_mb(dn(1)))
-        call pspw_print_APC(6)
+        call pspw_dngen_APC(ispin,ne,dbl_mb(dn(1)),.false.)
+        call pspw_print_APC(luout)
 
       end if
 
@@ -1530,6 +1549,14 @@ c      call frac_occ_end()
      >   ' (',F8.3,' kcal/mol)')
  1736 FORMAT(5x,' solvation energy (w/  QM polarization) :',E19.10,
      >   ' (',F8.3,' kcal/mol)')
+
+ 1740 FORMAT(/' extended Born solvation energies:')
+ 1741 FORMAT(5x,' screen=(epsilon-1)/(epsilon):',F11.6)
+ 1745 FORMAT(5x,' solvation energy (w/o QM polarization) :',E19.10,
+     >   ' (',F8.3,' kcal/mol)')
+ 1746 FORMAT(5x,' solvation energy (w/  QM polarization) :',E19.10,
+     >   ' (',F8.3,' kcal/mol)')
+
 
  1800 FORMAT(/' Charge+Electric Field Energies')
  1801 FORMAT( ' ------------------------------')
