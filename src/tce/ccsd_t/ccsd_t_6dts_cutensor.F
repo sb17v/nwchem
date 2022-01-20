@@ -1,0 +1,1261 @@
+      module tce_ccsd_t_cutensor
+
+      contains
+
+      SUBROUTINE ccsd_t_6dts_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
+     &            d_v2,k_v2_offset,energy1,energy2,size_t1,xmem)
+      IMPLICIT NONE
+#include "global.fh"
+#include "mafdecls.fh"
+#include "util.fh"
+#include "errquit.fh"
+#include "tce.fh"
+#include "tce_main.fh"
+      double precision, intent(inout) :: energy1,energy2
+      integer, intent(in) :: d_t1, d_t2, d_v2
+      integer, intent(in) :: k_t1_offset, k_t2_offset, k_v2_offset
+      integer, intent(in) :: xmem, size_t1
+      integer :: t_h1b, t_h1, t_h2b, t_h2, t_h3b, t_h3
+      integer :: t_p4b, t_p4, t_p5b, t_p5, t_p6b, t_p6
+      double precision, allocatable :: f_singles(:), f_doubles(:)
+      double precision, allocatable :: t1_local(:)
+      integer :: alloc_error
+      integer :: size,i
+      integer :: nxtask
+      integer :: next
+      integer :: nprocs
+      integer :: count
+      integer :: offset_p4,offset_p5,offset_p6
+      integer :: offset_h1,offset_h2,offset_h3
+      integer :: range_p4,range_p5,range_p6
+      integer :: range_h1,range_h2,range_h3
+      integer :: dp4,dp5,ii,jj,istart,istop,jstart,jstop
+      integer :: mdp4,mdp5
+      integer :: maxp4,maxp5
+      integer :: slice_dp4,slice_dp5,qp4,qp5
+      integer :: xlocal
+! ---------------------------------------
+      integer :: maxh, maxp,h,p
+! ---------------------------------------
+      double precision energy(2)
+      double precision factor,denom
+      double precision denom_p4,denom_p5,denom_p6
+      double precision denom_h1,denom_h2,denom_h3
+      external nxtask
+!
+! Here we determine the maximum tile dimension
+! for p and h tiles so we can allocate buffers
+! up front once rather than in a loop.
+!
+! As a lose upper bound, we can use tile_dim instead,
+! but for occupied tiles, this may be a very loose bound.
+!
+      maxp = 0
+      do p = noab+1,noab+nvab
+         maxp = max(maxp,int_mb(k_range+p-1))
+      enddo
+      maxh = 0
+      do h = 1,noab
+         maxh = max(maxh,int_mb(k_range+h-1))
+      enddo
+
+! - T1/X1 LOCALIZATION ----------
+      allocate(t1_local(1:size_t1), stat=alloc_error)
+      if (alloc_error.ne.0) then
+        call errquit('ccsd_t_6dts: allocate failed',
+     &               alloc_error, MA_ERR)
+      endif
+      t1_local = 0.0d0
+      call get_block(d_t1,t1_local,size_t1,0)
+! -------------------------------
+      nprocs = GA_NNODES()
+      count = 0
+      next = nxtask(nprocs,1)
+      energy1 = 0.0d0
+      energy2 = 0.0d0
+      do t_p4b = noab+1,noab+nvab
+       range_p4 = int_mb(k_range+t_p4b-1)
+       offset_p4 = k_evl_sorted+int_mb(k_offset+t_p4b-1)-1
+       do t_p5b = t_p4b,noab+nvab
+        range_p5 = int_mb(k_range+t_p5b-1)
+        offset_p5 = k_evl_sorted+int_mb(k_offset+t_p5b-1)-1
+        do t_p6b = t_p5b,noab+nvab
+         range_p6 = int_mb(k_range+t_p6b-1)
+         offset_p6 = k_evl_sorted+int_mb(k_offset+t_p6b-1)-1
+         do t_h1b = 1,noab
+          range_h1 = int_mb(k_range+t_h1b-1)
+          offset_h1 = k_evl_sorted+int_mb(k_offset+t_h1b-1)-1
+          do t_h2b = t_h1b,noab
+           range_h2 = int_mb(k_range+t_h2b-1)
+           offset_h2 = k_evl_sorted+int_mb(k_offset+t_h2b-1)-1
+           do t_h3b = t_h2b,noab
+            range_h3 = int_mb(k_range+t_h3b-1)
+            offset_h3 = k_evl_sorted+int_mb(k_offset+t_h3b-1)-1
+            if (int_mb(k_spin+t_p4b-1)
+     &         +int_mb(k_spin+t_p5b-1)
+     &         +int_mb(k_spin+t_p6b-1)
+     &      .eq.int_mb(k_spin+t_h1b-1)
+     &         +int_mb(k_spin+t_h2b-1)
+     &         +int_mb(k_spin+t_h3b-1)) then
+            if ((.not.restricted).or.
+     &         (int_mb(k_spin+t_p4b-1)
+     &         +int_mb(k_spin+t_p5b-1)
+     &         +int_mb(k_spin+t_p6b-1)
+     &         +int_mb(k_spin+t_h1b-1)
+     &         +int_mb(k_spin+t_h2b-1)
+     &         +int_mb(k_spin+t_h3b-1).le.8)) then
+            if (ieor(int_mb(k_sym+t_p4b-1),
+     &          ieor(int_mb(k_sym+t_p5b-1),
+     &          ieor(int_mb(k_sym+t_p6b-1),
+     &          ieor(int_mb(k_sym+t_h1b-1),
+     &          ieor(int_mb(k_sym+t_h2b-1),
+     &               int_mb(k_sym+t_h3b-1)))))).eq.0) then
+            if (next.eq.count) then
+! -- 6DTS --
+            dp4=1
+            dp5=1
+  300       continue
+            xlocal=((int_mb(k_range+t_p4b-1)/dp4)
+     &           *  (int_mb(k_range+t_p5b-1)/dp5))
+     &           * int_mb(k_range+t_p6b-1)
+     &           * int_mb(k_range+t_h1b-1)
+     &           * int_mb(k_range+t_h2b-1)
+     &           * int_mb(k_range+t_h3b-1)
+!
+            slice_dp4=range_p4/dp4
+            qp4=range_p4/slice_dp4
+            slice_dp5=range_p5/dp5
+            qp5=range_p5/slice_dp5
+!
+            if((xlocal)/((1024*1024)/8).gt.(xmem)) then
+             if(dp4.lt.int_mb(k_range+t_p4b-1)) then
+              dp4=dp4+1
+             else
+              dp5=dp5+1
+             end if
+             go to 300
+            end if
+!
+            if(slice_dp4*qp4.ne.range_p4) then
+              mdp4=qp4+1
+            else
+              mdp4=qp4
+            end if
+            if(slice_dp5*qp5.ne.range_p5) then
+              mdp5=qp5+1
+            else
+              mdp5=qp5
+            end if
+!
+           size = slice_dp4
+     &          * slice_dp5
+     &          * range_p6
+     &          * range_h1
+     &          * range_h2
+     &          * range_h3
+!
+            maxp4=slice_dp4
+            maxp5=slice_dp5
+!
+            allocate(f_singles(1:size), stat=alloc_error)
+            if (alloc_error.ne.0) then
+              call errquit('ccsd_t_6dts_cutensor: allocate failed',
+     &                     alloc_error, MA_ERR)
+            endif
+            allocate(f_doubles(1:size), stat=alloc_error)
+            if (alloc_error.ne.0) then
+              call errquit('ccsd_t_6dts_cutensor: allocate failed',
+     &                     alloc_error, MA_ERR)
+            endif
+!  6DTS ----
+           do ii=1,mdp4 !do ii ---
+           do jj=1,mdp5 !do jj ---
+            if(ii.ne.mdp4) then
+             istart=(ii-1)*(slice_dp4)+1
+             istop=ii*(slice_dp4)
+            else
+             istart=(ii-1)*(slice_dp4)+1
+             istop=int_mb(k_range+t_p4b-1)
+            end if
+            if(jj.ne.mdp5) then
+             jstart=(jj-1)*(slice_dp5)+1
+             jstop=jj*(slice_dp5)
+            else
+             jstart=(jj-1)*(slice_dp5)+1
+             jstop=int_mb(k_range+t_p5b-1)
+            end if
+            f_singles = 0.0d0
+            f_doubles = 0.0d0
+            call ccsd_t_singles_l_6dts_cutensor(f_singles,
+     &        t1_local,d_v2,k_t1_offset,k_v2_offset,
+     &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+            call ccsd_t_doubles_l_6dts_cutensor(f_doubles,
+     &        d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+            if (restricted) then
+              factor = 2.0d0
+            else
+              factor = 1.0d0
+            endif
+            if ((t_p4b.eq.t_p5b).and.(t_p5b.eq.t_p6b)) then
+              factor = factor / 6.0d0
+            else if ((t_p4b.eq.t_p5b).or.(t_p5b.eq.t_p6b)) then
+              factor = factor / 2.0d0
+            endif
+            if ((t_h1b.eq.t_h2b).and.(t_h2b.eq.t_h3b)) then
+              factor = factor / 6.0d0
+            else if ((t_h1b.eq.t_h2b).or.(t_h2b.eq.t_h3b)) then
+              factor = factor / 2.0d0
+            endif
+!
+! factor = [ 1/36, 1/18, 1/12, 1/6, 1/4, 1/3, 1/2, 1, 2]
+!
+            i = 0
+            do t_p4 = istart,istop
+             denom_p4 = dbl_mb(offset_p4+t_p4)
+             do t_p5 = jstart,jstop
+              denom_p5 = dbl_mb(offset_p5+t_p5)
+              do t_p6 = 1, range_p6
+               denom_p6 = dbl_mb(offset_p6+t_p6)
+               do t_h1 = 1, range_h1
+                denom_h1 = dbl_mb(offset_h1+t_h1)
+                do t_h2 = 1, range_h2
+                 denom_h2 = dbl_mb(offset_h2+t_h2)
+                 do t_h3 = 1, range_h3
+                  denom_h3 = dbl_mb(offset_h3+t_h3)
+                  denom = 1.0d0 / ( ( denom_h1 + denom_h2 + denom_h3 )
+     &                            - ( denom_p4 + denom_p5 + denom_p6 ) )
+                  energy1 = energy1 + factor*denom
+     &                    * f_doubles(i+1) * f_doubles(i+1)
+                  energy2 = energy2 + factor*denom*f_doubles(i+1)
+     &                    * (f_doubles(i+1)+f_singles(i+1))
+                  i = i + 1
+                 enddo
+                enddo
+               enddo
+              enddo
+             enddo
+            enddo
+!
+            enddo !do ii ---
+            enddo !do jj ---
+!
+            deallocate(f_singles, stat=alloc_error)
+            if (alloc_error.ne.0) then
+              call errquit('ccst_t_6dts: deallocate failed',
+     &                     alloc_error, MA_ERR)
+            endif
+            deallocate(f_doubles, stat=alloc_error)
+            if (alloc_error.ne.0)  then
+              call errquit('ccsd_t_6dts: deallocate failed',
+     &                     alloc_error, MA_ERR)
+            endif
+!
+            next = nxtask(nprocs,1)
+            endif
+            count = count + 1
+!
+            endif
+            endif
+            endif
+           enddo
+          enddo
+         enddo
+        enddo
+       enddo
+      enddo
+      next = nxtask(-nprocs,1)
+      energy(1) = energy1
+      energy(2) = energy2
+      call ga_dgop(mt_dbl,energy,2,'+')
+      energy1 = energy(1)
+      energy2 = energy(2)
+! - T1/X1 LOCALIZATION ------
+      deallocate(t1_local, stat=alloc_error)
+      if (alloc_error.ne.0)  then
+        call errquit('ccsd_t_6dts: deallocate failed',
+     &               alloc_error, MA_ERR)
+      endif
+! ---------------------------
+      end
+
+      SUBROUTINE ccsd_t_singles_l_6dts_cutensor(f_t3,f_t1,
+     &           d_v2,k_t1_offset,k_v2_offset,
+     &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = 1 * P( 9 ) * t ( p4 h1 )_t * v ( p5 p6 h2 h3 )_v
+      IMPLICIT NONE
+#include "global.fh"
+#include "mafdecls.fh"
+#include "util.fh"
+#include "errquit.fh"
+#include "tce.fh"
+      double precision, intent(inout) :: f_t3(*)
+      double precision, intent(in) :: f_t1(*)
+      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
+      integer, intent(in) :: d_v2, k_t1_offset, k_v2_offset
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: maxp,maxh
+      CALL ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
+     &     d_v2,k_t1_offset,k_v2_offset,
+     &     t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+      END
+
+      SUBROUTINE ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
+     &           d_v2,k_t1_offset,k_v2_offset,
+     &           t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = 1 * P( 9 ) * t ( p4 h1 )_t * v ( p5 p6 h2 h3 )_v
+!
+! elimination of the transpositions (kowalski,august,2009)
+!
+      IMPLICIT NONE
+#include "global.fh"
+#include "mafdecls.fh"
+#include "sym.fh"
+#include "errquit.fh"
+#include "tce.fh"
+      double precision, intent(inout) :: f_t3(*)
+      double precision, intent(in) :: f_t1(*)
+      integer, intent(in) :: d_v2, k_t1_offset, k_v2_offset
+      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: maxp,maxh
+      integer :: p4b, p5b, p6b, h1b, h2b, h3b
+      integer :: p4b_1, h1b_1, p5b_2, p6b_2, h2b_2, h3b_2
+      integer :: dimc, dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: a3(9,6)
+      integer :: ia6,ja6
+      logical :: skipped
+      double precision, allocatable :: f_t1_temp(:), f_t1_sort(:)
+      double precision, allocatable :: f_v2_temp(:), f_v2_sort(:)
+      integer :: dimhp, dimhhpp
+      integer :: alloc_error
+
+      dimhp   = maxh*maxp
+      dimhhpp = maxh*maxh*maxp*maxp
+
+      allocate( f_t1_temp(1:dimhp),   f_t1_sort(1:dimhp), 
+     &          f_v2_temp(1:dimhhpp), f_v2_sort(1:dimhhpp),
+     &          stat=alloc_error)
+      if (alloc_error.ne.0) then
+        call errquit("MA ccsd_t_singles_l_1_6dts_cutensor",
+     &               2*dimhhpp,MA_ERR)
+      endif
+!
+      a3(1,1)=t_p4b
+      a3(1,2)=t_p5b
+      a3(1,3)=t_p6b
+      a3(1,4)=t_h1b
+      a3(1,5)=t_h2b
+      a3(1,6)=t_h3b
+!
+      a3(2,1)=t_p4b
+      a3(2,2)=t_p5b
+      a3(2,3)=t_p6b
+      a3(2,4)=t_h2b
+      a3(2,5)=t_h1b
+      a3(2,6)=t_h3b
+!
+      a3(3,1)=t_p4b
+      a3(3,2)=t_p5b
+      a3(3,3)=t_p6b
+      a3(3,4)=t_h3b
+      a3(3,5)=t_h1b
+      a3(3,6)=t_h2b
+!
+      a3(4,1)=t_p5b
+      a3(4,2)=t_p4b
+      a3(4,3)=t_p6b
+      a3(4,4)=t_h1b
+      a3(4,5)=t_h2b
+      a3(4,6)=t_h3b
+!
+      a3(5,1)=t_p5b
+      a3(5,2)=t_p4b
+      a3(5,3)=t_p6b
+      a3(5,4)=t_h2b
+      a3(5,5)=t_h1b
+      a3(5,6)=t_h3b
+!
+      a3(6,1)=t_p5b
+      a3(6,2)=t_p4b
+      a3(6,3)=t_p6b
+      a3(6,4)=t_h3b
+      a3(6,5)=t_h1b
+      a3(6,6)=t_h2b
+!
+      a3(7,1)=t_p6b
+      a3(7,2)=t_p4b
+      a3(7,3)=t_p5b
+      a3(7,4)=t_h1b
+      a3(7,5)=t_h2b
+      a3(7,6)=t_h3b
+!
+      a3(8,1)=t_p6b
+      a3(8,2)=t_p4b
+      a3(8,3)=t_p5b
+      a3(8,4)=t_h2b
+      a3(8,5)=t_h1b
+      a3(8,6)=t_h3b
+!
+      a3(9,1)=t_p6b
+      a3(9,2)=t_p4b
+      a3(9,3)=t_p5b
+      a3(9,4)=t_h3b
+      a3(9,5)=t_h1b
+      a3(9,6)=t_h2b
+!
+      do ia6=1,8
+       if(a3(ia6,1).ne.0) then
+       do ja6=ia6+1,9
+        if((a3(ia6,1).eq.a3(ja6,1)).and.(a3(ia6,2).eq.a3(ja6,2))
+     &   .and.(a3(ia6,3).eq.a3(ja6,3)).and.(a3(ia6,4).eq.a3(ja6,4))
+     &   .and.(a3(ia6,5).eq.a3(ja6,5)).and.(a3(ia6,6).eq.a3(ja6,6)))
+     &   then
+         a3(ja6,1)=0
+         a3(ja6,2)=0
+         a3(ja6,3)=0
+         a3(ja6,4)=0
+         a3(ja6,5)=0
+         a3(ja6,6)=0
+        end if
+       enddo 
+       end if
+      enddo 
+!
+      do ia6=1,9
+      p4b=a3(ia6,1)
+      p5b=a3(ia6,2)
+      p6b=a3(ia6,3)
+      h1b=a3(ia6,4)
+      h2b=a3(ia6,5)
+      h3b=a3(ia6,6)
+      if((p5b.le.p6b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
+      skipped = .false.
+      IF (.not.skipped) THEN
+      IF ((.not.restricted).or.
+     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
+     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
+     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12)) THEN
+      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
+     &    .eq. 
+     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)
+     &   ) THEN
+      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
+     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
+     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) .eq. 
+     &    ieor(irrep_v,irrep_t)) THEN
+      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1)
+     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
+     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
+      IF (int_mb(k_spin+p4b-1) .eq. int_mb(k_spin+h1b-1)) THEN
+      IF (ieor(int_mb(k_sym+p4b-1),int_mb(k_sym+h1b-1)) 
+     &    .eq. irrep_t) THEN
+      CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
+      CALL TCE_RESTRICTED_4(p5b,p6b,h2b,h3b,p5b_2,p6b_2,h2b_2,h3b_2)
+      dim_common = 1
+      dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h1b-1)
+      dima = dim_common * dima_sort
+      dimb_sort = int_mb(k_range+p5b-1) * int_mb(k_range+p6b-1) 
+     &          * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
+      dimb = dim_common * dimb_sort
+      IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
+      CALL GET_HASH_BLOCK_MA(f_t1,f_t1_temp,dima, int_mb(k_t1_offset),
+     &                       (h1b_1 - 1 + noab * (p4b_1 - noab - 1)))
+      CALL TCE_SORT_2(f_t1_temp,f_t1_sort,int_mb(k_range+p4b-1),
+     &                int_mb(k_range+h1b-1),2,1,1.0d0)
+      if(.not.intorb) then
+      CALL GET_HASH_BLOCK(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
+     &     (h3b_2 - 1 + (noab+nvab) * (h2b_2 - 1 + (noab+nvab) *
+     &      (p6b_2 - 1 + (noab+nvab) * (p5b_2 - 1)))))
+      else
+      CALL GET_HASH_BLOCK_I(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
+     &     (h3b_2 - 1 + (noab+nvab) * (h2b_2 - 1 + (noab+nvab) *
+     &      (p6b_2 - 1 + (noab+nvab) * (p5b_2 - 1)))),
+     &     h3b_2,h2b_2,p6b_2,p5b_2)
+      end if
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
+     &    (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. 
+     &    (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) THEN
+
+      call sd_6ds_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_6ds_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+
+      call sd_6ds_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_6ds_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_6ds_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+
+      call sd_6ds_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_6ds_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_6ds_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+
+      call sd_6ds_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               f_t3,f_t1_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,
+     & maxp4,maxp5)
+
+      END IF
+!
+      END IF
+      END IF
+      END IF
+!
+      END IF
+      END IF
+      END IF
+      END IF
+!
+      END IF
+      END DO
+      END
+!
+      SUBROUTINE ccsd_t_doubles_l_6dts_cutensor(f_t3,
+     &           d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
+!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( p7 ) * t ( p4 p7 h1 h2 )_t * v ( p5 p6 h3 p7 )_v
+      IMPLICIT NONE
+#include "global.fh"
+#include "mafdecls.fh"
+#include "util.fh"
+#include "errquit.fh"
+#include "tce.fh"
+      double precision, intent(inout) :: f_t3(*)
+      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
+      integer, intent(in) :: d_t2, d_v2
+      integer, intent(in) :: k_t2_offset, k_v2_offset
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: maxp,maxh
+      CALL ccsd_t_6dts_l_1_cutensor(f_t3,
+     &      d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &     t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+      CALL ccsd_t_6dts_l_2_cutensor(f_t3,
+     &     d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &     t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+      END
+
+      SUBROUTINE ccsd_t_6dts_l_1_cutensor(f_t3,
+     &           d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &           t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
+!
+! elimination of the transpositions (kowalski,august,2009)
+!
+      IMPLICIT NONE
+#include "global.fh"
+#include "mafdecls.fh"
+#include "sym.fh"
+#include "errquit.fh"
+#include "tce.fh"
+      double precision, intent(inout) :: f_t3(*)
+      integer, intent(in) :: d_t2, d_v2
+      integer, intent(in) :: k_t2_offset, k_v2_offset
+      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: maxp,maxh
+      integer :: p4b, p5b, p6b, h1b, h2b, h3b, h7b
+      integer :: p4b_1, p5b_1, h1b_1, h7b_1, p6b_2, h7b_2, h2b_2, h3b_2
+      integer :: dimc, dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: a3(9,6)
+      integer :: ia6,ja6
+      logical :: skipped
+      double precision, allocatable :: f_t2_temp(:), f_t2_sort(:)
+      double precision, allocatable :: f_v2_sort(:)
+      integer :: dimhhpp, dimhhhp
+      integer :: alloc_error
+
+      dimhhhp = maxh*maxh*maxh*maxp
+      dimhhpp = maxh*maxh*maxp*maxp
+
+      allocate( f_t2_temp(1:dimhhpp), f_t2_sort(1:dimhhpp), 
+     &          f_v2_sort(1:dimhhhp),
+     &          stat=alloc_error)
+      if (alloc_error.ne.0) then
+        call errquit("MA ccsd_t_6dts_l_1_cutensor",
+     &               2*dimhhpp+dimhhhp,MA_ERR)
+      endif
+!
+      a3(1,1)=t_p4b
+      a3(1,2)=t_p5b
+      a3(1,3)=t_p6b
+      a3(1,4)=t_h1b
+      a3(1,5)=t_h2b
+      a3(1,6)=t_h3b
+!
+      a3(2,1)=t_p4b
+      a3(2,2)=t_p5b
+      a3(2,3)=t_p6b
+      a3(2,4)=t_h2b
+      a3(2,5)=t_h1b
+      a3(2,6)=t_h3b
+!
+      a3(3,1)=t_p4b
+      a3(3,2)=t_p5b
+      a3(3,3)=t_p6b
+      a3(3,4)=t_h3b
+      a3(3,5)=t_h1b
+      a3(3,6)=t_h2b
+!
+      a3(4,1)=t_p5b
+      a3(4,2)=t_p6b
+      a3(4,3)=t_p4b
+      a3(4,4)=t_h1b
+      a3(4,5)=t_h2b
+      a3(4,6)=t_h3b
+!
+      a3(5,1)=t_p5b
+      a3(5,2)=t_p6b
+      a3(5,3)=t_p4b
+      a3(5,4)=t_h2b
+      a3(5,5)=t_h1b
+      a3(5,6)=t_h3b
+!
+      a3(6,1)=t_p5b
+      a3(6,2)=t_p6b
+      a3(6,3)=t_p4b
+      a3(6,4)=t_h3b
+      a3(6,5)=t_h1b
+      a3(6,6)=t_h2b
+!
+      a3(7,1)=t_p4b
+      a3(7,2)=t_p6b
+      a3(7,3)=t_p5b
+      a3(7,4)=t_h1b
+      a3(7,5)=t_h2b
+      a3(7,6)=t_h3b
+!
+      a3(8,1)=t_p4b
+      a3(8,2)=t_p6b
+      a3(8,3)=t_p5b
+      a3(8,4)=t_h2b
+      a3(8,5)=t_h1b
+      a3(8,6)=t_h3b
+!
+      a3(9,1)=t_p4b
+      a3(9,2)=t_p6b
+      a3(9,3)=t_p5b
+      a3(9,4)=t_h3b
+      a3(9,5)=t_h1b
+      a3(9,6)=t_h2b
+!
+      do ia6=1,8
+       if(a3(ia6,1).ne.0) then
+       do ja6=ia6+1,9
+        if((a3(ia6,1).eq.a3(ja6,1)).and.(a3(ia6,2).eq.a3(ja6,2))
+     &   .and.(a3(ia6,3).eq.a3(ja6,3)).and.(a3(ia6,4).eq.a3(ja6,4))
+     &   .and.(a3(ia6,5).eq.a3(ja6,5)).and.(a3(ia6,6).eq.a3(ja6,6)))
+     &   then
+         a3(ja6,1)=0
+         a3(ja6,2)=0
+         a3(ja6,3)=0
+         a3(ja6,4)=0
+         a3(ja6,5)=0
+         a3(ja6,6)=0
+        end if
+       enddo 
+       end if
+      enddo 
+!
+      do ia6=1,9
+      p4b=a3(ia6,1)
+      p5b=a3(ia6,2)
+      p6b=a3(ia6,3)
+      h1b=a3(ia6,4)
+      h2b=a3(ia6,5)
+      h3b=a3(ia6,6)
+      if((p4b.le.p5b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
+      skipped = .false.
+      IF (.not.skipped) THEN
+      IF ((.not.restricted).or.
+     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
+     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
+     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12)
+     &    ) THEN
+      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
+     &    .eq. 
+     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)
+     &    ) THEN
+      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
+     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
+     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) 
+     &   .eq. ieor(irrep_v,irrep_t)) THEN
+      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
+     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1) 
+     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
+!
+      DO h7b = 1,noab
+      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1) .eq. 
+     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h7b-1)) THEN
+      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
+     &    ieor(int_mb(k_sym+h1b-1),int_mb(k_sym+h7b-1)))) 
+     &    .eq. irrep_t) THEN
+      CALL TCE_RESTRICTED_4(p4b,p5b,h1b,h7b,p4b_1,p5b_1,h1b_1,h7b_1)
+      CALL TCE_RESTRICTED_4(p6b,h7b,h2b,h3b,p6b_2,h7b_2,h2b_2,h3b_2)
+      dim_common = int_mb(k_range+h7b-1)
+      dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
+     &          * int_mb(k_range+h1b-1)
+      dimb_sort = int_mb(k_range+p6b-1) * int_mb(k_range+h2b-1) 
+     &          * int_mb(k_range+h3b-1)
+      dima = dim_common * dima_sort
+      dimb = dim_common * dimb_sort
+      IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
+      IF ((h7b .lt. h1b)) THEN
+      CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
+     &      (h1b_1 - 1 + noab * (h7b_1 - 1 + noab * 
+     &       (p5b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
+      CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
+     &                int_mb(k_range+p4b-1),int_mb(k_range+p5b-1),
+     &                int_mb(k_range+h7b-1),int_mb(k_range+h1b-1),
+     &                4,2,1,3,-1.0d0)
+      END IF
+      IF ((h1b .le. h7b)) THEN
+      CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
+     &      (h7b_1 - 1 + noab * (h1b_1 - 1 + noab * 
+     &       (p5b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
+      CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
+     &                int_mb(k_range+p4b-1),int_mb(k_range+p5b-1),
+     &                int_mb(k_range+h1b-1),int_mb(k_range+h7b-1),
+     &                3,2,1,4,1.0d0)
+      END IF
+      IF ((h7b .le. p6b)) THEN
+      if(.not.intorb) then
+      CALL GET_HASH_BLOCK(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
+     &     (h3b_2 - 1 + (noab+nvab) * (h2b_2 - 1 + (noab+nvab) * 
+     &     (p6b_2 - 1 + (noab+nvab) * (h7b_2 - 1)))))
+      else
+      CALL GET_HASH_BLOCK_I(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
+     &     (h3b_2 - 1 + (noab+nvab) * (h2b_2 - 1 + (noab+nvab) *
+     &     (p6b_2 - 1 + (noab+nvab) * (h7b_2 - 1)))),
+     &     h3b_2,h2b_2,p6b_2,h7b_2)
+      end if
+      END IF
+!
+!  no need to zero d_c - it has already been done in ccsd_t
+!  k_c_sort is not used here
+!
+! contributions are calculated here
+!
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+      call sd_tx1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+      call sd_tx1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+      call sd_tx1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+      call sd_tx1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+      call sd_tx1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+      call sd_tx1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+      call sd_tx1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+      call sd_tx1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+      call sd_tx1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+h7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      END IF
+!
+      END IF
+      END IF
+      END IF
+      END DO !h7b loop
+!
+      END IF
+      END IF
+      END IF
+      END IF
+!
+      END IF
+      END DO
+      END
+
+      SUBROUTINE ccsd_t_6dts_l_2_cutensor(f_t3,
+     &           d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &           t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( p7 ) * t ( p4 p7 h1 h2 )_t * v ( p5 p6 h3 p7 )_v
+!
+! elimination of the transpositions (kowalski,august,2009)
+!
+      IMPLICIT NONE
+#include "global.fh"
+#include "mafdecls.fh"
+#include "sym.fh"
+#include "errquit.fh"
+#include "tce.fh"
+      double precision, intent(inout) :: f_t3(*)
+      integer, intent(in) :: d_t2, d_v2
+      integer, intent(in) :: k_t2_offset, k_v2_offset
+      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: maxp,maxh
+      integer :: p4b, p5b, p6b, h1b, h2b, h3b, p7b
+      integer :: p4b_1, p7b_1, h1b_1, h2b_1, p5b_2, p6b_2, h3b_2, p7b_2
+      integer :: dimc, dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: a3(9,6)
+      integer :: ia6,ja6
+      logical :: skipped
+      double precision, allocatable :: f_t2_temp(:), f_t2_sort(:)
+      double precision, allocatable :: f_v2_sort(:)
+      integer :: dimhhpp, dimhppp
+      integer :: alloc_error
+
+      dimhhpp = maxh*maxh*maxp*maxp
+      dimhppp = maxh*maxp*maxp*maxp
+
+      allocate( f_t2_temp(1:dimhhpp), f_t2_sort(1:dimhhpp), 
+     &          f_v2_sort(1:dimhppp),
+     &          stat=alloc_error)
+      if (alloc_error.ne.0) then
+        call errquit("MA ccsd_t_6dts_l_2_cutensor",
+     &               2*dimhppp+dimhppp,MA_ERR)
+      endif
+!
+      a3(1,1)=t_p4b
+      a3(1,2)=t_p5b
+      a3(1,3)=t_p6b
+      a3(1,4)=t_h1b
+      a3(1,5)=t_h2b
+      a3(1,6)=t_h3b
+!
+      a3(2,1)=t_p4b
+      a3(2,2)=t_p5b
+      a3(2,3)=t_p6b
+      a3(2,4)=t_h2b
+      a3(2,5)=t_h3b
+      a3(2,6)=t_h1b
+!
+      a3(3,1)=t_p4b
+      a3(3,2)=t_p5b
+      a3(3,3)=t_p6b
+      a3(3,4)=t_h1b
+      a3(3,5)=t_h3b
+      a3(3,6)=t_h2b
+!
+      a3(4,1)=t_p5b
+      a3(4,2)=t_p4b
+      a3(4,3)=t_p6b
+      a3(4,4)=t_h1b
+      a3(4,5)=t_h2b
+      a3(4,6)=t_h3b
+!
+      a3(5,1)=t_p5b
+      a3(5,2)=t_p4b
+      a3(5,3)=t_p6b
+      a3(5,4)=t_h2b
+      a3(5,5)=t_h3b
+      a3(5,6)=t_h1b
+!
+      a3(6,1)=t_p5b
+      a3(6,2)=t_p4b
+      a3(6,3)=t_p6b
+      a3(6,4)=t_h1b
+      a3(6,5)=t_h3b
+      a3(6,6)=t_h2b
+!
+      a3(7,1)=t_p6b
+      a3(7,2)=t_p4b
+      a3(7,3)=t_p5b
+      a3(7,4)=t_h1b
+      a3(7,5)=t_h2b
+      a3(7,6)=t_h3b
+!
+      a3(8,1)=t_p6b
+      a3(8,2)=t_p4b
+      a3(8,3)=t_p5b
+      a3(8,4)=t_h2b
+      a3(8,5)=t_h3b
+      a3(8,6)=t_h1b
+!
+      a3(9,1)=t_p6b
+      a3(9,2)=t_p4b
+      a3(9,3)=t_p5b
+      a3(9,4)=t_h1b
+      a3(9,5)=t_h3b
+      a3(9,6)=t_h2b
+!
+      do ia6=1,8
+       if(a3(ia6,1).ne.0) then
+       do ja6=ia6+1,9
+        if((a3(ia6,1).eq.a3(ja6,1)).and.(a3(ia6,2).eq.a3(ja6,2))
+     &   .and.(a3(ia6,3).eq.a3(ja6,3)).and.(a3(ia6,4).eq.a3(ja6,4))
+     &   .and.(a3(ia6,5).eq.a3(ja6,5)).and.(a3(ia6,6).eq.a3(ja6,6)))
+     &   then
+         a3(ja6,1)=0
+         a3(ja6,2)=0
+         a3(ja6,3)=0
+         a3(ja6,4)=0
+         a3(ja6,5)=0
+         a3(ja6,6)=0
+        end if
+       enddo 
+       end if
+      enddo 
+!
+      do ia6=1,9
+      p4b=a3(ia6,1)
+      p5b=a3(ia6,2)
+      p6b=a3(ia6,3)
+      h1b=a3(ia6,4)
+      h2b=a3(ia6,5)
+      h3b=a3(ia6,6)
+      if((p5b.le.p6b).and.(h1b.le.h2b).and.(p4b.ne.0)) then
+      skipped = .false.
+      IF (.not.skipped) THEN
+      IF ((.not.restricted).or.
+     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
+     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
+     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12)) THEN
+      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
+     &    .eq. 
+     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)
+     &   ) THEN
+      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
+     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
+     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) .eq. 
+     &    ieor(irrep_v,irrep_t)) THEN
+      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
+     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1) 
+     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
+      DO p7b = noab+1,noab+nvab
+      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p7b-1) .eq. 
+     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)) THEN
+      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p7b-1),
+     &    ieor(int_mb(k_sym+h1b-1),int_mb(k_sym+h2b-1)))) 
+     &    .eq. irrep_t) THEN
+      CALL TCE_RESTRICTED_4(p4b,p7b,h1b,h2b,p4b_1,p7b_1,h1b_1,h2b_1)
+      CALL TCE_RESTRICTED_4(p5b,p6b,h3b,p7b,p5b_2,p6b_2,h3b_2,p7b_2)
+      dim_common = int_mb(k_range+p7b-1)
+      dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h1b-1) 
+     &          * int_mb(k_range+h2b-1)
+      dima = dim_common * dima_sort
+      dimb_sort = int_mb(k_range+p5b-1) * int_mb(k_range+p6b-1) 
+     &          * int_mb(k_range+h3b-1)
+      dimb = dim_common * dimb_sort
+      IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
+      IF ((p7b .lt. p4b)) THEN
+      CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
+     &     (h2b_1 - 1 + noab * (h1b_1 - 1 + noab * 
+     &     (p4b_1 - noab - 1 + nvab * (p7b_1 - noab - 1)))))
+      CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
+     &                int_mb(k_range+p7b-1),int_mb(k_range+p4b-1),
+     &                int_mb(k_range+h1b-1),int_mb(k_range+h2b-1),
+     &                4,3,2,1,-1.0d0)
+      END IF
+      IF ((p4b .le. p7b)) THEN
+      CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
+     &     (h2b_1 - 1 + noab * (h1b_1 - 1 + noab * 
+     &     (p7b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
+      CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
+     &                int_mb(k_range+p4b-1),int_mb(k_range+p7b-1),
+     &                int_mb(k_range+h1b-1),int_mb(k_range+h2b-1),
+     &                4,3,1,2,1.0d0)
+      END IF
+      IF ((h3b .le. p7b)) THEN
+      if(.not.intorb) then
+      CALL GET_HASH_BLOCK(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
+     &     (p7b_2 - 1 + (noab+nvab) * (h3b_2 - 1 + (noab+nvab) 
+     &   * (p6b_2 - 1 + (noab+nvab) * (p5b_2 - 1)))))
+      else
+      CALL GET_HASH_BLOCK_I(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
+     &     (p7b_2 - 1 + (noab+nvab) * (h3b_2 - 1 + (noab+nvab) 
+     &   * (p6b_2 - 1 + (noab+nvab) * (p5b_2 - 1)))),
+     &     p7b_2,h3b_2,p6b_2,p5b_2)
+      end if
+      END IF
+!
+!  no need to zero d_c - it has already been done in ccsd_t
+!  k_c_sort is not used here
+!
+! contributions are calculated here
+!
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_ty1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &2b)) THEN
+
+      call sd_ty1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &2b)) THEN
+
+      call sd_ty1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_ty1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &2b)) THEN
+
+      call sd_ty1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &2b)) THEN
+
+      call sd_ty1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+
+      call sd_ty1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &2b)) THEN
+
+      call sd_ty1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &2b)) THEN
+
+      call sd_ty1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
+     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+     &               int_mb(k_range+p7b-1),
+     &               f_t3,f_t2_sort,f_v2_sort,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+
+      END IF
+
+      END IF
+      END IF
+      END IF
+      END DO ! p7b loop
+!
+      END IF
+      END IF
+      END IF
+      END IF
+!
+      END IF
+      END DO
+      END
+
+      end module tce_ccsd_t_cutensor
