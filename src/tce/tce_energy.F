@@ -3369,9 +3369,8 @@ c
      1                    d_v2,k_v2_offset,pt3_1,pt3_2,size_t1,icuda)
               end if 
 #else
-              if (nodezero) write(LuOut,*) 'Using plain CCSD(T) code'
-              if (nodezero) call util_flush(LuOut)
               if(.not.slice) then
+              if (nodezero) write(LuOut,*) 'Using plain CCSD(T) code'
               call ccsd_t(d_t1,k_t1_offset,d_t2,k_t2_offset,
      1                    d_v2,k_v2_offset,pt3_1,pt3_2,size_t1)
               else
@@ -3384,6 +3383,7 @@ c
      1                    d_v2,k_v2_offset,
      1                    pt3_1_cut,pt3_2_cut,size_t1,xmem)
               end if
+              if (nodezero) call util_flush(LuOut)
 #endif
 #ifdef USE_PSTAT
 c     
