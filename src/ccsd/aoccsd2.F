@@ -17,6 +17,7 @@ c
       logical use_trpdrv_omp, use_trpdrv_bgp2
       logical use_trpdrv_omp_mp
       logical use_trpdrv_stdpar
+      logical use_trpdrv_openacc
       logical use_trpdrv_offload
 c
 #include "ccsd_len.fh"
@@ -721,6 +722,9 @@ C
       if (.not. rtdb_get(rtdb, 'ccsd:use_trpdrv_stdpar', mt_log, 1,
      1                   use_trpdrv_stdpar))
      2    use_trpdrv_offload=.false.
+      if (.not. rtdb_get(rtdb, 'ccsd:use_trpdrv_openacc', mt_log, 1,
+     1                   use_trpdrv_openacc))
+     2    use_trpdrv_openacc=.false.
       if (.not. rtdb_get(rtdb, 'ccsd:use_trpdrv_offload', mt_log, 1,
      1                   use_trpdrv_offload))
      2    use_trpdrv_offload=.false.
@@ -981,13 +985,27 @@ c
      $        dbl_mb(k_trp_Kij), dbl_mb(k_trp_Kkj), dbl_mb(k_trp_Dja),
      $        dbl_mb(k_trp_Djka), dbl_mb(k_trp_Djia))
 c
-         else if (use_trpdrv_stdpar) then
-#ifdef USE_F90_ALLOCATABLE
+#if defined(USE_OPENACC_TRPDRV)
+         else if (use_trpdrv_openacc) then
          if (iam.eq.0.and.oprint) then
             write(luout,1808) nvpass,util_wallsec()
             call util_flush(luout)
          endif
- 1808    format(' commencing triples evaluation - stdpar version',i8,
+ 1808    format(' commencing triples evaluation - OpenACC version',i8,
+     I        ' at ',f20.2,' secs')
+         call ccsd_trpdrv_openacc(dbl_mb(k_t1),eorb,
+     $        g_objo,g_objv,g_coul,g_exch,ncor,nocc,nvir,iprt,
+     $        empt(1),empt(2),oseg_lo,oseg_hi,kchunk)
+#else
+         call errquit('aoccsd: trpdrv_openacc disabled ',0,0)
+#endif
+         else if (use_trpdrv_stdpar) then
+#ifdef USE_F90_ALLOCATABLE
+         if (iam.eq.0.and.oprint) then
+            write(luout,1809) nvpass,util_wallsec()
+            call util_flush(luout)
+         endif
+ 1809    format(' commencing triples evaluation - stdpar version',i8,
      I        ' at ',f20.2,' secs')
          call ccsd_trpdrv_stdpar(dbl_mb(k_t1),
      $        f1n,f1t,f2n,f2t,f3n,f3t,f4n,f4t,
