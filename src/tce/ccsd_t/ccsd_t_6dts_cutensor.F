@@ -620,17 +620,17 @@
       integer, intent(in) :: maxp,maxh
       CALL ccsd_t_6dts_l_1_cutensor(f_t3,
      &      d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &     t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &     t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
       CALL ccsd_t_6dts_l_2_cutensor(f_t3,
      &     d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &     t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &     t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
       END
 
       SUBROUTINE ccsd_t_6dts_l_1_cutensor(f_t3,
      &           d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &           t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
 !
@@ -937,7 +937,7 @@
 
       SUBROUTINE ccsd_t_6dts_l_2_cutensor(f_t3,
      &           d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &           t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( p7 ) * t ( p4 p7 h1 h2 )_t * v ( p5 p6 h3 p7 )_v
 !
