@@ -186,14 +186,22 @@
             end if
             f_singles = 0.0d0
             f_doubles = 0.0d0
-            call ccsd_t_singles_l_6dts_cutensor(f_singles,
+            call ccsd_t_singles_l_1_6dts_cutensor(f_singles,
      &        t1_local,d_v2,k_t1_offset,k_v2_offset,
      &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-            call ccsd_t_doubles_l_6dts_cutensor(f_doubles,
-     &        d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+!            call ccsd_t_doubles_l_6dts_cutensor(f_doubles,
+!     &        d_t2,d_v2,k_t2_offset,k_v2_offset,
+!     &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+!     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+             call ccsd_t_6dts_l_1_cutensor(f_doubles,
+     &         d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &         t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &         istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+             call ccsd_t_6dts_l_2_cutensor(f_doubles,
+     &         d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &         t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &         istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
             if (restricted) then
               factor = 2.0d0
             else
@@ -300,13 +308,13 @@
       integer, intent(in) :: maxp,maxh
       CALL ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
      &     d_v2,k_t1_offset,k_v2_offset,
-     &     t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &     t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
       END
 
       SUBROUTINE ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
      &           d_v2,k_t1_offset,k_v2_offset,
-     &           t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = 1 * P( 9 ) * t ( p4 h1 )_t * v ( p5 p6 h2 h3 )_v
 !
