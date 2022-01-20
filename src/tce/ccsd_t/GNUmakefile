@@ -13,8 +13,13 @@ OBJ_OPTIMIZE = ccsd_t.o ccsd_t_doubles.o ccsd_t_singles.o lambda_ccsd_t.o lambda
                offl_ccsd_t_doubles_l.o ccsd_t_kernels_omp.o \
                tce_hashnsort.o ccsd_t_pstat.o \
                ccsd_t_dot.o ccsd_t_neword.o
+
 ifdef USE_OFFLOAD
   OBJ_OPTIMIZE += offl_ccsd_t_singles_l.o offl_ccsd_t_singles_l_1.o
+endif
+
+ifdef USE_CUTENSOR
+  OBJ_OPTIMIZE += ccsd_t_6dts_cutensor.o
 endif
 
 LIB_INCLUDES = -I../include
