@@ -557,8 +557,17 @@ endif
 #detect clang
 GOTCLANG= $(shell $(CC) -dM -E - </dev/null 2> /dev/null |grep __clang__|head -1|cut -c19)
 GOTFREEBSD= $(shell uname -o 2>&1|awk ' /FreeBSD/ {print "1";exit}')
+ifeq ($(_FC),ifort)
+  USE_FPICF=1
+endif
+ifeq ($(_FC),ifx)
+  USE_FPICF=1
+endif
 ifdef USE_FPICF
   FFLAGS_FORGA += "-fPIC"
+endif
+ifdef USE_CRAYSHASTA
+  CFLAGS_FORGA += -D__CRAYXE
 endif
 ifeq ($(GOTCLANG),1)
   CFLAGS_FORGA += "-fPIC"
@@ -566,6 +575,11 @@ ifeq ($(GOTCLANG),1)
     CFLAGS_FORGA +=-DMPICH_NO_ATTR_TYPE_TAGS
   endif
 endif
+ifeq ($(PE_ENV),CRAY)
+   CFLAGS_FORGA +=-O0 -g -L/opt/cray/pe/mpt/default/gni/mpich-cray/90/lib
+   FFLAGS_FORGA +=-O0 -g
+endif
+
 ifeq ($(GOTFREEBSD),1)
     UNSETFLAGS_FORGA = LDFLAGS=" " CPPFLAGS=" " LIBS=" "
 endif
@@ -597,7 +611,7 @@ ifdef USE_GAGITHUB
 	GET_TOOLS=./get-tools-github
   ifdef USE_GA_RELEASE
     ifndef GA_RELEASE_NO
-      GA_RELEASE_NO=5.8
+      GA_RELEASE_NO=5.8.1
     endif
     GA_DIR=ga-$(GA_RELEASE_NO)
   else
@@ -629,6 +643,10 @@ endif
 ifndef ARMCI_NETWORK
     ARMCI_NETWORK=MPI-TS
     MAYBE_ARMCI = --with-mpi-ts
+endif
+# CUDA UM support
+ifdef NWCHEM_LINK_CUDA
+    MAYBE_ARMCI +=  --enable-cuda-mem
 endif
 #
 # Apparently weak bindings do not work with CYGWIN64 at the moment. There seems

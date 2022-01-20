@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         blas: [build_openblas]
-        os: [ubuntu-18.04, macos-10.15]
+        os: [ubuntu-20.04, macos-10.15]
         experimental: [false]
         mpi_impl:
           - openmpi
@@ -32,7 +32,7 @@ jobs:
           - "qmandpw qmd"
           - "tce"
         fc:
-          - gfortran-9
+          - gfortran
         exclude:
           - os: macos-10.15 
             mpi_impl: mpich
@@ -44,105 +44,201 @@ jobs:
           - os: ubuntu-20.04
             experimental: true
             mpi_impl: mpich
-            armci_network: mpi-ts
+            armci_network: MPI-TS
             nwchem_modules: "tinyqmpw python"
             fc: flang
             cc: clang
+          - os: ubuntu-18.04
+            experimental: true
+            mpi_impl: mpich
+            armci_network: MPI-TS
+            nwchem_modules: "tinyqmpw python"
+            fc: amdflang
+            cc: amdclang
+          - os: ubuntu-18.04
+            experimental: true
+            mpi_impl: mpich
+            armci_network: MPI-TS
+            nwchem_modules: "tce"
+            fc: amdflang
+            cc: amdclang
           - os: ubuntu-20.04
             experimental: true
             mpi_impl: intel
-            armci_network: mpi-pr
+            armci_network: MPI-PR
             nwchem_modules: "tinyqmpw python"
             fc: ifort
           - os: ubuntu-20.04
             experimental: true
             mpi_impl: mpich
-            armci_network: mpi-ts
+            armci_network: MPI-TS
             nwchem_modules: "tinyqmpw python"
             fc: nvfortran
             cc: gcc
           - os: ubuntu-20.04
             experimental: true
             mpi_impl: intel
-            armci_network: sockets
+            armci_network: SOCKETS
             nwchem_modules: "tce"
             fc: ifort
           - os: ubuntu-20.04
             experimental: true 
             mpi_impl: mpich
-            armci_network: mpi-ts
+            armci_network: MPI-TS
             nwchem_modules: "tce"
             fc: flang
             cc: clang
           - os: ubuntu-20.04
             experimental: true 
             mpi_impl: intel
-            armci_network: mpi-pr
+            armci_network: MPI-PR
             nwchem_modules: "tinyqmpw python"
             fc: ifort
           - os: ubuntu-20.04
             experimental: true 
             mpi_impl: intel
-            armci_network: sockets
+            armci_network: SOCKETS
             nwchem_modules: "tce"
             fc: ifort
-          - os: ubuntu-20.04
+          - os: ubuntu-18.04
             experimental: true 
-            mpi_impl: mpich
-            armci_network: mpi-pt
-            nwchem_modules: "nwdft solvation driver"
-            fc: gfortran-10
-            use_simint: 1
-          - os: ubuntu-20.04
-            experimental: true 
-            mpi_impl: mpich
-            armci_network: mpi-pr
+            mpi_impl: intel
+            armci_network: MPI-PR
             nwchem_modules: "tinyqmpw python"
-            fc: gfortran-10
+            fc: ifx
+          - os: ubuntu-18.04
+            experimental: true 
+            mpi_impl: intel
+            armci_network: SOCKETS
+            nwchem_modules: "tce"
+            fc: ifx
+          - os: ubuntu-18.04
+            experimental: true
+            mpi_impl: openmpi
+            armci_network: MPI-TS
+            nwchem_modules: "tinyqmpw"
+            fc: gfortran
+            cc: gcc
+            use_libxc: 1
+          - os: ubuntu-18.04
+            experimental: true
+            mpi_impl: intel
+            armci_network: MPI-TS
+            nwchem_modules: "tinyqmpw"
+            fc: ifort
+            cc: icc
+            use_libxc: 1
           - os: macos-10.15
             experimental: true 
             mpi_impl: openmpi
-            armci_network: mpi-pr
+            armci_network: MPI-TS
+            nwchem_modules: "tinyqmpw"
+            fc: gfortran-10
+            cc: gcc
+            xcode_version: 12.4
+            use_libxc: 1
+          - os: ubuntu-18.04
+            experimental: true 
+            mpi_impl: mpich
+            armci_network: MPI-PT
+            nwchem_modules: "nwdft solvation driver"
+            fc: gfortran-10
+            cc: gcc-10
+            use_simint: 1
+          - os: ubuntu-20.04
+            experimental: true
+            mpi_impl: mpich
+            armci_network: MPI-TS
+            nwchem_modules: "nwdft solvation driver"
+            fc: nvfortran
+            cc: gcc
+            use_simint: 1
+          - os: ubuntu-20.04
+            experimental: true
+            mpi_impl: intel
+            armci_network: MPI-TS
+            nwchem_modules: "nwdft solvation driver"
+            fc: ifort
+            cc: icc
+            use_simint: 1
+          - os: ubuntu-18.04
+            experimental: true 
+            mpi_impl: mpich
+            armci_network: MPI-PR
+            nwchem_modules: "tinyqmpw python"
+            fc: gfortran-10
+            cc: gcc-10
+            use_libxc: 1
+          - os: macos-10.15
+            experimental: true 
+            mpi_impl: openmpi
+            armci_network: MPI-PR
             nwchem_modules: "qmandpw qmd"
             fc: gfortran-10
+            cc: gcc-10
             xcode_version: 12.3
           - os: macos-11.0
             experimental: true
             mpi_impl: openmpi
-            armci_network: mpi-pr
+            armci_network: MPI-PR
             nwchem_modules: "tce"
             fc: gfortran-10
-            xcode_version: 12.3
+            cc: gcc-10
+            xcode_version: 12.5.1
+          - os: macos-11.0
+            experimental: true
+            mpi_impl: openmpi
+            armci_network: MPI-TS
+            nwchem_modules: "tinyqmpw"
+            fc: gfortran-11
+            xcode_version: 13.2.1
           - os: macos-10.15
             experimental: true
             mpi_impl: openmpi
-            armci_network: mpi-ts
+            armci_network: MPI-TS
             nwchem_modules: "tinyqmpw"
             fc: gfortran-9
             blas: "accelerate"
-            xcode_version: 12.1
-          - os: ubuntu-20.04
+            xcode_version: 12.1.1
+          - os: macos-10.15
             experimental: true
             mpi_impl: mpich
-            armci_network: mpi-ts
+            armci_network: SOCKETS
+            nwchem_modules: "tinyqmpw"
+            fc: ifort
+            xcode_version: 12.4
+          - os: ubuntu-18.04
+            experimental: true
+            mpi_impl: mpich
+            armci_network: MPI-TS
             nwchem_modules: "qmandpw qmd"
             fc: gfortran-10
+            cc: gcc-10
             use_openmp: 2
             blas: "build_openblas"
           - os: ubuntu-20.04
             experimental: true
             mpi_impl: intel
-            armci_network: mpi-ts
+            armci_network: MPI-TS
             nwchem_modules: "qmandpw qmd"
             fc: ifort
             use_openmp: 2
+          - os: ubuntu-latest
+            experimental: true
+            mpi_impl: mpich
+            armci_network: MPI-TS
+            nwchem_modules: "tinyqmpw"
+            fc: gfortran
+            blas: "internal"
       fail-fast: false
     env:
         MPI_IMPL: ${{ matrix.mpi_impl }}
         ARMCI_NETWORK: ${{ matrix.armci_network }}
         NWCHEM_MODULES: ${{ matrix.nwchem_modules }}
         USE_SIMINT: ${{ matrix.use_simint }}
+        USE_LIBXC: ${{ matrix.use_libxc }}
         FC: ${{ matrix.fc }}
+        CC: ${{ matrix.cc }}
         COMEX_MAX_NB_OUTSTANDING: 4
         SIMINT_MAXAM: 3
         SIMINT_VECTOR: avx2
@@ -166,7 +262,14 @@ jobs:
         with:
           path: |
             ~/cache
-          key: ${{ matrix.os }}-${{ matrix.mpi_impl}}-${{ matrix.fc}}-xcode${{ matrix.xcode_version}}-simint${{ matrix.use_simint}}-blas${{ matrix.blas}}-simd${{ steps.get-simd.outputs.simd }}-nwchemcache-v004
+            ~/apps
+          key: ${{ matrix.os }}-${{ matrix.mpi_impl}}-${{ matrix.fc}}-xcode${{ matrix.xcode_version}}-simint${{ matrix.use_simint}}-blas${{ matrix.blas}}-simd${{ steps.get-simd.outputs.simd }}-nwchemcache-v014
+      - name: fetch apps cache
+        if: steps.setup-cache.outputs.cache-hit == 'true'
+        run: |
+          if [[ -f ~/apps/oneapi/setvars.sh ]]; then \
+          echo "apps oneapi cache fetched" ; \
+          export GOT_APPSCACHE="Y" ; fi
       - name: build environment
         run: |
           pwd
@@ -175,11 +278,12 @@ jobs:
       - name: fetch cache
         if: steps.setup-cache.outputs.cache-hit == 'true'
         run: |
-          [ -d ~/cache/libext ] && mkdir -p ~/cache/libext/mpich/mpich  && \
-          rsync -av ~/cache/libext/* src/libext/.  
+          ls -Rla ~/cache
+          [ -d ~/cache/libext ] && rsync -av ~/cache/libext/* src/libext/.  
           [ -d ~/cache/simint/simint_install/lib ] && \
           mkdir -p src/NWints/simint/libsimint_source/simint_install && \
           rsync -av ~/cache/simint/simint_install/* src/NWints/simint/libsimint_source/simint_install/.   || true
+          [ -f ~/cache/tarballs/dftd3.tgz ] && rsync -av ~/cache/tarballs/dftd3.tgz  src/nwpw/nwpwlib/nwpwxc/dftd3.tgz  || true
           echo "cache fetched"
       - name: compile
         id: compile
@@ -194,13 +298,17 @@ jobs:
           cat src/tools/build/comex/config.log || true
       - name: store cache
         run: |
+          mkdir -p ~/apps || true
           mkdir -p ~/cache/libext/lib  ~/cache/libext/bin  ~/cache/libext/include ~/cache/libext/mpich || true
+          mkdir -p ~/cache/libext/mpich/mpich || true
           mkdir -p ~/cache/simint/simint_install || true
+          mkdir -p ~/cache/tarballs || true
+          ls -la src/libext ||true
           [ -d "src/libext/lib" ] && rsync -av src/libext/lib/*  ~/cache/libext/lib/. || true
           [ -d "src/libext/bin" ] && rsync -av src/libext/bin/*  ~/cache/libext/bin/. || true
           [ -d "src/libext/include" ] && rsync -av src/libext/include/*  ~/cache/libext/include/.  || true
           [ -d "src/NWints/simint/libsimint_source/simint_install/lib" ] && rsync -av src/NWints/simint/libsimint_source/simint_install/* ~/cache/simint/simint_install/.  || true
-          mkdir -p ~/cache/libext/mpich/mpich || true
+          [ -f "src/nwpw/nwpwlib/nwpwxc/dftd3.tgz" ] && rsync -av  src/nwpw/nwpwlib/nwpwxc/dftd3.tgz ~/cache/tarballs/dftd3.tgz || true
           echo "cache stored"
           ls -Rla ~/cache
       - name: qa_test
@@ -231,6 +339,8 @@ jobs:
           egrep d=  QA/testoutputs/dft_smear.out || true; fi
           if [[ -f QA/testoutputs/dft_smear.out ]]; then \
           tail -2000  QA/testoutputs/dft_smear.out || true; fi
+          if [[ -f QA/testoutputs/pspw_md.out ]]; then \
+          grep 'PSPW energy'  QA/testoutputs/pspw_md.out || true; fi
   
 
 
