@@ -610,6 +610,13 @@ c
       cname(76)='             wb97 Correlation Functional'
       cname(77)='            wb97x Correlation Functional'
       cname(78)='         wb97x-d3 Correlation Functional'
+      cname(79)='            revM11 Correlation Potential'
+      cname(80)='            MN12-L Correlation Potential'
+      cname(81)='           MN12-SX Correlation Potential'
+      cname(82)='            N12-SX Correlation Potential'
+      cname(83)='            MN15-L Correlation Potential'
+      cname(84)='              MN15 Correlation Potential'
+      cname(85)='            M06-SX Correlation Potential'
 c
 c     Exchange functional name defaults.
 c
@@ -684,6 +691,13 @@ c
       xname(76)='                wb97 Exchange Functional'
       xname(77)='               wb97x Exchange Functional'
       xname(78)='            wb97x-d3 Exchange Functional'
+      xname(79)='              revM11 Exchange Functional'
+      xname(80)='              MN12-L Exchange Functional'
+      xname(81)='             MN12-SX Exchange Functional'
+      xname(82)='              N12-SX Exchange Functional'
+      xname(83)='              MN15-L Exchange Functional'
+      xname(84)='                MN15 Exchange Functional'
+      xname(85)='              M06-SX Exchange Functional'
 c
 c     Exchange-Correlation combination functional name defaults.
 c
@@ -758,6 +772,13 @@ c
       xcname(76)='              wb97  Method XC Functional'
       xcname(77)='             wb97x  Method XC Functional'
       xcname(78)='          wb97x-d3  Method XC Functional'
+      xcname(79)='             revM11 Method XC Functional'
+      xcname(80)='             MN12-L Method XC Functional'
+      xcname(81)='            MN12-SX Method XC Functional'
+      xcname(82)='             N12-SX Method XC Functional'
+      xcname(83)='             MN15-L Method XC Functional'
+      xcname(84)='               MN15 Method XC Functional'
+      xcname(85)='             M06-SX Method XC Functional'
 c     
 c     place character XC parameters in rtdb
 c     
@@ -777,6 +798,12 @@ c
      &     call errquit('rdinput: geom_create?',70, GEOM_ERR)
       if (.not. geom_rtdb_load(rtdb, geom, 'geometry'))
      &     call errquit('rdinput: no geometry ',72, RTDB_ERR)
+c     check 0-d
+      if(.not. geom_systype_get(geom,itype)) itype = 0
+      if(itype.ne.0)
+     c     call errquit('dft_rdinput: detected periodicity = ',
+     c    itype , INPUT_ERR)
+
       if (.not.rtdb_get(rtdb, 'dft:skeleton',MT_LOG, 1, oskel))then
          oskel = sym_number_ops(geom) .gt. 0
       endif
