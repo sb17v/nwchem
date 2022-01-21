@@ -107,25 +107,14 @@
             offset_h3 = k_evl_sorted+int_mb(k_offset+t_h3b-1)-1
             spin_h3b=int_mb(k_spin+t_h3b-1)
             sym_h3b=int_mb(k_sym+t_h3b-1)
-            if (spin_p4b
-     &         +spin_p5b
-     &         +spin_p6b
-     &      .eq.spin_h1b
-     &         +spin_h2b
-     &         +spin_h3b) then
+            if (spin_p4b+spin_p5b+spin_p6b
+     &      .eq.spin_h1b+spin_h2b+spin_h3b) then
             if ((.not.restricted).or.
-     &         (spin_p4b
-     &         +spin_p5b
-     &         +spin_p6b
-     &         +spin_h1b
-     &         +spin_h2b
-     &         +spin_h3b.le.8)) then
-            if (ieor(sym_p4b,
-     &          ieor(sym_p5b,
-     &          ieor(sym_p6b,
-     &          ieor(sym_h1b,
-     &          ieor(sym_h2b,
-     &               sym_h3b))))).eq.0) then
+     &         (spin_p4b+spin_p5b+spin_p6b+
+     &          spin_h1b+spin_h2b+spin_h3b.le.8)) then
+            if (ieor(sym_p4b,ieor(sym_p5b,
+     &          ieor(sym_p6b,ieor(sym_h1b,
+     &          ieor(sym_h2b,sym_h3b))))).eq.0) then
             if (next.eq.count) then
 ! -- 6DTS --
             dp4=1
@@ -163,12 +152,9 @@
               mdp5=qp5
             end if
 !
-           size = slice_dp4
-     &          * slice_dp5
-     &          * range_p6
-     &          * range_h1
-     &          * range_h2
-     &          * range_h3
+           size = slice_dp4 * slice_dp5
+     &          * range_p6  * range_h1
+     &          * range_h2  * range_h3
 !
             maxp4=slice_dp4
             maxp5=slice_dp5
@@ -465,36 +451,27 @@
       IF (.not.skipped) THEN
 
       IF ((.not.restricted).or.
-     &    (spin_p4b+spin_p5b+
-     &     spin_p6b+spin_h1b+
-     &     spin_h2b+spin_h3b.ne.12)) THEN
-      IF (spin_p4b+spin_p5b+spin_p6b
-     &    .eq. 
-     &    spin_h1b+spin_h2b+spin_h3b
-     &   ) THEN
-      IF (ieor(sym_p4b,ieor(sym_p5b,
-     &    ieor(sym_p6b,ieor(sym_h1b,
-     &    ieor(sym_h2b,sym_h3b))))) .eq. 
-     &    ieor(irrep_v,irrep_t)) THEN
-      dimc = range_p4b * range_p5b
-     &     * range_p6b * range_h1b
-     &     * range_h2b * range_h3b
+     &    (spin_p4b+spin_p5b+spin_p6b+
+     &     spin_h1b+spin_h2b+spin_h3b.ne.12)) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
+     &    spin_h1b+spin_h2b+spin_h3b) THEN
+      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) .eq. ieor(irrep_v,irrep_t)) THEN
+      dimc = range_p4b * range_p5b * range_p6b 
+     &     * range_h1b * range_h2b * range_h3b
       IF (spin_p4b .eq. spin_h1b) THEN
-      IF (ieor(sym_p4b,sym_h1b) 
-     &    .eq. irrep_t) THEN
+      IF (ieor(sym_p4b,sym_h1b) .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
       CALL TCE_RESTRICTED_4(p5b,p6b,h2b,h3b,p5b_2,p6b_2,h2b_2,h3b_2)
       dim_common = 1
       dima_sort = range_p4b * range_h1b
       dima = dim_common * dima_sort
-      dimb_sort = range_p5b * range_p6b 
-     &          * range_h2b * range_h3b
+      dimb_sort = range_p5b * range_p6b * range_h2b * range_h3b
       dimb = dim_common * dimb_sort
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
       CALL GET_HASH_BLOCK_MA(f_t1,f_t1_temp,dima, int_mb(k_t1_offset),
      &                       (h1b_1 - 1 + noab * (p4b_1 - noab - 1)))
-      CALL TCE_SORT_2(f_t1_temp,f_t1_sort,range_p4b,
-     &                range_h1b,2,1,1.0d0)
+      CALL TCE_SORT_2(f_t1_temp,f_t1_sort,range_p4b,range_h1b,2,1,1.0d0)
       if(.not.intorb) then
       CALL GET_HASH_BLOCK(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
      &     (h3b_2 - 1 + (noab+nvab) * (h2b_2 - 1 + (noab+nvab) *
@@ -522,10 +499,10 @@
      &3b)) THEN
 
       call acc_sd_6ds_2(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -534,10 +511,10 @@
      &1b)) THEN
 
       call acc_sd_6ds_3(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -546,10 +523,10 @@
      &3b)) THEN
 
       call acc_sd_6ds_4(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -558,10 +535,10 @@
      &3b)) THEN
 
       call acc_sd_6ds_5(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -570,10 +547,10 @@
      &1b)) THEN
 
       call acc_sd_6ds_6(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -582,10 +559,10 @@
      &3b)) THEN
 
       call acc_sd_6ds_7(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -597,7 +574,7 @@
      &               range_h1b,range_p6b,
      &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -609,7 +586,7 @@
      &               range_h1b,range_p6b,
      &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
+     &                  istart,istop,jstart,jstop,
      & maxp4,maxp5)
 
       END IF
@@ -868,7 +845,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
@@ -878,7 +855,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
@@ -888,7 +865,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
@@ -898,7 +875,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
@@ -908,7 +885,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
@@ -918,7 +895,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
@@ -928,7 +905,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
@@ -938,7 +915,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
@@ -948,7 +925,7 @@
      &               range_p5b,range_p4b,
      &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
 !
       END IF
@@ -1127,20 +1104,14 @@
       skipped = .false.
       IF (.not.skipped) THEN
       IF ((.not.restricted).or.
-     &    (spin_p4b+spin_p5b+
-     &     spin_p6b+spin_h1b+
+     &    (spin_p4b+spin_p5b+spin_p6b+spin_h1b+
      &     spin_h2b+spin_h3b.ne.12)) THEN
-      IF (spin_p4b+spin_p5b+spin_p6b
-     &    .eq. 
-     &    spin_h1b+spin_h2b+spin_h3b
-     &   ) THEN
-      IF (ieor(sym_p4b,ieor(sym_p5b,
-     &    ieor(sym_p6b,ieor(sym_h1b,
-     &    ieor(sym_h2b,sym_h3b))))) .eq. 
-     &    ieor(irrep_v,irrep_t)) THEN
-      dimc = range_p4b * range_p5b 
-     &     * range_p6b * range_h1b 
-     &     * range_h2b * range_h3b
+      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
+     &    spin_h1b+spin_h2b+spin_h3b) THEN
+      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) .eq. ieor(irrep_v,irrep_t)) THEN
+      dimc = range_p4b * range_p5b * range_p6b
+     &     * range_h1b * range_h2b * range_h3b
       DO p7b = noab+1,noab+nvab
           spin_p7b=int_mb(k_spin+p7b-1)
           sym_p7b=int_mb(k_sym+p7b-1)
@@ -1154,11 +1125,9 @@
       CALL TCE_RESTRICTED_4(p4b,p7b,h1b,h2b,p4b_1,p7b_1,h1b_1,h2b_1)
       CALL TCE_RESTRICTED_4(p5b,p6b,h3b,p7b,p5b_2,p6b_2,h3b_2,p7b_2)
       dim_common = range_p7b
-      dima_sort = range_p4b * range_h1b 
-     &          * range_h2b
+      dima_sort = range_p4b * range_h1b * range_h2b
       dima = dim_common * dima_sort
-      dimb_sort = range_p5b * range_p6b 
-     &          * range_h3b
+      dimb_sort = range_p5b * range_p6b * range_h3b
       dimb = dim_common * dimb_sort
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
       IF ((p7b .lt. p4b)) THEN
@@ -1166,8 +1135,7 @@
      &     (h2b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &     (p4b_1 - noab - 1 + nvab * (p7b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                range_p7b,range_p4b,
-     &                range_h1b,range_h2b,
+     &                range_p7b,range_p4b,range_h1b,range_h2b,
      &                4,3,2,1,-1.0d0)
       END IF
       IF ((p4b .le. p7b)) THEN
@@ -1175,8 +1143,7 @@
      &     (h2b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &     (p7b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                range_p4b,range_p7b,
-     &                range_h1b,range_h2b,
+     &                range_p4b,range_p7b,range_h1b,range_h2b,
      &                4,3,1,2,1.0d0)
       END IF
       IF ((h3b .le. p7b)) THEN
@@ -1201,108 +1168,90 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_ty1_1(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_1(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call acc_sd_ty1_2(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_2(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call acc_sd_ty1_3(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_3(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_ty1_4(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_4(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b, range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call acc_sd_ty1_5(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_5(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call acc_sd_ty1_6(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_6(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_ty1_7(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_7(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call acc_sd_ty1_8(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_8(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call acc_sd_ty1_9(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_p7b,
-     &               f_t3,f_t2_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+      call acc_sd_ty1_9(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,range_p7b,
+     &                  f_t3,f_t2_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
 
@@ -1322,7 +1271,7 @@
 
       subroutine acc_sd_6ds_1(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_1'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1348,7 +1297,7 @@
 !
       subroutine acc_sd_6ds_2(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_2'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1377,7 +1326,7 @@
 !
       subroutine acc_sd_6ds_3(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_3'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1406,7 +1355,7 @@
 !
       subroutine acc_sd_6ds_4(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_4'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1433,7 +1382,7 @@
 !
       subroutine acc_sd_6ds_5(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_5'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1462,7 +1411,7 @@
 !
       subroutine acc_sd_6ds_6(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_6'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1491,7 +1440,7 @@
 !
       subroutine acc_sd_6ds_7(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_7'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1518,7 +1467,7 @@
 !
       subroutine acc_sd_6ds_8(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_8'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1547,7 +1496,7 @@
 !
       subroutine acc_sd_6ds_9(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_6ds_9'
       integer istart,istop,jstart,jstop,maxp4,maxp5
@@ -1579,7 +1528,7 @@
       subroutine acc_sd_tx1_1(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_1'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1609,7 +1558,7 @@
       subroutine acc_sd_tx1_2(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_2'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1641,7 +1590,7 @@
       subroutine acc_sd_tx1_3(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_3'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1675,7 +1624,7 @@
       subroutine acc_sd_tx1_4(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_4'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1705,7 +1654,7 @@
       subroutine acc_sd_tx1_5(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_5'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1741,7 +1690,7 @@
       subroutine acc_sd_tx1_6(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_6'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1775,7 +1724,7 @@
       subroutine acc_sd_tx1_7(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_7'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1805,7 +1754,7 @@
       subroutine acc_sd_tx1_8(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_8'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1841,7 +1790,7 @@
       subroutine acc_sd_tx1_9(h3d,h2d,h1d,p6d,p5d,p4d,
      &               h7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_tx1_9'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1875,7 +1824,7 @@
       subroutine acc_sd_ty1_1(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       character(len=*), parameter :: funcname = 'sd_ty1_1'
@@ -1911,7 +1860,7 @@
       subroutine acc_sd_ty1_2(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_2'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1945,7 +1894,7 @@
       subroutine acc_sd_ty1_3(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_3'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -1981,7 +1930,7 @@
       subroutine acc_sd_ty1_4(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_4'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -2017,7 +1966,7 @@
       subroutine acc_sd_ty1_5(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_5'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -2051,7 +2000,7 @@
       subroutine acc_sd_ty1_6(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_6'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -2087,7 +2036,7 @@
       subroutine acc_sd_ty1_7(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_7'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -2123,7 +2072,7 @@
       subroutine acc_sd_ty1_8(h3d,h2d,h1d,p6d,p5d,p4d,
      &               p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_8'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
@@ -2156,7 +2105,7 @@
 !
       subroutine acc_sd_ty1_9(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
-     & istart,istop,jstart,jstop,maxp4,maxp5)
+     &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       character(len=*), parameter :: funcname = 'sd_ty1_9'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
