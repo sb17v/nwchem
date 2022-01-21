@@ -3072,6 +3072,15 @@ ifneq ($(TARGET),LINUX)
             DEFINES  += -DCATAMOUNT
         endif
 
+        ifdef USE_OPENACC
+           FOPTIONS  += -acc -Minfo=acc
+           LDOPTIONS += -acc
+        endif
+        ifdef USE_CUTENSOR
+           FOPTIONS  += -cudalib=cutensor
+           LDOPTIONS += -cudalib=cutensor
+        endif
+      endif
 
         # Jeff: FreeBSD does not link libm automatically with flang
         ifeq ($(USE_FLANG),1)

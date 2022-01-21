@@ -109,7 +109,7 @@ ifeq ($(HAVE_SET_GA_PROPERTY),Y)
       LIB_DEFINES += -DHAVE_SET_GA_PROPERTY
 endif
 
-ifdef USE_OPENACC_TRPDRV
+ifdef USE_OPENACC
   OBJ_OPTIMIZE += ccsd_trpdrv_openacc.o
   USES_BLAS    += ccsd_trpdrv_openacc.F
   FOPTIONS += -DUSE_OPENACC_TRPDRV

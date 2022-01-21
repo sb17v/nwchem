@@ -316,7 +316,7 @@ ifdef TCE_HIP
   OBJ += util_cuda_support.o
 endif
 
-ifdef USE_OPENACC_TRPDRV
+ifdef USE_OPENACC
   FOPTIONS += -cuda -DUSE_CUDA_AFFINITY
 endif
 
