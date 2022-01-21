@@ -1,12 +1,12 @@
       module tce_ccsd_t_cutensor
 
-        integer, parameter :: CHUNK = 16
+      implicit none
 
       contains
 
       SUBROUTINE ccsd_t_6dts_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
      &            d_v2,k_v2_offset,energy1,energy2,size_t1,xmem)
-      IMPLICIT NONE
+      implicit none
 #include "global.fh"
 #include "mafdecls.fh"
 #include "util.fh"
@@ -19,7 +19,9 @@
       integer, intent(in) :: xmem, size_t1
       integer :: t_h1b, t_h1, t_h2b, t_h2, t_h3b, t_h3
       integer :: t_p4b, t_p4, t_p5b, t_p5, t_p6b, t_p6
-      double precision, allocatable :: f_singles(:), f_doubles(:)
+      double precision, allocatable :: f_singles(:)
+      double precision, allocatable :: f_doubles1(:)
+      double precision, allocatable :: f_doubles2(:)
       double precision, allocatable :: t1_local(:)
       integer :: alloc_error
       integer :: size,i
@@ -43,10 +45,11 @@
 ! ---------------------------------------
       integer :: maxh, maxp,h,p
 ! ---------------------------------------
-      double precision energy(2)
-      double precision factor,denom
-      double precision denom_p4,denom_p5,denom_p6
-      double precision denom_h1,denom_h2,denom_h3
+      double precision :: energy(2)
+      double precision :: factor,denom
+      double precision :: e_s, e_d, e_d1, e_d2
+      double precision :: denom_p4,denom_p5,denom_p6
+      double precision :: denom_h1,denom_h2,denom_h3
       external nxtask
 !
 ! Here we determine the maximum tile dimension
@@ -161,12 +164,8 @@
             maxp4=slice_dp4
             maxp5=slice_dp5
 !
-            allocate(f_singles(1:size), stat=alloc_error)
-            if (alloc_error.ne.0) then
-              call errquit('ccsd_t_6dts_cutensor: allocate failed',
-     &                     alloc_error, MA_ERR)
-            endif
-            allocate(f_doubles(1:size), stat=alloc_error)
+            allocate(f_singles(1:size), f_doubles1(1:size),
+     &               f_doubles2(1:size), stat=alloc_error)
             if (alloc_error.ne.0) then
               call errquit('ccsd_t_6dts_cutensor: allocate failed',
      &                     alloc_error, MA_ERR)
@@ -189,20 +188,20 @@
              jstop=int_mb(k_range+t_p5b-1)
             end if
             f_singles = 0.0d0
-            f_doubles = 0.0d0
-            print*,istart,istop,jstart,jstop
+            f_doubles1 = 0.0d0
+            f_doubles2 = 0.0d0
             call ccsd_t_singles_l_1_6dts_cutensor(f_singles,
      &        t1_local,d_v2,k_t1_offset,k_v2_offset,
      &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-             call ccsd_t_6dts_l_1_cutensor(f_doubles,
-     &         d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &         t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &         istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-             call ccsd_t_6dts_l_2_cutensor(f_doubles,
-     &         d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &         t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &         istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+            call ccsd_t_6dts_l_1_cutensor(f_doubles1,
+     &        d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+            call ccsd_t_6dts_l_2_cutensor(f_doubles2,
+     &        d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
+     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
             if (restricted) then
               factor = 2.0d0
             else
@@ -236,10 +235,12 @@
                   denom_h3 = dbl_mb(offset_h3+t_h3)
                   denom = 1.0d0 / ( ( denom_h1 + denom_h2 + denom_h3 )
      &                            - ( denom_p4 + denom_p5 + denom_p6 ) )
-                  energy1 = energy1 + factor*denom
-     &                    * f_doubles(i) * f_doubles(i)
-                  energy2 = energy2 + factor*denom*f_doubles(i)
-     &                    * (f_doubles(i)+f_singles(i))
+                  e_s  = f_singles(i)
+                  e_d1 = f_doubles1(i)
+                  e_d2 = f_doubles2(i)
+                  e_d  = e_d1 + e_d2
+                  energy1 = energy1 + factor*denom * e_d * e_d
+                  energy2 = energy2 + factor*denom * e_d * (e_d + e_s)
                   i = i + 1
                  enddo
                 enddo
@@ -251,14 +252,10 @@
             enddo !do ii ---
             enddo !do jj ---
 !
-            deallocate(f_singles, stat=alloc_error)
+            deallocate(f_singles, f_doubles1, f_doubles2,
+     &                 stat=alloc_error)
             if (alloc_error.ne.0) then
               call errquit('ccst_t_6dts: deallocate failed',
-     &                     alloc_error, MA_ERR)
-            endif
-            deallocate(f_doubles, stat=alloc_error)
-            if (alloc_error.ne.0)  then
-              call errquit('ccsd_t_6dts: deallocate failed',
      &                     alloc_error, MA_ERR)
             endif
 !
@@ -298,7 +295,7 @@
 !
 ! elimination of the transpositions (kowalski,august,2009)
 !
-      IMPLICIT NONE
+      implicit none
 #include "global.fh"
 #include "mafdecls.fh"
 #include "sym.fh"
@@ -606,7 +603,7 @@
 !
 ! elimination of the transpositions (kowalski,august,2009)
 !
-      IMPLICIT NONE
+      implicit none
 #include "global.fh"
 #include "mafdecls.fh"
 #include "sym.fh"
@@ -917,7 +914,7 @@
 !
 ! elimination of the transpositions (kowalski,august,2009)
 !
-      IMPLICIT NONE
+      implicit none
 #include "global.fh"
 #include "mafdecls.fh"
 #include "sym.fh"
@@ -1239,13 +1236,13 @@
       subroutine acc_sd_6ds_1(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3h2,h1,p6,p5,p4
-      double precision triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d*h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3h2,h1,p6,p5,p4
+      double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1264,13 +1261,13 @@
       subroutine acc_sd_6ds_2(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3,h2,h1,p6,p5,p4
-      double precision triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d,h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3,h2,h1,p6,p5,p4
+      double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1292,13 +1289,13 @@
       subroutine acc_sd_6ds_3(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3,h2,h1,p6,p5,p4
-      double precision triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d,h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3,h2,h1,p6,p5,p4
+      double precision :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1320,13 +1317,13 @@
       subroutine acc_sd_6ds_4(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3h2,h1,p6,p5,p4
-      double precision triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d*h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3h2,h1,p6,p5,p4
+      double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1346,13 +1343,13 @@
       subroutine acc_sd_6ds_5(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3,h2,h1,p6,p5,p4
-      double precision triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d,h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3,h2,h1,p6,p5,p4
+      double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1374,13 +1371,13 @@
       subroutine acc_sd_6ds_6(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3,h2,h1,p6,p5,p4
-      double precision triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d,h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3,h2,h1,p6,p5,p4
+      double precision :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1402,13 +1399,13 @@
       subroutine acc_sd_6ds_7(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3h2,h1,p6,p5,p4
-      double precision triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d*h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3h2,h1,p6,p5,p4
+      double precision :: triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -1428,13 +1425,13 @@
       subroutine acc_sd_6ds_8(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3,h2,h1,p6,p5,p4
-      double precision triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d,h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3,h2,h1,p6,p5,p4
+      double precision :: triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -1456,13 +1453,13 @@
       subroutine acc_sd_6ds_9(h3d,h2d,h1d,p6d,p5d,p4d,
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      integer istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d
-      integer h3,h2,h1,p6,p5,p4
-      double precision triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
-      double precision t1sub(p4d,h1d)
-      double precision v2sub(h3d,h2d,p6d,p5d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
+      integer :: h3,h2,h1,p6,p5,p4
+      double precision :: triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
+      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -1487,13 +1484,13 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3h2,h1,p6,p5,p4,h7
-      double precision triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d*h2d,p6d,h7d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1516,13 +1513,13 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3,h2,h1,p6,p5,p4,h7
-      double precision triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d,h2d,p6d,h7d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3,h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1547,14 +1544,14 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3h2,h1,p6,p5,p4,h7
-      double precision triplesx(h1d,h3d*h2d,p6d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d,h2d,p6d,h7d)
-      double precision scratch(h7d,h3d*h2d,p6d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h1d,h3d*h2d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+      double precision :: scratch(h7d,h3d*h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=istart,istop
       do p5=jstart,jstop
@@ -1579,13 +1576,13 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3h2,h1,p6,p5,p4,h7
-      double precision triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d*h2d,p6d,h7d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
       do p6=istart,istop
       do p4=jstart,jstop
       do p5=1,p5d
@@ -1608,14 +1605,14 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3,h2,h1,p6,p5,p4,h7
-      double precision triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d,h2d,p6d,h7d)
-      double precision scratch(h7d,h3d,h2d,p6d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3,h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+      double precision :: scratch(h7d,h3d,h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p6=istart,istop
       do p4=jstart,jstop
@@ -1642,14 +1639,14 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3h2,h1,p6,p5,p4,h7
-      double precision triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d,h2d,p6d,h7d)
-      double precision scratch(h7d,h3d*h2d,p6d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+      double precision :: scratch(h7d,h3d*h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p6=istart,istop
       do p4=jstart,jstop
@@ -1674,13 +1671,13 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3h2,h1,p6,p5,p4,h7
-      double precision triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d*h2d,p6d,h7d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
       do p4=istart,istop
       do p6=jstart,jstop
       do p5=1,p5d
@@ -1703,14 +1700,14 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3,h2,h1,p6,p5,p4,h7
-      double precision triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d,h2d,p6d,h7d)
-      double precision scratch(h7d,h3d,h2d,p6d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3,h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+      double precision :: scratch(h7d,h3d,h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=istart,istop
       do p6=jstart,jstop
@@ -1737,14 +1734,14 @@
      &               h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer h3h2,h1,p6,p5,p4,h7
-      double precision triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision v2sub(h3d,h2d,p6d,h7d)
-      double precision scratch(h7d,h3d*h2d,p6d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer :: h3h2,h1,p6,p5,p4,h7
+      double precision :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+      double precision :: scratch(h7d,h3d*h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=istart,istop
       do p6=jstart,jstop
@@ -1769,14 +1766,14 @@
      &               p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2,h1,p6,p5,p4,p7
-      double precision triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(p7d,h2d,h1d,p4d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      double precision :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p4=istart,istop
       do p5=jstart,jstop
@@ -1803,14 +1800,14 @@
      &               p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2h1,p6,p5,p4,p7
-      double precision triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(h2d*h1d,p4d,p7d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2h1,p6,p5,p4,p7
+      double precision :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(h2d*h1d,p4d,p7d)
       call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
       do p4=istart,istop
       do p5=jstart,jstop
@@ -1835,14 +1832,14 @@
      &               p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2,h1,p6,p5,p4,p7
-      double precision triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(p7d,h2d,h1d,p4d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      double precision :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p4=istart,istop
       do p5=jstart,jstop
@@ -1869,14 +1866,14 @@
      &               p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2,h1,p6,p5,p4,p7
-      double precision triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(p7d,h2d,h1d,p4d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      double precision :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p4=jstart,jstop
@@ -1903,14 +1900,14 @@
      &               p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2h1,p6,p5,p4,p7
-      double precision triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(h2d*h1d,p4d,p7d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2h1,p6,p5,p4,p7
+      double precision :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(h2d*h1d,p4d,p7d)
       call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
       do p5=istart,istop
       do p4=jstart,jstop
@@ -1935,14 +1932,14 @@
      &               p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2,h1,p6,p5,p4,p7
-      double precision triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(p7d,h2d,h1d,p4d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      double precision :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p4=jstart,jstop
@@ -1969,14 +1966,14 @@
      &               p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2,h1,p6,p5,p4,p7
-      double precision triplesx(h3d,h2d,h1d,p4d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(p7d,h2d,h1d,p4d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      double precision :: triplesx(h3d,h2d,h1d,p4d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p6=jstart,jstop
@@ -1999,18 +1996,17 @@
       return
       end
 !
-      subroutine acc_sd_ty1_8(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
+      subroutine acc_sd_ty1_8(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2h1,p6,p5,p4,p7
-      double precision triplesx(h2d*h1d,h3d,p4d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(h2d*h1d,p4d,p7d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      double precision :: triplesx(h2d*h1d,h3d,p4d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(h2d*h1d,p4d,p7d)
+      integer :: h3,h2h1,p6,p5,p4,p7
       call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
       do p5=istart,istop
       do p6=jstart,jstop
@@ -2034,14 +2030,14 @@
       subroutine acc_sd_ty1_9(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
-      IMPLICIT NONE
-      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer h3,h2,h1,p6,p5,p4,p7
-      double precision triplesx(h2d,h3d,h1d,p4d,maxp5,maxp4)
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision v2sub(p7d,h3d,p6d,p5d)
-      double precision scratch(p7d,h2d,h1d,p4d)
+      implicit none
+      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      double precision :: triplesx(h2d,h3d,h1d,p4d,maxp5,maxp4)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
+      integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p6=jstart,jstop
@@ -2066,20 +2062,15 @@
 
       subroutine cute_transpt2(t2sub,scratch,h1d,p5d,p4d,h7d)
       implicit none
-      integer h1d,p5d,p4d,h7d
-      double precision t2sub(h7d,p4d,p5d,h1d)
-      double precision scratch(h1d,p5d,p4d,h7d)
-      integer h1,p5,p4,h7
-      integer pp5,hh1
+      integer, intent(in) :: h1d,p5d,p4d,h7d
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision :: scratch(h1d,p5d,p4d,h7d)
+      integer :: h1,p5,p4,h7,pp5,hh1
       do h7=1,h7d
          do p4=1,p4d
-            do pp5=1,p5d,CHUNK
-               do hh1=1,h1d,CHUNK
-                  do p5=pp5,min(pp5+CHUNK-1,p5d)
-                     do h1=hh1,min(hh1+CHUNK-1,h1d)
-                        scratch(h1,p5,p4,h7)=t2sub(h7,p4,p5,h1)
-                     enddo
-                  enddo
+            do p5=1,p5d
+               do h1=1,h1d
+                  scratch(h1,p5,p4,h7)=t2sub(h7,p4,p5,h1)
                enddo
             enddo
          enddo
@@ -2088,20 +2079,15 @@
 
       subroutine cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       implicit none
-      integer p4d,h1d,h2d,p7d
-      double precision t2sub(p7d,p4d,h1d,h2d)
-      double precision scratch(p7d,h2d,h1d,p4d)
-      integer p4,h1,h2,p7
-      integer hh2,pp7
+      integer, intent(in) :: p4d,h1d,h2d,p7d
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
+      integer :: p4,h1,h2,p7
       do p4=1,p4d
          do h1=1,h1d
-            do hh2=1,h2d,CHUNK
-               do pp7=1,p7d,CHUNK
-                  do h2=hh2,min(hh2+CHUNK-1,h2d)
-                     do p7=pp7,min(pp7+CHUNK-1,p7d)
-                        scratch(p7,h2,h1,p4)=t2sub(p7,p4,h1,h2)
-                     enddo
-                  enddo
+            do h2=1,h2d
+               do p7=1,p7d
+                  scratch(p7,h2,h1,p4)=t2sub(p7,p4,h1,h2)
                enddo
             enddo
          enddo
@@ -2111,20 +2097,15 @@
 
       subroutine cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       implicit none
-      integer h3d,h2d,p6d,h7d
-      double precision v2sub(h3d,h2d,p6d,h7d)
-      double precision scratch(h7d,h3d,h2d,p6d)
-      integer h3,h2,p6,h7
-      integer hh3,hh7
+      integer, intent(in) :: h3d,h2d,p6d,h7d
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+      double precision :: scratch(h7d,h3d,h2d,p6d)
+      integer :: h3,h2,p6,h7
       do p6=1,p6d
          do h2=1,h2d
-            do hh3=1,h3d,CHUNK
-               do hh7=1,h7d,CHUNK
-                  do h3=hh3,min(hh3+CHUNK-1,h3d)
-                     do h7=hh7,min(hh7+CHUNK-1,h7d)
-                        scratch(h7,h3,h2,p6)=v2sub(h3,h2,p6,h7)
-                     enddo
-                  enddo
+            do h3=1,h3d
+               do h7=1,h7d
+                  scratch(h7,h3,h2,p6)=v2sub(h3,h2,p6,h7)
                enddo
             enddo
          enddo

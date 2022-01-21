@@ -2712,6 +2712,14 @@ ifeq ($(_CPU),$(findstring $(_CPU), ppc64 ppc64le))
            FOPTIONS  += -mp -Minfo=mp
            LDOPTIONS += -mp
         endif
+        ifdef USE_OPENACC
+           FOPTIONS  += -acc -Minfo=acc
+           LDOPTIONS += -acc
+        endif
+        ifdef USE_CUTENSOR
+           FOPTIONS  += -cudalib=cutensor
+           LDOPTIONS += -cudalib=cutensor
+        endif
       endif
 
 ifeq ($(NWCHEM_TARGET),CATAMOUNT)
