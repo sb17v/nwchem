@@ -498,96 +498,88 @@
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_6ds_2(range_h3b,range_h2b,
-     &                  range_h1b,range_p6b,
+      call acc_sd_6ds_2(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
      &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
 
-      call acc_sd_6ds_3(range_h3b,range_h2b,
-     &                  range_h1b,range_p6b,
+      call acc_sd_6ds_3(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
      &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_6ds_4(range_h3b,range_h2b,
-     &                  range_h1b,range_p6b,
+      call acc_sd_6ds_4(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
      &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_6ds_5(range_h3b,range_h2b,
-     &                  range_h1b,range_p6b,
+      call acc_sd_6ds_5(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
      &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
 
-      call acc_sd_6ds_6(range_h3b,range_h2b,
-     &                  range_h1b,range_p6b,
+      call acc_sd_6ds_6(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
      &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_6ds_7(range_h3b,range_h2b,
-     &                  range_h1b,range_p6b,
+      call acc_sd_6ds_7(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
      &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call acc_sd_6ds_8(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
+      call acc_sd_6ds_8(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
 
-      call acc_sd_6ds_9(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               f_t3,f_t1_sort,f_v2_sort,
+      call acc_sd_6ds_9(range_h3b,range_h2b,range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+     &                  maxp4,maxp5)
 
       END IF
 !
@@ -766,20 +758,15 @@
       skipped = .false.
       IF (.not.skipped) THEN
       IF ((.not.restricted).or.
-     &    (spin_p4b+spin_p5b+
-     &     spin_p6b+spin_h1b+
-     &     spin_h2b+spin_h3b.ne.12)
-     &    ) THEN
-      IF (spin_p4b+spin_p5b+spin_p6b
-     &    .eq. 
-     &    spin_h1b+spin_h2b+spin_h3b
-     &    ) THEN
+     &    (spin_p4b+spin_p5b+spin_p6b+spin_h1b+
+     &     spin_h2b+spin_h3b.ne.12) ) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
+     &    spin_h1b+spin_h2b+spin_h3b) THEN
       IF (ieor(sym_p4b,ieor(sym_p5b,
      &    ieor(sym_p6b,ieor(sym_h1b,
      &    ieor(sym_h2b,sym_h3b))))) 
      &   .eq. ieor(irrep_v,irrep_t)) THEN
-      dimc = range_p4b * range_p5b 
-     &     * range_p6b * range_h1b 
+      dimc = range_p4b * range_p5b * range_p6b * range_h1b 
      &     * range_h2b * range_h3b
 !
       DO h7b = 1,noab
@@ -794,10 +781,8 @@
       CALL TCE_RESTRICTED_4(p4b,p5b,h1b,h7b,p4b_1,p5b_1,h1b_1,h7b_1)
       CALL TCE_RESTRICTED_4(p6b,h7b,h2b,h3b,p6b_2,h7b_2,h2b_2,h3b_2)
       dim_common = range_h7b
-      dima_sort = range_p4b * range_p5b 
-     &          * range_h1b
-      dimb_sort = range_p6b * range_h2b 
-     &          * range_h3b
+      dima_sort = range_p4b * range_p5b * range_h1b
+      dimb_sort = range_p6b * range_h2b * range_h3b
       dima = dim_common * dima_sort
       dimb = dim_common * dimb_sort
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
@@ -806,8 +791,7 @@
      &      (h1b_1 - 1 + noab * (h7b_1 - 1 + noab * 
      &       (p5b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                range_p4b,range_p5b,
-     &                range_h7b,range_h1b,
+     &                range_p4b,range_p5b,range_h7b,range_h1b,
      &                4,2,1,3,-1.0d0)
       END IF
       IF ((h1b .le. h7b)) THEN
@@ -815,8 +799,7 @@
      &      (h7b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &       (p5b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                range_p4b,range_p5b,
-     &                range_h1b,range_h7b,
+     &                range_p4b,range_p5b,range_h1b,range_h7b,
      &                3,2,1,4,1.0d0)
       END IF
       IF ((h7b .le. p6b)) THEN
@@ -840,90 +823,72 @@
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call acc_sd_tx1_1(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_1(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call acc_sd_tx1_2(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_2(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-      call acc_sd_tx1_3(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_3(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call acc_sd_tx1_4(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_4(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call acc_sd_tx1_5(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_5(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-      call acc_sd_tx1_6(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_6(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call acc_sd_tx1_7(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_7(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call acc_sd_tx1_8(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_8(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-      call acc_sd_tx1_9(range_h3b,range_h2b,
-     &               range_h1b,range_p6b,
-     &               range_p5b,range_p4b,
-     &               range_h7b,
+      call acc_sd_tx1_9(range_h3b,range_h2b,range_h1b,range_p6b,
+     &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
