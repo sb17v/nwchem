@@ -1,5 +1,7 @@
       module tce_ccsd_t_cutensor
 
+        integer, parameter :: CHUNK = 16
+
       contains
 
       SUBROUTINE ccsd_t_6dts_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
@@ -1238,7 +1240,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_1'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3h2,h1,p6,p5,p4
@@ -1264,7 +1265,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_2'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3,h2,h1,p6,p5,p4
@@ -1293,7 +1293,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_3'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3,h2,h1,p6,p5,p4
@@ -1322,7 +1321,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_4'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3h2,h1,p6,p5,p4
@@ -1349,7 +1347,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_5'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3,h2,h1,p6,p5,p4
@@ -1378,7 +1375,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_6'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3,h2,h1,p6,p5,p4
@@ -1407,7 +1403,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_7'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3h2,h1,p6,p5,p4
@@ -1434,7 +1429,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_8'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3,h2,h1,p6,p5,p4
@@ -1463,7 +1457,6 @@
      &               triplesx,t1sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_6ds_9'
       integer istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d
       integer h3,h2,h1,p6,p5,p4
@@ -1495,7 +1488,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_1'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3h2,h1,p6,p5,p4,h7
@@ -1525,7 +1517,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_2'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3,h2,h1,p6,p5,p4,h7
@@ -1557,7 +1548,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_3'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3h2,h1,p6,p5,p4,h7
@@ -1565,8 +1555,7 @@
       double precision t2sub(h7d,p4d,p5d,h1d)
       double precision v2sub(h3d,h2d,p6d,h7d)
       double precision scratch(h7d,h3d*h2d,p6d)
-      external ccsd_t_transpt2_7326
-      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1591,7 +1580,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_4'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3h2,h1,p6,p5,p4,h7
@@ -1621,7 +1609,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_5'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3,h2,h1,p6,p5,p4,h7
@@ -1629,8 +1616,7 @@
       double precision t2sub(h7d,p4d,p5d,h1d)
       double precision v2sub(h3d,h2d,p6d,h7d)
       double precision scratch(h7d,h3d,h2d,p6d)
-      external ccsd_t_transpt2_7326
-      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p6=istart,istop
       do p4=jstart,jstop
       do p5=1,p5d
@@ -1657,7 +1643,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_6'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3h2,h1,p6,p5,p4,h7
@@ -1665,8 +1650,7 @@
       double precision t2sub(h7d,p4d,p5d,h1d)
       double precision v2sub(h3d,h2d,p6d,h7d)
       double precision scratch(h7d,h3d*h2d,p6d)
-      external ccsd_t_transpt2_7326
-      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p6=istart,istop
       do p4=jstart,jstop
       do p5=1,p5d
@@ -1691,7 +1675,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_7'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3h2,h1,p6,p5,p4,h7
@@ -1721,7 +1704,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_8'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3,h2,h1,p6,p5,p4,h7
@@ -1729,8 +1711,7 @@
       double precision t2sub(h7d,p4d,p5d,h1d)
       double precision v2sub(h3d,h2d,p6d,h7d)
       double precision scratch(h7d,h3d,h2d,p6d)
-      external ccsd_t_transpt2_7326
-      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=istart,istop
       do p6=jstart,jstop
       do p5=1,p5d
@@ -1757,7 +1738,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_tx1_9'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer h3h2,h1,p6,p5,p4,h7
@@ -1765,8 +1745,7 @@
       double precision t2sub(h7d,p4d,p5d,h1d)
       double precision v2sub(h3d,h2d,p6d,h7d)
       double precision scratch(h7d,h3d*h2d,p6d)
-      external ccsd_t_transpt2_7326
-      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=istart,istop
       do p6=jstart,jstop
       do p5=1,p5d
@@ -1792,15 +1771,13 @@
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
-      character(len=*), parameter :: funcname = 'sd_ty1_1'
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2,h1,p6,p5,p4,p7
       double precision triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(p7d,h2d,h1d,p4d)
-      external ccsd_t_transpt2_7124
-      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1827,7 +1804,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_2'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2h1,p6,p5,p4,p7
@@ -1835,8 +1811,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(h2d*h1d,p4d,p7d)
-      external ccsd_t_transpt2
-      call ccsd_t_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+      call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1861,7 +1836,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_3'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2,h1,p6,p5,p4,p7
@@ -1869,8 +1843,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(p7d,h2d,h1d,p4d)
-      external ccsd_t_transpt2_7124
-      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1897,7 +1870,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_4'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2,h1,p6,p5,p4,p7
@@ -1905,8 +1877,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(p7d,h2d,h1d,p4d)
-      external ccsd_t_transpt2_7124
-      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1933,7 +1904,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_5'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2h1,p6,p5,p4,p7
@@ -1941,8 +1911,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(h2d*h1d,p4d,p7d)
-      external ccsd_t_transpt2
-      call ccsd_t_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+      call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1967,7 +1936,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_6'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2,h1,p6,p5,p4,p7
@@ -1975,8 +1943,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(p7d,h2d,h1d,p4d)
-      external ccsd_t_transpt2_7124
-      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -2003,7 +1970,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_7'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2,h1,p6,p5,p4,p7
@@ -2011,8 +1977,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(p7d,h2d,h1d,p4d)
-      external ccsd_t_transpt2_7124
-      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -2039,7 +2004,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_8'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2h1,p6,p5,p4,p7
@@ -2047,8 +2011,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(h2d*h1d,p4d,p7d)
-      external ccsd_t_transpt2
-      call ccsd_t_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+      call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -2072,7 +2035,6 @@
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       IMPLICIT NONE
-      character(len=*), parameter :: funcname = 'sd_ty1_9'
       INTEGER istart,istop,jstart,jstop,maxp4,maxp5
       integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer h3,h2,h1,p6,p5,p4,p7
@@ -2080,8 +2042,7 @@
       double precision t2sub(p7d,p4d,h1d,h2d)
       double precision v2sub(p7d,h3d,p6d,p5d)
       double precision scratch(p7d,h2d,h1d,p4d)
-      external ccsd_t_transpt2_7124
-      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -2101,6 +2062,73 @@
       enddo
       enddo
       return
+      end
+
+      subroutine cute_transpt2(t2sub,scratch,h1d,p5d,p4d,h7d)
+      implicit none
+      integer h1d,p5d,p4d,h7d
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision scratch(h1d,p5d,p4d,h7d)
+      integer h1,p5,p4,h7
+      integer pp5,hh1
+      do h7=1,h7d
+         do p4=1,p4d
+            do pp5=1,p5d,CHUNK
+               do hh1=1,h1d,CHUNK
+                  do p5=pp5,min(pp5+CHUNK-1,p5d)
+                     do h1=hh1,min(hh1+CHUNK-1,h1d)
+                        scratch(h1,p5,p4,h7)=t2sub(h7,p4,p5,h1)
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+      end
+
+      subroutine cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      implicit none
+      integer p4d,h1d,h2d,p7d
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision scratch(p7d,h2d,h1d,p4d)
+      integer p4,h1,h2,p7
+      integer hh2,pp7
+      do p4=1,p4d
+         do h1=1,h1d
+            do hh2=1,h2d,CHUNK
+               do pp7=1,p7d,CHUNK
+                  do h2=hh2,min(hh2+CHUNK-1,h2d)
+                     do p7=pp7,min(pp7+CHUNK-1,p7d)
+                        scratch(p7,h2,h1,p4)=t2sub(p7,p4,h1,h2)
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+      end
+
+
+      subroutine cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      implicit none
+      integer h3d,h2d,p6d,h7d
+      double precision v2sub(h3d,h2d,p6d,h7d)
+      double precision scratch(h7d,h3d,h2d,p6d)
+      integer h3,h2,p6,h7
+      integer hh3,hh7
+      do p6=1,p6d
+         do h2=1,h2d
+            do hh3=1,h3d,CHUNK
+               do hh7=1,h7d,CHUNK
+                  do h3=hh3,min(hh3+CHUNK-1,h3d)
+                     do h7=hh7,min(hh7+CHUNK-1,h7d)
+                        scratch(h7,h3,h2,p6)=v2sub(h3,h2,p6,h7)
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
       end
 
       end module tce_ccsd_t_cutensor
