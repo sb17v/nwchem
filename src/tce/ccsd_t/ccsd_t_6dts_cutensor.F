@@ -29,6 +29,10 @@
       integer :: offset_h1,offset_h2,offset_h3
       integer :: range_p4,range_p5,range_p6
       integer :: range_h1,range_h2,range_h3
+      integer :: spin_p4b,spin_p5b,spin_p6b
+      integer :: spin_h1b,spin_h2b,spin_h3b
+      integer :: sym_p4b,sym_p5b,sym_p6b
+      integer :: sym_h1b,sym_h2b,sym_h3b
       integer :: dp4,dp5,ii,jj,istart,istop,jstart,jstop
       integer :: mdp4,mdp5
       integer :: maxp4,maxp5
@@ -76,40 +80,52 @@
       do t_p4b = noab+1,noab+nvab
        range_p4 = int_mb(k_range+t_p4b-1)
        offset_p4 = k_evl_sorted+int_mb(k_offset+t_p4b-1)-1
+       spin_p4b=int_mb(k_spin+t_p4b-1)
+       sym_p4b=int_mb(k_sym+t_p4b-1)
        do t_p5b = t_p4b,noab+nvab
         range_p5 = int_mb(k_range+t_p5b-1)
         offset_p5 = k_evl_sorted+int_mb(k_offset+t_p5b-1)-1
+        spin_p5b=int_mb(k_spin+t_p5b-1)
+        sym_p5b=int_mb(k_sym+t_p5b-1)
         do t_p6b = t_p5b,noab+nvab
          range_p6 = int_mb(k_range+t_p6b-1)
          offset_p6 = k_evl_sorted+int_mb(k_offset+t_p6b-1)-1
+         spin_p6b=int_mb(k_spin+t_p6b-1)
+         sym_p6b=int_mb(k_sym+t_p6b-1)
          do t_h1b = 1,noab
           range_h1 = int_mb(k_range+t_h1b-1)
           offset_h1 = k_evl_sorted+int_mb(k_offset+t_h1b-1)-1
+          spin_h1b=int_mb(k_spin+t_h1b-1)
+          sym_h1b=int_mb(k_sym+t_h1b-1)
           do t_h2b = t_h1b,noab
            range_h2 = int_mb(k_range+t_h2b-1)
            offset_h2 = k_evl_sorted+int_mb(k_offset+t_h2b-1)-1
+           spin_h2b=int_mb(k_spin+t_h2b-1)
+           sym_h2b=int_mb(k_sym+t_h2b-1)
            do t_h3b = t_h2b,noab
             range_h3 = int_mb(k_range+t_h3b-1)
             offset_h3 = k_evl_sorted+int_mb(k_offset+t_h3b-1)-1
-            if (int_mb(k_spin+t_p4b-1)
-     &         +int_mb(k_spin+t_p5b-1)
-     &         +int_mb(k_spin+t_p6b-1)
-     &      .eq.int_mb(k_spin+t_h1b-1)
-     &         +int_mb(k_spin+t_h2b-1)
-     &         +int_mb(k_spin+t_h3b-1)) then
+            spin_h3b=int_mb(k_spin+t_h3b-1)
+            sym_h3b=int_mb(k_sym+t_h3b-1)
+            if (spin_p4b
+     &         +spin_p5b
+     &         +spin_p6b
+     &      .eq.spin_h1b
+     &         +spin_h2b
+     &         +spin_h3b) then
             if ((.not.restricted).or.
-     &         (int_mb(k_spin+t_p4b-1)
-     &         +int_mb(k_spin+t_p5b-1)
-     &         +int_mb(k_spin+t_p6b-1)
-     &         +int_mb(k_spin+t_h1b-1)
-     &         +int_mb(k_spin+t_h2b-1)
-     &         +int_mb(k_spin+t_h3b-1).le.8)) then
-            if (ieor(int_mb(k_sym+t_p4b-1),
-     &          ieor(int_mb(k_sym+t_p5b-1),
-     &          ieor(int_mb(k_sym+t_p6b-1),
-     &          ieor(int_mb(k_sym+t_h1b-1),
-     &          ieor(int_mb(k_sym+t_h2b-1),
-     &               int_mb(k_sym+t_h3b-1)))))).eq.0) then
+     &         (spin_p4b
+     &         +spin_p5b
+     &         +spin_p6b
+     &         +spin_h1b
+     &         +spin_h2b
+     &         +spin_h3b.le.8)) then
+            if (ieor(sym_p4b,
+     &          ieor(sym_p5b,
+     &          ieor(sym_p6b,
+     &          ieor(sym_h1b,
+     &          ieor(sym_h2b,
+     &               sym_h3b))))).eq.0) then
             if (next.eq.count) then
 ! -- 6DTS --
             dp4=1
@@ -186,14 +202,11 @@
             end if
             f_singles = 0.0d0
             f_doubles = 0.0d0
+            print*,istart,istop,jstart,jstop
             call ccsd_t_singles_l_1_6dts_cutensor(f_singles,
      &        t1_local,d_v2,k_t1_offset,k_v2_offset,
      &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
      &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-!            call ccsd_t_doubles_l_6dts_cutensor(f_doubles,
-!     &        d_t2,d_v2,k_t2_offset,k_v2_offset,
-!     &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-!     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
              call ccsd_t_6dts_l_1_cutensor(f_doubles,
      &         d_t2,d_v2,k_t2_offset,k_v2_offset,
      &         t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
@@ -220,7 +233,7 @@
 !
 ! factor = [ 1/36, 1/18, 1/12, 1/6, 1/4, 1/3, 1/2, 1, 2]
 !
-            i = 0
+            i = 1
             do t_p4 = istart,istop
              denom_p4 = dbl_mb(offset_p4+t_p4)
              do t_p5 = jstart,jstop
@@ -236,9 +249,9 @@
                   denom = 1.0d0 / ( ( denom_h1 + denom_h2 + denom_h3 )
      &                            - ( denom_p4 + denom_p5 + denom_p6 ) )
                   energy1 = energy1 + factor*denom
-     &                    * f_doubles(i+1) * f_doubles(i+1)
-                  energy2 = energy2 + factor*denom*f_doubles(i+1)
-     &                    * (f_doubles(i+1)+f_singles(i+1))
+     &                    * f_doubles(i) * f_doubles(i)
+                  energy2 = energy2 + factor*denom*f_doubles(i)
+     &                    * (f_doubles(i)+f_singles(i))
                   i = i + 1
                  enddo
                 enddo
@@ -289,29 +302,6 @@
 ! ---------------------------
       end
 
-      SUBROUTINE ccsd_t_singles_l_6dts_cutensor(f_t3,f_t1,
-     &           d_v2,k_t1_offset,k_v2_offset,
-     &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = 1 * P( 9 ) * t ( p4 h1 )_t * v ( p5 p6 h2 h3 )_v
-      IMPLICIT NONE
-#include "global.fh"
-#include "mafdecls.fh"
-#include "util.fh"
-#include "errquit.fh"
-#include "tce.fh"
-      double precision, intent(inout) :: f_t3(*)
-      double precision, intent(in) :: f_t1(*)
-      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
-      integer, intent(in) :: d_v2, k_t1_offset, k_v2_offset
-      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
-      integer, intent(in) :: maxp,maxh
-      CALL ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
-     &     d_v2,k_t1_offset,k_v2_offset,
-     &     t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-      END
-
       SUBROUTINE ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
      &           d_v2,k_t1_offset,k_v2_offset,
      &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
@@ -342,6 +332,12 @@
       double precision, allocatable :: f_v2_temp(:), f_v2_sort(:)
       integer :: dimhp, dimhhpp
       integer :: alloc_error
+      integer :: range_p4b,range_p5b,range_p6b
+      integer :: range_h1b,range_h2b,range_h3b
+      integer :: spin_p4b,spin_p5b,spin_p6b
+      integer :: spin_h1b,spin_h2b,spin_h3b
+      integer :: sym_p4b,sym_p5b,sym_p6b
+      integer :: sym_h1b,sym_h2b,sym_h3b
 
       dimhp   = maxh*maxp
       dimhhpp = maxh*maxh*maxp*maxp
@@ -436,46 +432,69 @@
       enddo 
 !
       do ia6=1,9
-      p4b=a3(ia6,1)
-      p5b=a3(ia6,2)
-      p6b=a3(ia6,3)
-      h1b=a3(ia6,4)
-      h2b=a3(ia6,5)
-      h3b=a3(ia6,6)
+          p4b=a3(ia6,1)
+          p5b=a3(ia6,2)
+          p6b=a3(ia6,3)
+          h1b=a3(ia6,4)
+          h2b=a3(ia6,5)
+          h3b=a3(ia6,6)
+
+          spin_h1b=int_mb(k_spin+h1b-1)
+          spin_h2b=int_mb(k_spin+h2b-1)
+          spin_h3b=int_mb(k_spin+h3b-1)
+          spin_p4b=int_mb(k_spin+p4b-1)
+          spin_p5b=int_mb(k_spin+p5b-1)
+          spin_p6b=int_mb(k_spin+p6b-1)
+
+          sym_h1b=int_mb(k_sym+h1b-1)
+          sym_h2b=int_mb(k_sym+h2b-1)
+          sym_h3b=int_mb(k_sym+h3b-1)
+          sym_p4b=int_mb(k_sym+p4b-1)
+          sym_p5b=int_mb(k_sym+p5b-1)
+          sym_p6b=int_mb(k_sym+p6b-1)
+
+          range_h1b=int_mb(k_range+h1b-1)
+          range_h2b=int_mb(k_range+h2b-1)
+          range_h3b=int_mb(k_range+h3b-1)
+          range_p4b=int_mb(k_range+p4b-1)
+          range_p5b=int_mb(k_range+p5b-1)
+          range_p6b=int_mb(k_range+p6b-1)
+
       if((p5b.le.p6b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
       skipped = .false.
       IF (.not.skipped) THEN
+
       IF ((.not.restricted).or.
-     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
-     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
-     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12)) THEN
-      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
+     &    (spin_p4b+spin_p5b+
+     &     spin_p6b+spin_h1b+
+     &     spin_h2b+spin_h3b.ne.12)) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b
      &    .eq. 
-     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)
+     &    spin_h1b+spin_h2b+spin_h3b
      &   ) THEN
-      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
-     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
-     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) .eq. 
+      IF (ieor(sym_p4b,ieor(sym_p5b,
+     &    ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) .eq. 
      &    ieor(irrep_v,irrep_t)) THEN
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1)
-     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
-     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
-      IF (int_mb(k_spin+p4b-1) .eq. int_mb(k_spin+h1b-1)) THEN
-      IF (ieor(int_mb(k_sym+p4b-1),int_mb(k_sym+h1b-1)) 
+      dimc = range_p4b * range_p5b
+     &     * range_p6b * range_h1b
+     &     * range_h2b * range_h3b
+      IF (spin_p4b .eq. spin_h1b) THEN
+      IF (ieor(sym_p4b,sym_h1b) 
      &    .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
       CALL TCE_RESTRICTED_4(p5b,p6b,h2b,h3b,p5b_2,p6b_2,h2b_2,h3b_2)
       dim_common = 1
-      dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h1b-1)
+      dima_sort = range_p4b * range_h1b
       dima = dim_common * dima_sort
-      dimb_sort = int_mb(k_range+p5b-1) * int_mb(k_range+p6b-1) 
-     &          * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
+      dimb_sort = range_p5b * range_p6b 
+     &          * range_h2b * range_h3b
       dimb = dim_common * dimb_sort
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
       CALL GET_HASH_BLOCK_MA(f_t1,f_t1_temp,dima, int_mb(k_t1_offset),
      &                       (h1b_1 - 1 + noab * (p4b_1 - noab - 1)))
-      CALL TCE_SORT_2(f_t1_temp,f_t1_sort,int_mb(k_range+p4b-1),
-     &                int_mb(k_range+h1b-1),2,1,1.0d0)
+      CALL TCE_SORT_2(f_t1_temp,f_t1_sort,range_p4b,
+     &                range_h1b,2,1,1.0d0)
       if(.not.intorb) then
       CALL GET_HASH_BLOCK(d_v2,f_v2_sort,dimb,int_mb(k_v2_offset),
      &     (h3b_2 - 1 + (noab+nvab) * (h2b_2 - 1 + (noab+nvab) *
@@ -490,21 +509,21 @@
      &    (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. 
      &    (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) THEN
 
-      call sd_6ds_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               f_t3,f_t1_sort,f_v2_sort,
-     & istart,istop,jstart,jstop,
-     & maxp4,maxp5)
+      call acc_sd_6ds_1(range_h3b,range_h2b,
+     &                  range_h1b,range_p6b,
+     &                  range_p5b,range_p4b,
+     &                  f_t3,f_t1_sort,f_v2_sort,
+     &                  istart,istop,jstart,jstop,
+     &                  maxp4,maxp5)
 
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_6ds_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_2(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -514,9 +533,9 @@
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
 
-      call sd_6ds_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_3(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -526,9 +545,9 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_6ds_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_4(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -538,9 +557,9 @@
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_6ds_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_5(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -550,9 +569,9 @@
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
 
-      call sd_6ds_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_6(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -562,9 +581,9 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_6ds_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_7(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -574,9 +593,9 @@
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_6ds_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_8(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -586,9 +605,9 @@
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
 
-      call sd_6ds_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
+      call acc_sd_6ds_9(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
      &               f_t3,f_t1_sort,f_v2_sort,
      & istart,istop,jstart,jstop,
      & maxp4,maxp5)
@@ -606,34 +625,6 @@
 !
       END IF
       END DO
-      END
-!
-      SUBROUTINE ccsd_t_doubles_l_6dts_cutensor(f_t3,
-     &           d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
-!     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( p7 ) * t ( p4 p7 h1 h2 )_t * v ( p5 p6 h3 p7 )_v
-      IMPLICIT NONE
-#include "global.fh"
-#include "mafdecls.fh"
-#include "util.fh"
-#include "errquit.fh"
-#include "tce.fh"
-      double precision, intent(inout) :: f_t3(*)
-      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
-      integer, intent(in) :: d_t2, d_v2
-      integer, intent(in) :: k_t2_offset, k_v2_offset
-      integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
-      integer, intent(in) :: maxp,maxh
-      CALL ccsd_t_6dts_l_1_cutensor(f_t3,
-     &      d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &     t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
-      CALL ccsd_t_6dts_l_2_cutensor(f_t3,
-     &     d_t2,d_v2,k_t2_offset,k_v2_offset,
-     &     t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &     istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
       END
 
       SUBROUTINE ccsd_t_6dts_l_1_cutensor(f_t3,
@@ -666,7 +657,12 @@
       double precision, allocatable :: f_v2_sort(:)
       integer :: dimhhpp, dimhhhp
       integer :: alloc_error
-
+      integer :: range_p4b,range_p5b,range_p6b,range_h7b
+      integer :: range_h1b,range_h2b,range_h3b
+      integer :: spin_p4b,spin_p5b,spin_p6b,spin_h7b
+      integer :: spin_h1b,spin_h2b,spin_h3b
+      integer :: sym_p4b,sym_p5b,sym_p6b,sym_h7b
+      integer :: sym_h1b,sym_h2b,sym_h3b
       dimhhhp = maxh*maxh*maxh*maxp
       dimhhpp = maxh*maxh*maxp*maxp
 
@@ -760,45 +756,71 @@
       enddo 
 !
       do ia6=1,9
-      p4b=a3(ia6,1)
-      p5b=a3(ia6,2)
-      p6b=a3(ia6,3)
-      h1b=a3(ia6,4)
-      h2b=a3(ia6,5)
-      h3b=a3(ia6,6)
+          p4b=a3(ia6,1)
+          p5b=a3(ia6,2)
+          p6b=a3(ia6,3)
+          h1b=a3(ia6,4)
+          h2b=a3(ia6,5)
+          h3b=a3(ia6,6)
+
+          spin_h1b=int_mb(k_spin+h1b-1)
+          spin_h2b=int_mb(k_spin+h2b-1)
+          spin_h3b=int_mb(k_spin+h3b-1)
+          spin_p4b=int_mb(k_spin+p4b-1)
+          spin_p5b=int_mb(k_spin+p5b-1)
+          spin_p6b=int_mb(k_spin+p6b-1)
+          spin_h7b=int_mb(k_spin+h7b-1)
+
+          sym_h1b=int_mb(k_sym+h1b-1)
+          sym_h2b=int_mb(k_sym+h2b-1)
+          sym_h3b=int_mb(k_sym+h3b-1)
+          sym_p4b=int_mb(k_sym+p4b-1)
+          sym_p5b=int_mb(k_sym+p5b-1)
+          sym_p6b=int_mb(k_sym+p6b-1)
+
+          range_h1b=int_mb(k_range+h1b-1)
+          range_h2b=int_mb(k_range+h2b-1)
+          range_h3b=int_mb(k_range+h3b-1)
+          range_p4b=int_mb(k_range+p4b-1)
+          range_p5b=int_mb(k_range+p5b-1)
+          range_p6b=int_mb(k_range+p6b-1)
+
       if((p4b.le.p5b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
       skipped = .false.
       IF (.not.skipped) THEN
       IF ((.not.restricted).or.
-     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
-     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
-     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12)
+     &    (spin_p4b+spin_p5b+
+     &     spin_p6b+spin_h1b+
+     &     spin_h2b+spin_h3b.ne.12)
      &    ) THEN
-      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
+      IF (spin_p4b+spin_p5b+spin_p6b
      &    .eq. 
-     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)
+     &    spin_h1b+spin_h2b+spin_h3b
      &    ) THEN
-      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
-     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
-     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) 
+      IF (ieor(sym_p4b,ieor(sym_p5b,
+     &    ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) 
      &   .eq. ieor(irrep_v,irrep_t)) THEN
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
-     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1) 
-     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
+      dimc = range_p4b * range_p5b 
+     &     * range_p6b * range_h1b 
+     &     * range_h2b * range_h3b
 !
       DO h7b = 1,noab
-      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1) .eq. 
-     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h7b-1)) THEN
-      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
-     &    ieor(int_mb(k_sym+h1b-1),int_mb(k_sym+h7b-1)))) 
+          spin_h7b=int_mb(k_spin+h7b-1)
+          sym_h7b=int_mb(k_sym+h7b-1)
+          range_h7b=int_mb(k_range+h7b-1)
+      IF (spin_p4b+spin_p5b .eq. 
+     &    spin_h1b+spin_h7b) THEN
+      IF (ieor(sym_p4b,ieor(sym_p5b,
+     &    ieor(sym_h1b,sym_h7b))) 
      &    .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_4(p4b,p5b,h1b,h7b,p4b_1,p5b_1,h1b_1,h7b_1)
       CALL TCE_RESTRICTED_4(p6b,h7b,h2b,h3b,p6b_2,h7b_2,h2b_2,h3b_2)
-      dim_common = int_mb(k_range+h7b-1)
-      dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
-     &          * int_mb(k_range+h1b-1)
-      dimb_sort = int_mb(k_range+p6b-1) * int_mb(k_range+h2b-1) 
-     &          * int_mb(k_range+h3b-1)
+      dim_common = range_h7b
+      dima_sort = range_p4b * range_p5b 
+     &          * range_h1b
+      dimb_sort = range_p6b * range_h2b 
+     &          * range_h3b
       dima = dim_common * dima_sort
       dimb = dim_common * dimb_sort
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
@@ -807,8 +829,8 @@
      &      (h1b_1 - 1 + noab * (h7b_1 - 1 + noab * 
      &       (p5b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                int_mb(k_range+p4b-1),int_mb(k_range+p5b-1),
-     &                int_mb(k_range+h7b-1),int_mb(k_range+h1b-1),
+     &                range_p4b,range_p5b,
+     &                range_h7b,range_h1b,
      &                4,2,1,3,-1.0d0)
       END IF
       IF ((h1b .le. h7b)) THEN
@@ -816,8 +838,8 @@
      &      (h7b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &       (p5b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                int_mb(k_range+p4b-1),int_mb(k_range+p5b-1),
-     &                int_mb(k_range+h1b-1),int_mb(k_range+h7b-1),
+     &                range_p4b,range_p5b,
+     &                range_h1b,range_h7b,
      &                3,2,1,4,1.0d0)
       END IF
       IF ((h7b .le. p6b)) THEN
@@ -841,90 +863,90 @@
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call sd_tx1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_1(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call sd_tx1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_2(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-      call sd_tx1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_3(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call sd_tx1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_4(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call sd_tx1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_5(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-      call sd_tx1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_6(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call sd_tx1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_7(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call sd_tx1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_8(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-      call sd_tx1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+h7b-1),
+      call acc_sd_tx1_9(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
@@ -973,6 +995,12 @@
       double precision, allocatable :: f_v2_sort(:)
       integer :: dimhhpp, dimhppp
       integer :: alloc_error
+      integer :: range_p4b,range_p5b,range_p6b,range_p7b
+      integer :: range_h1b,range_h2b,range_h3b
+      integer :: spin_p4b,spin_p5b,spin_p6b,spin_p7b
+      integer :: spin_h1b,spin_h2b,spin_h3b
+      integer :: sym_p4b,sym_p5b,sym_p6b,sym_p7b
+      integer :: sym_h1b,sym_h2b,sym_h3b
 
       dimhhpp = maxh*maxh*maxp*maxp
       dimhppp = maxh*maxp*maxp*maxp
@@ -1067,44 +1095,70 @@
       enddo 
 !
       do ia6=1,9
-      p4b=a3(ia6,1)
-      p5b=a3(ia6,2)
-      p6b=a3(ia6,3)
-      h1b=a3(ia6,4)
-      h2b=a3(ia6,5)
-      h3b=a3(ia6,6)
+          p4b=a3(ia6,1)
+          p5b=a3(ia6,2)
+          p6b=a3(ia6,3)
+          h1b=a3(ia6,4)
+          h2b=a3(ia6,5)
+          h3b=a3(ia6,6)
+
+          spin_h1b=int_mb(k_spin+h1b-1)
+          spin_h2b=int_mb(k_spin+h2b-1)
+          spin_h3b=int_mb(k_spin+h3b-1)
+          spin_p4b=int_mb(k_spin+p4b-1)
+          spin_p5b=int_mb(k_spin+p5b-1)
+          spin_p6b=int_mb(k_spin+p6b-1)
+
+          sym_h1b=int_mb(k_sym+h1b-1)
+          sym_h2b=int_mb(k_sym+h2b-1)
+          sym_h3b=int_mb(k_sym+h3b-1)
+          sym_p4b=int_mb(k_sym+p4b-1)
+          sym_p5b=int_mb(k_sym+p5b-1)
+          sym_p6b=int_mb(k_sym+p6b-1)
+
+          range_h1b=int_mb(k_range+h1b-1)
+          range_h2b=int_mb(k_range+h2b-1)
+          range_h3b=int_mb(k_range+h3b-1)
+          range_p4b=int_mb(k_range+p4b-1)
+          range_p5b=int_mb(k_range+p5b-1)
+          range_p6b=int_mb(k_range+p6b-1)
+
       if((p5b.le.p6b).and.(h1b.le.h2b).and.(p4b.ne.0)) then
       skipped = .false.
       IF (.not.skipped) THEN
       IF ((.not.restricted).or.
-     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
-     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
-     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12)) THEN
-      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
+     &    (spin_p4b+spin_p5b+
+     &     spin_p6b+spin_h1b+
+     &     spin_h2b+spin_h3b.ne.12)) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b
      &    .eq. 
-     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)
+     &    spin_h1b+spin_h2b+spin_h3b
      &   ) THEN
-      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
-     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
-     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) .eq. 
+      IF (ieor(sym_p4b,ieor(sym_p5b,
+     &    ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) .eq. 
      &    ieor(irrep_v,irrep_t)) THEN
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
-     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1) 
-     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
+      dimc = range_p4b * range_p5b 
+     &     * range_p6b * range_h1b 
+     &     * range_h2b * range_h3b
       DO p7b = noab+1,noab+nvab
-      IF (int_mb(k_spin+p4b-1)+int_mb(k_spin+p7b-1) .eq. 
-     &    int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)) THEN
-      IF (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p7b-1),
-     &    ieor(int_mb(k_sym+h1b-1),int_mb(k_sym+h2b-1)))) 
+          spin_p7b=int_mb(k_spin+p7b-1)
+          sym_p7b=int_mb(k_sym+p7b-1)
+          range_p7b=int_mb(k_range+p7b-1)
+
+      IF (spin_p4b+spin_p7b .eq. 
+     &    spin_h1b+spin_h2b) THEN
+      IF (ieor(sym_p4b,ieor(sym_p7b,
+     &    ieor(sym_h1b,sym_h2b))) 
      &    .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_4(p4b,p7b,h1b,h2b,p4b_1,p7b_1,h1b_1,h2b_1)
       CALL TCE_RESTRICTED_4(p5b,p6b,h3b,p7b,p5b_2,p6b_2,h3b_2,p7b_2)
-      dim_common = int_mb(k_range+p7b-1)
-      dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h1b-1) 
-     &          * int_mb(k_range+h2b-1)
+      dim_common = range_p7b
+      dima_sort = range_p4b * range_h1b 
+     &          * range_h2b
       dima = dim_common * dima_sort
-      dimb_sort = int_mb(k_range+p5b-1) * int_mb(k_range+p6b-1) 
-     &          * int_mb(k_range+h3b-1)
+      dimb_sort = range_p5b * range_p6b 
+     &          * range_h3b
       dimb = dim_common * dimb_sort
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
       IF ((p7b .lt. p4b)) THEN
@@ -1112,8 +1166,8 @@
      &     (h2b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &     (p4b_1 - noab - 1 + nvab * (p7b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                int_mb(k_range+p7b-1),int_mb(k_range+p4b-1),
-     &                int_mb(k_range+h1b-1),int_mb(k_range+h2b-1),
+     &                range_p7b,range_p4b,
+     &                range_h1b,range_h2b,
      &                4,3,2,1,-1.0d0)
       END IF
       IF ((p4b .le. p7b)) THEN
@@ -1121,8 +1175,8 @@
      &     (h2b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &     (p7b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
-     &                int_mb(k_range+p4b-1),int_mb(k_range+p7b-1),
-     &                int_mb(k_range+h1b-1),int_mb(k_range+h2b-1),
+     &                range_p4b,range_p7b,
+     &                range_h1b,range_h2b,
      &                4,3,1,2,1.0d0)
       END IF
       IF ((h3b .le. p7b)) THEN
@@ -1147,10 +1201,10 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_ty1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_1(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1159,10 +1213,10 @@
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call sd_ty1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_2(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1171,10 +1225,10 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call sd_ty1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_3(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1183,10 +1237,10 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_ty1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_4(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1195,10 +1249,10 @@
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call sd_ty1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_5(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1207,10 +1261,10 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call sd_ty1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_6(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1219,10 +1273,10 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
 
-      call sd_ty1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_7(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1231,10 +1285,10 @@
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call sd_ty1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_8(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1243,10 +1297,10 @@
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-      call sd_ty1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
-     &               int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
-     &               int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
-     &               int_mb(k_range+p7b-1),
+      call acc_sd_ty1_9(range_h3b,range_h2b,
+     &               range_h1b,range_p6b,
+     &               range_p5b,range_p4b,
+     &               range_p7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      & istart,istop,jstart,jstop,maxp4,maxp5)
 
@@ -1265,5 +1319,874 @@
       END IF
       END DO
       END
+
+      subroutine acc_sd_6ds_1(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_1'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3h2,h1,p6,p5,p4
+      double precision triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d*h2d,p6d,p5d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h1=1,h1d
+      do h3h2=1,h2d*h3d
+       triplesx(h3h2,h1,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h3h2,h1,p6,p5-jstart+1,p4-istart+1)
+     &   + t1sub(p4,h1)*v2sub(h3h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine acc_sd_6ds_2(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_2'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h3,h1,h2,p6,p5-jstart+1,p4-istart+1)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_6ds_3(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_3'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h1,h3,h2,p6,p5-jstart+1,p4-istart+1)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_6ds_4(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_4'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3h2,h1,p6,p5,p4
+      double precision triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d*h2d,p6d,p5d)
+      do p5=istart,istop
+      do p4=jstart,jstop
+      do p6=1,p6d
+      do h1=1,h1d
+      do h3h2=1,h3d*h2d
+       triplesx(h3h2,h1,p6,p4-jstart+1,p5-istart+1)=
+     &     triplesx(h3h2,h1,p6,p4-jstart+1,p5-istart+1)
+     &   - t1sub(p4,h1)*v2sub(h3h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_6ds_5(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_5'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+      do p5=istart,istop
+      do p4=jstart,jstop
+      do p6=1,p6d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p6,p4-jstart+1,p5-istart+1)=
+     &     triplesx(h3,h1,h2,p6,p4-jstart+1,p5-istart+1)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_6ds_6(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_6'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+      do p5=istart,istop
+      do p4=jstart,jstop
+      do p6=1,p6d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p6,p4-jstart+1,p5-istart+1)=
+     &     triplesx(h1,h3,h2,p6,p4-jstart+1,p5-istart+1)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_6ds_7(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_7'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3h2,h1,p6,p5,p4
+      double precision triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d*h2d,p6d,p5d)
+      do p5=istart,istop
+      do p6=jstart,jstop
+      do p4=1,p4d
+      do h1=1,h1d
+      do h3h2=1,h3d*h2d
+       triplesx(h3h2,h1,p4,p6-jstart+1,p5-istart+1)=
+     &     triplesx(h3h2,h1,p4,p6-jstart+1,p5-istart+1)
+     &   + t1sub(p4,h1)*v2sub(h3h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_6ds_8(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_8'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+      do p5=istart,istop
+      do p6=jstart,jstop
+      do p4=1,p4d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p4,p6-jstart+1,p5-istart+1)=
+     &     triplesx(h3,h1,h2,p4,p6-jstart+1,p5-istart+1)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_6ds_9(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               triplesx,t1sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_6ds_9'
+      integer istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+      do p5=istart,istop
+      do p6=jstart,jstop
+      do p4=1,p4d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p4,p6-jstart+1,p5-istart+1)=
+     &     triplesx(h1,h3,h2,p4,p6-jstart+1,p5-istart+1)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+
+
+
+      subroutine acc_sd_tx1_1(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_1'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3h2,h1,p6,p5,p4,h7
+      double precision triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d*h2d,p6d,h7d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h1=1,h1d
+      do h7=1,h7d
+      do h3h2=1,h2d*h3d
+       triplesx(h3h2,h1,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h3h2,h1,p6,p5-jstart+1,p4-istart+1)
+     &   - t2sub(h7,p4,p5,h1)*v2sub(h3h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_2(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_2'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3,h2,h1,p6,p5,p4,h7
+      double precision triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d,h2d,p6d,h7d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+      do h7=1,h7d
+       triplesx(h3,h1,h2,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h3,h1,h2,p6,p5-jstart+1,p4-istart+1)
+     &   + t2sub(h7,p4,p5,h1)*v2sub(h3,h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_3(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_3'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3h2,h1,p6,p5,p4,h7
+      double precision triplesx(h1d,h3d*h2d,p6d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d,h2d,p6d,h7d)
+      double precision scratch(h7d,h3d*h2d,p6d)
+      external ccsd_t_transpt2_7326
+      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h3h2=1,h2d*h3d
+      do h1=1,h1d
+      do h7=1,h7d
+       triplesx(h1,h3h2,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h1,h3h2,p6,p5-jstart+1,p4-istart+1)
+     &    - t2sub(h7,p4,p5,h1)*scratch(h7,h3h2,p6)
+!     &   - t2sub(h7,p4,p5,h1)*v2sub(h3,h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_4(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_4'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3h2,h1,p6,p5,p4,h7
+      double precision triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d*h2d,p6d,h7d)
+      do p6=istart,istop
+      do p4=jstart,jstop
+      do p5=1,p5d
+      do h1=1,h1d
+      do h7=1,h7d
+      do h3h2=1,h2d*h3d
+       triplesx(h3h2,h1,p5,p4-jstart+1,p6-istart+1)=
+     &     triplesx(h3h2,h1,p5,p4-jstart+1,p6-istart+1)
+     &   - t2sub(h7,p4,p5,h1)*v2sub(h3h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_5(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_5'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3,h2,h1,p6,p5,p4,h7
+      double precision triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d,h2d,p6d,h7d)
+      double precision scratch(h7d,h3d,h2d,p6d)
+      external ccsd_t_transpt2_7326
+      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      do p6=istart,istop
+      do p4=jstart,jstop
+      do p5=1,p5d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+      do h7=1,h7d
+       triplesx(h3,h1,h2,p5,p4-jstart+1,p6-istart+1)=
+     &     triplesx(h3,h1,h2,p5,p4-jstart+1,p6-istart+1)
+     &   + t2sub(h7,p4,p5,h1)*scratch(h7,h3,h2,p6)
+!     &   + t2sub(h7,p4,p5,h1)*v2sub(h3,h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_6(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_6'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3h2,h1,p6,p5,p4,h7
+      double precision triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d,h2d,p6d,h7d)
+      double precision scratch(h7d,h3d*h2d,p6d)
+      external ccsd_t_transpt2_7326
+      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      do p6=istart,istop
+      do p4=jstart,jstop
+      do p5=1,p5d
+      do h3h2=1,h2d*h3d
+      do h1=1,h1d
+      do h7=1,h7d
+       triplesx(h1,h3h2,p5,p4-jstart+1,p6-istart+1)=
+     &     triplesx(h1,h3h2,p5,p4-jstart+1,p6-istart+1)
+     &   - t2sub(h7,p4,p5,h1)*scratch(h7,h3h2,p6)
+!     &   - t2sub(h7,p4,p5,h1)*v2sub(h3,h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_7(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_7'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3h2,h1,p6,p5,p4,h7
+      double precision triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d*h2d,p6d,h7d)
+      do p4=istart,istop
+      do p6=jstart,jstop
+      do p5=1,p5d
+      do h1=1,h1d
+      do h7=1,h7d
+      do h3h2=1,h2d*h3d
+       triplesx(h3h2,h1,p5,p6-jstart+1,p4-istart+1)=
+     &     triplesx(h3h2,h1,p5,p6-jstart+1,p4-istart+1)
+     &   + t2sub(h7,p4,p5,h1)*v2sub(h3h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_8(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_8'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3,h2,h1,p6,p5,p4,h7
+      double precision triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d,h2d,p6d,h7d)
+      double precision scratch(h7d,h3d,h2d,p6d)
+      external ccsd_t_transpt2_7326
+      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      do p4=istart,istop
+      do p6=jstart,jstop
+      do p5=1,p5d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+      do h7=1,h7d
+       triplesx(h3,h1,h2,p5,p6-jstart+1,p4-istart+1)=
+     &     triplesx(h3,h1,h2,p5,p6-jstart+1,p4-istart+1)
+     &   - t2sub(h7,p4,p5,h1)*scratch(h7,h3,h2,p6)
+!     &   - t2sub(h7,p4,p5,h1)*v2sub(h3,h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_tx1_9(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               h7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_tx1_9'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,h7d
+      integer h3h2,h1,p6,p5,p4,h7
+      double precision triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision t2sub(h7d,p4d,p5d,h1d)
+      double precision v2sub(h3d,h2d,p6d,h7d)
+      double precision scratch(h7d,h3d*h2d,p6d)
+      external ccsd_t_transpt2_7326
+      call ccsd_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+      do p4=istart,istop
+      do p6=jstart,jstop
+      do p5=1,p5d
+      do h3h2=1,h2d*h3d
+      do h1=1,h1d
+      do h7=1,h7d
+       triplesx(h1,h3h2,p5,p6-jstart+1,p4-istart+1)=
+     &     triplesx(h1,h3h2,p5,p6-jstart+1,p4-istart+1)
+     &   + t2sub(h7,p4,p5,h1)*scratch(h7,h3h2,p6)
+!     &   + t2sub(h7,p4,p5,h1)*v2sub(h3,h2,p6,h7)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_1(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      character(len=*), parameter :: funcname = 'sd_ty1_1'
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2,h1,p6,p5,p4,p7
+      double precision triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(p7d,h2d,h1d,p4d)
+      external ccsd_t_transpt2_7124
+      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+      do p7=1,p7d
+       triplesx(h3,h2,h1,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h3,h2,h1,p6,p5-jstart+1,p4-istart+1)
+     &   - scratch(p7,h2,h1,p4)*v2sub(p7,h3,p6,p5)
+!     &   - t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_2(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_2'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2h1,p6,p5,p4,p7
+      double precision triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(h2d*h1d,p4d,p7d)
+      external ccsd_t_transpt2
+      call ccsd_t_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h3=1,h3d
+      do p7=1,p7d
+      do h2h1=1,h1d*h2d
+       triplesx(h2h1,h3,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h2h1,h3,p6,p5-jstart+1,p4-istart+1)
+     &   - scratch(h2h1,p4,p7)*v2sub(p7,h3,p6,p5)
+!     &   - t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_3(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_3'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2,h1,p6,p5,p4,p7
+      double precision triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(p7d,h2d,h1d,p4d)
+      external ccsd_t_transpt2_7124
+      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      do p4=istart,istop
+      do p5=jstart,jstop
+      do p6=1,p6d
+      do h1=1,h1d
+      do h3=1,h3d
+      do h2=1,h2d
+      do p7=1,p7d
+       triplesx(h2,h3,h1,p6,p5-jstart+1,p4-istart+1)=
+     &     triplesx(h2,h3,h1,p6,p5-jstart+1,p4-istart+1)
+     &   + scratch(p7,h2,h1,p4)*v2sub(p7,h3,p6,p5)
+!     &   + t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_4(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_4'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2,h1,p6,p5,p4,p7
+      double precision triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(p7d,h2d,h1d,p4d)
+      external ccsd_t_transpt2_7124
+      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      do p5=istart,istop
+      do p4=jstart,jstop
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+      do p7=1,p7d
+       triplesx(h3,h2,h1,p6,p4-jstart+1,p5-istart+1)=
+     &     triplesx(h3,h2,h1,p6,p4-jstart+1,p5-istart+1)
+     &   + scratch(p7,h2,h1,p4)*v2sub(p7,h3,p6,p5)
+!     &   + t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_5(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_5'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2h1,p6,p5,p4,p7
+      double precision triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(h2d*h1d,p4d,p7d)
+      external ccsd_t_transpt2
+      call ccsd_t_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+      do p5=istart,istop
+      do p4=jstart,jstop
+      do p6=1,p6d
+      do h3=1,h3d
+      do p7=1,p7d
+      do h2h1=1,h2d*h1d
+       triplesx(h2h1,h3,p6,p4-jstart+1,p5-istart+1)=
+     &     triplesx(h2h1,h3,p6,p4-jstart+1,p5-istart+1)
+     &   + scratch(h2h1,p4,p7)*v2sub(p7,h3,p6,p5)
+!     &   + t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_6(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_6'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2,h1,p6,p5,p4,p7
+      double precision triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(p7d,h2d,h1d,p4d)
+      external ccsd_t_transpt2_7124
+      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      do p5=istart,istop
+      do p4=jstart,jstop
+      do p6=1,p6d
+      do h1=1,h1d
+      do h3=1,h3d
+      do h2=1,h2d
+      do p7=1,p7d
+       triplesx(h2,h3,h1,p6,p4-jstart+1,p5-istart+1)=
+     &     triplesx(h2,h3,h1,p6,p4-jstart+1,p5-istart+1)
+     &   - scratch(p7,h2,h1,p4)*v2sub(p7,h3,p6,p5)
+!     &   - t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_7(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_7'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2,h1,p6,p5,p4,p7
+      double precision triplesx(h3d,h2d,h1d,p4d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(p7d,h2d,h1d,p4d)
+      external ccsd_t_transpt2_7124
+      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      do p5=istart,istop
+      do p6=jstart,jstop
+      do p4=1,p4d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+      do p7=1,p7d
+       triplesx(h3,h2,h1,p4,p6-jstart+1,p5-istart+1)=
+     &     triplesx(h3,h2,h1,p4,p6-jstart+1,p5-istart+1)
+     &   - scratch(p7,h2,h1,p4)*v2sub(p7,h3,p6,p5)
+!     &   - t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_8(h3d,h2d,h1d,p6d,p5d,p4d,
+     &               p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_8'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2h1,p6,p5,p4,p7
+      double precision triplesx(h2d*h1d,h3d,p4d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(h2d*h1d,p4d,p7d)
+      external ccsd_t_transpt2
+      call ccsd_t_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+      do p5=istart,istop
+      do p6=jstart,jstop
+      do p4=1,p4d
+      do h3=1,h3d
+      do p7=1,p7d
+      do h2h1=1,h1d*h2d
+       triplesx(h2h1,h3,p4,p6-jstart+1,p5-istart+1)=
+     &     triplesx(h2h1,h3,p4,p6-jstart+1,p5-istart+1)
+     &   - scratch(h2h1,p4,p7)*v2sub(p7,h3,p6,p5)
+!     &   - t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
+!
+      subroutine acc_sd_ty1_9(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
+     &               triplesx,t2sub,v2sub,
+     & istart,istop,jstart,jstop,maxp4,maxp5)
+      IMPLICIT NONE
+      character(len=*), parameter :: funcname = 'sd_ty1_9'
+      INTEGER istart,istop,jstart,jstop,maxp4,maxp5
+      integer h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer h3,h2,h1,p6,p5,p4,p7
+      double precision triplesx(h2d,h3d,h1d,p4d,maxp5,maxp4)
+      double precision t2sub(p7d,p4d,h1d,h2d)
+      double precision v2sub(p7d,h3d,p6d,p5d)
+      double precision scratch(p7d,h2d,h1d,p4d)
+      external ccsd_t_transpt2_7124
+      call ccsd_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+      do p5=istart,istop
+      do p6=jstart,jstop
+      do p4=1,p4d
+      do h1=1,h1d
+      do h3=1,h3d
+      do h2=1,h2d
+      do p7=1,p7d
+       triplesx(h2,h3,h1,p4,p6-jstart+1,p5-istart+1)=
+     &     triplesx(h2,h3,h1,p4,p6-jstart+1,p5-istart+1)
+     &   + scratch(p7,h2,h1,p4)*v2sub(p7,h3,p6,p5)
+!     &   + t2sub(p7,p4,h1,h2)*v2sub(p7,h3,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      return
+      end
 
       end module tce_ccsd_t_cutensor
