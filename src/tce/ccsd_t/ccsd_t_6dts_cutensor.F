@@ -269,8 +269,8 @@
 
             i = 1
             print*,'SANDWITCH',util_wallsec()
-#if 0
-!$acc parallel loop collapse(force:6) reduction(+:energy1,energy2)
+#if 1
+!$acc parallel loop collapse(6) reduction(+:energy1,energy2)
 !$acc& copyin(i,factor,f_singles,f_doubles1,f_doubles2)
 !$acc& copyin(k_evl_sorted,evals)
 !$acc& copyin(offset_p4,offset_p5,offset_p6)
@@ -281,36 +281,22 @@
 !$acc& private(denom,e_s,e_d1,e_d2,e_d)
 #endif
             do t_p4 = istart,istop
-!             write(6,'(a8,i5,f14.7,1x,f14.7)')
-!     &             'offset=',offset_p4+t_p4-k_evl_sorted,
-!     &              dbl_mb(offset_p4+t_p4),
-!     &              evals(offset_p4+t_p4-k_evl_sorted+1)
-!             denom_p4 = dbl_mb(offset_p4+t_p4)
-             denom_p4 = evals(offset_p4+t_p4-k_evl_sorted+1)
-
-!             if (offset_p4+t_p4-k_evl_sorted+1 .lt. 1) then
-!               call errquit('evals out-of-bounds',
-!     &                      offset_p4+t_p4-k_evl_sorted+1, CALC_ERR)
-!             endif
-!             if (offset_p4+t_p4-k_evl_sorted+1 .gt. nevals) then
-!               call errquit('evals out-of-bounds',
-!     &                      offset_p4+t_p4-k_evl_sorted+1, CALC_ERR)
-!             endif
-             
+             !denom_p4 = dbl_mb(offset_p4+t_p4)
              do t_p5 = jstart,jstop
               !denom_p5 = dbl_mb(offset_p5+t_p5)
-              denom_p5 = evals(offset_p5+t_p5-k_evl_sorted+1)
               do t_p6 = 1, range_p6
                !denom_p6 = dbl_mb(offset_p6+t_p6)
-               denom_p6 = evals(offset_p6+t_p6-k_evl_sorted+1)
                do t_h1 = 1, range_h1
                 !denom_h1 = dbl_mb(offset_h1+t_h1)
-                denom_h1 = evals(offset_h1+t_h1-k_evl_sorted+1)
                 do t_h2 = 1, range_h2
                  !denom_h2 = dbl_mb(offset_h2+t_h2)
-                 denom_h2 = evals(offset_h2+t_h2-k_evl_sorted+1)
                  do t_h3 = 1, range_h3
                   !denom_h3 = dbl_mb(offset_h3+t_h3)
+                  denom_p4 = evals(offset_p4+t_p4-k_evl_sorted+1)
+                  denom_p5 = evals(offset_p5+t_p5-k_evl_sorted+1)
+                  denom_p6 = evals(offset_p6+t_p6-k_evl_sorted+1)
+                  denom_h1 = evals(offset_h1+t_h1-k_evl_sorted+1)
+                  denom_h2 = evals(offset_h2+t_h2-k_evl_sorted+1)
                   denom_h3 = evals(offset_h3+t_h3-k_evl_sorted+1)
                   denom = 1.0d0 / ( ( denom_h1 + denom_h2 + denom_h3 )
      &                            - ( denom_p4 + denom_p5 + denom_p6 ) )
