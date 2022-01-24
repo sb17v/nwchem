@@ -1,3 +1,6 @@
+#define CUDA 1
+#define T1D 1
+
       module tce_ccsd_t_cutensor
 
       use cudafor
@@ -21,12 +24,18 @@
       integer, intent(in) :: xmem, size_t1
       integer :: t_h1b, t_h1, t_h2b, t_h2, t_h3b, t_h3
       integer :: t_p4b, t_p4, t_p5b, t_p5, t_p6b, t_p6
+#if T1D
       double precision, allocatable :: f_singles(:)
       double precision, allocatable :: f_doubles1(:)
       double precision, allocatable :: f_doubles2(:)
+      integer :: i, size
+#else
+      double precision, allocatable :: f_singles(:,:,:,:,:,:)
+      double precision, allocatable :: f_doubles1(:,:,:,:,:,:)
+      double precision, allocatable :: f_doubles2(:,:,:,:,:,:)
+#endif
       double precision, allocatable :: t1_local(:)
-      integer :: alloc_error,cuda_err
-      integer :: size,i
+      integer :: alloc_error
       integer :: nxtask
       integer :: next
       integer :: nprocs
@@ -52,17 +61,24 @@
       double precision :: e_s, e_d, e_d1, e_d2
       double precision :: denom_p4,denom_p5,denom_p6
       double precision :: denom_h1,denom_h2,denom_h3
+#if CUDA
       integer(kind=cuda_stream_kind) :: stream(3)
+      integer :: cuda_err
+#else
+      integer :: stream(3)
+#endif
       integer :: nevals
       double precision, allocatable :: evals(:)
       external nxtask
 
+#if CUDA
       do p=1,3
         cuda_err = cudaStreamCreate(stream(p))
         if (cuda_err.ne.0) then
           call errquit('cudaStreamCreate',cuda_err,UNKNOWN_ERR)
         endif
       enddo
+#endif
 !
 ! Here we determine the maximum tile dimension
 ! for p and h tiles so we can allocate buffers
@@ -90,19 +106,19 @@
       call get_block(d_t1,t1_local,size_t1,0)
 ! -------------------------------
 
-      block
-        integer :: x, y, ymin, ymax
-        ymin = huge(x)
-        ymax = 0
-        do x = 1,noab+nvab
-           !y = k_evl_sorted+int_mb(k_offset+x-1)-1
-           y = int_mb(k_offset+x-1)-1
-           ymin = min(y,ymin)
-           ymax = max(y,ymax)
-        enddo
-        write(6,'(a4,i14,1x,a4,i14,1x,a5,i15)') 
-     &          'min=',ymin,'max=',ymax,'diff=',ymax-ymin
-      end block
+!      block
+!        integer :: x, y, ymin, ymax
+!        ymin = huge(x)
+!        ymax = 0
+!        do x = 1,noab+nvab
+!           !y = k_evl_sorted+int_mb(k_offset+x-1)-1
+!           y = int_mb(k_offset+x-1)-1
+!           ymin = min(y,ymin)
+!           ymax = max(y,ymax)
+!        enddo
+!        write(6,'(a4,i14,1x,a4,i14,1x,a5,i15)') 
+!     &          'min=',ymin,'max=',ymax,'diff=',ymax-ymin
+!      end block
 
       nevals = nmo(1)-nfv(1)-nfc(1)+nmo(ipol)-nfv(ipol)-nfc(ipol)
       allocate(evals(1:nevals), stat=alloc_error)
@@ -191,16 +207,23 @@
             else
               mdp5=qp5
             end if
-!
+            maxp4=slice_dp4
+            maxp5=slice_dp5
+#if T1D
            size = slice_dp4 * slice_dp5
      &          * range_p6  * range_h1
      &          * range_h2  * range_h3
-!
-            maxp4=slice_dp4
-            maxp5=slice_dp5
-!
             allocate(f_singles(1:size), f_doubles1(1:size),
      &               f_doubles2(1:size), stat=alloc_error)
+#else
+            allocate(f_singles(1:range_h3,1:range_h2,1:range_h1,
+     &                         1:range_p6,1:slice_dp5,1:slice_dp4),
+     &               f_doubles1(1:range_h3,1:range_h2,1:range_h1,
+     &                          1:range_p6,1:slice_dp5,1:slice_dp4),
+     &               f_doubles2(1:range_h3,1:range_h2,1:range_h1,
+     &                          1:range_p6,1:slice_dp5,1:slice_dp4),
+     &              stat=alloc_error)
+#endif
             if (alloc_error.ne.0) then
               call errquit('ccsd_t_6dts_cutensor: allocate failed',
      &                     alloc_error, MA_ERR)
@@ -267,19 +290,8 @@
 !             print*,'index_h=',offset_h3+t_h3-k_evl_sorted
 !            enddo
 
-            i = 1
             print*,'SANDWITCH',util_wallsec()
-#if 1
 !$acc parallel loop collapse(6) reduction(+:energy1,energy2)
-!$acc& copyin(i,factor,f_singles,f_doubles1,f_doubles2)
-!$acc& copyin(k_evl_sorted,evals)
-!$acc& copyin(offset_p4,offset_p5,offset_p6)
-!$acc& copyin(offset_h1,offset_h2,offset_h3)
-!$acc& copyin(t_p4,t_p5,t_p6,t_h1,t_h2,t_h3)
-!$acc& copyin(istart,istop,range_p6,range_h1,range_h2,range_h3)
-!$acc& private(denom_p4,denom_p5,denom_p6,denom_h1,denom_h2,denom_h3)
-!$acc& private(denom,e_s,e_d1,e_d2,e_d)
-#endif
             do t_p4 = istart,istop
              !denom_p4 = dbl_mb(offset_p4+t_p4)
              do t_p5 = jstart,jstop
@@ -292,6 +304,7 @@
                  !denom_h2 = dbl_mb(offset_h2+t_h2)
                  do t_h3 = 1, range_h3
                   !denom_h3 = dbl_mb(offset_h3+t_h3)
+
                   denom_p4 = evals(offset_p4+t_p4-k_evl_sorted+1)
                   denom_p5 = evals(offset_p5+t_p5-k_evl_sorted+1)
                   denom_p6 = evals(offset_p6+t_p6-k_evl_sorted+1)
@@ -300,13 +313,30 @@
                   denom_h3 = evals(offset_h3+t_h3-k_evl_sorted+1)
                   denom = 1.0d0 / ( ( denom_h1 + denom_h2 + denom_h3 )
      &                            - ( denom_p4 + denom_p5 + denom_p6 ) )
+
+#if T1D
+                  i = 1 + (t_h3-1) + range_h3 * (
+     &                  + (t_h2-1) + range_h2 * (
+     &                  + (t_h1-1) + range_h1 * (
+     &                  + (t_p6-1) + range_p6 * (
+     &                  + (t_p5-jstart)
+     &                  + (t_p4-istart) * (jstop-jstart+1) ))))
                   e_s  = f_singles(i)
                   e_d1 = f_doubles1(i)
                   e_d2 = f_doubles2(i)
+#else
+                  block
+                    integer :: x_p5, x_p4
+                    x_p5 = 1+t_p5-jstart
+                    x_p5 = 1+t_p4-istart
+                    e_s  = f_singles(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
+                    e_d1 = f_doubles1(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
+                    e_d2 = f_doubles2(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
+                  end block
+#endif
                   e_d  = e_d1 + e_d2
                   energy1 = energy1 + factor*denom * e_d * e_d
                   energy2 = energy2 + factor*denom * e_d * (e_d + e_s)
-                  i = i + 1
                  enddo
                 enddo
                enddo
@@ -350,12 +380,14 @@
      &               alloc_error, MA_ERR)
       endif
 ! ---------------------------
+#if CUDA
       do p=1,3
         cuda_err = cudaStreamDestroy(stream(p))
         if (cuda_err.ne.0) then
           call errquit('cudaStreamDestroy',cuda_err,UNKNOWN_ERR)
         endif
       end do
+#endif
       end
 
       SUBROUTINE ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
@@ -379,7 +411,11 @@
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
+#if CUDA
       integer(kind=cuda_stream_kind), intent(inout) :: stream
+#else
+      integer :: stream ! unused
+#endif
       integer :: p4b, p5b, p6b, h1b, h2b, h3b
       integer :: p4b_1, h1b_1, p5b_2, p6b_2, h2b_2, h3b_2
       integer :: dima, dimb
@@ -757,7 +793,11 @@
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
+#if CUDA
       integer(kind=cuda_stream_kind), intent(inout) :: stream
+#else
+      integer :: stream ! unused
+#endif
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, h7b
       integer :: p4b_1, p5b_1, h1b_1, h7b_1, p6b_2, h7b_2, h2b_2, h3b_2
       integer :: dima, dimb
@@ -1106,7 +1146,11 @@
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
+#if CUDA
       integer(kind=cuda_stream_kind), intent(inout) :: stream
+#else
+      integer :: stream ! unused
+#endif
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, p7b
       integer :: p4b_1, p7b_1, h1b_1, h2b_1, p5b_2, p6b_2, h3b_2, p7b_2
       integer :: dima, dimb
@@ -2293,6 +2337,7 @@
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision :: scratch(h1d,p5d,p4d,h7d)
       integer :: h1,p5,p4,h7,pp5,hh1
+!$acc parallel loop collapse(4)
       do h7=1,h7d
          do p4=1,p4d
             do p5=1,p5d
@@ -2310,6 +2355,7 @@
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
       integer :: p4,h1,h2,p7
+!$acc parallel loop collapse(4)
       do p4=1,p4d
          do h1=1,h1d
             do h2=1,h2d
@@ -2328,6 +2374,7 @@
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,p6,h7
+!$acc parallel loop collapse(4)
       do p6=1,p6d
          do h2=1,h2d
             do h3=1,h3d
