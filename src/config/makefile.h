@@ -2717,8 +2717,8 @@ ifeq ($(_CPU),$(findstring $(_CPU), ppc64 ppc64le))
            LDOPTIONS += -acc
         endif
         ifdef USE_CUTENSOR
-           FOPTIONS  += -cudalib=cutensor
-           LDOPTIONS += -cudalib=cutensor
+           FOPTIONS  += -cudalib=cutensor -cuda
+           LDOPTIONS += -cudalib=cutensor -cuda
         endif
       endif
 
