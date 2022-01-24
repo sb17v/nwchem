@@ -1,11 +1,13 @@
       module tce_ccsd_t_cutensor
 
+      use cudafor
       implicit none
 
       contains
 
       SUBROUTINE ccsd_t_6dts_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
      &            d_v2,k_v2_offset,energy1,energy2,size_t1,xmem)
+      use cudafor
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
@@ -23,7 +25,7 @@
       double precision, allocatable :: f_doubles1(:)
       double precision, allocatable :: f_doubles2(:)
       double precision, allocatable :: t1_local(:)
-      integer :: alloc_error
+      integer :: alloc_error,cuda_err
       integer :: size,i
       integer :: nxtask
       integer :: next
@@ -50,7 +52,17 @@
       double precision :: e_s, e_d, e_d1, e_d2
       double precision :: denom_p4,denom_p5,denom_p6
       double precision :: denom_h1,denom_h2,denom_h3
+      integer(kind=cuda_stream_kind) :: stream(3)
+      integer :: nevals
+      double precision, allocatable :: evals(:)
       external nxtask
+
+      do p=1,3
+        cuda_err = cudaStreamCreate(stream(p))
+        if (cuda_err.ne.0) then
+          call errquit('cudaStreamCreate',cuda_err,UNKNOWN_ERR)
+        endif
+      enddo
 !
 ! Here we determine the maximum tile dimension
 ! for p and h tiles so we can allocate buffers
@@ -77,6 +89,29 @@
       t1_local = 0.0d0
       call get_block(d_t1,t1_local,size_t1,0)
 ! -------------------------------
+
+      block
+        integer :: x, y, ymin, ymax
+        ymin = huge(x)
+        ymax = 0
+        do x = 1,noab+nvab
+           !y = k_evl_sorted+int_mb(k_offset+x-1)-1
+           y = int_mb(k_offset+x-1)-1
+           ymin = min(y,ymin)
+           ymax = max(y,ymax)
+        enddo
+        write(6,'(a4,i14,1x,a4,i14,1x,a5,i15)') 
+     &          'min=',ymin,'max=',ymax,'diff=',ymax-ymin
+      end block
+
+      nevals = nmo(1)-nfv(1)-nfc(1)+nmo(ipol)-nfv(ipol)-nfc(ipol)
+      allocate(evals(1:nevals), stat=alloc_error)
+      if (alloc_error.ne.0) then
+        call errquit('ccsd_t_6dts: allocate failed',
+     &               alloc_error, MA_ERR)
+      endif
+      evals(1:nevals) = dbl_mb(k_evl_sorted:k_evl_sorted+nevals)
+
       nprocs = GA_NNODES()
       count = 0
       next = nxtask(nprocs,1)
@@ -193,15 +228,18 @@
             call ccsd_t_singles_l_1_6dts_cutensor(f_singles,
      &        t1_local,d_v2,k_t1_offset,k_v2_offset,
      &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh,
+     &        stream(1))
             call ccsd_t_6dts_l_1_cutensor(f_doubles1,
      &        d_t2,d_v2,k_t2_offset,k_v2_offset,
      &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh,
+     &        stream(2))
             call ccsd_t_6dts_l_2_cutensor(f_doubles2,
      &        d_t2,d_v2,k_t2_offset,k_v2_offset,
      &        t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+     &        istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh,
+     &        stream(3))
             if (restricted) then
               factor = 2.0d0
             else
@@ -220,19 +258,60 @@
 !
 ! factor = [ 1/36, 1/18, 1/12, 1/6, 1/4, 1/3, 1/2, 1, 2]
 !
+!            do t_p4 = 1,range_p4
+!             denom_p4 = dbl_mb(offset_p4+t_p4)
+!             print*,'index_p=',offset_p4+t_p4-k_evl_sorted
+!            enddo
+!            do t_h3 = 1,range_h3
+!             denom_h3 = dbl_mb(offset_h3+t_h3)
+!             print*,'index_h=',offset_h3+t_h3-k_evl_sorted
+!            enddo
+
             i = 1
+            print*,'SANDWITCH',util_wallsec()
+#if 0
+!$acc parallel loop collapse(force:6) reduction(+:energy1,energy2)
+!$acc& copyin(i,factor,f_singles,f_doubles1,f_doubles2)
+!$acc& copyin(k_evl_sorted,evals)
+!$acc& copyin(offset_p4,offset_p5,offset_p6)
+!$acc& copyin(offset_h1,offset_h2,offset_h3)
+!$acc& copyin(t_p4,t_p5,t_p6,t_h1,t_h2,t_h3)
+!$acc& copyin(istart,istop,range_p6,range_h1,range_h2,range_h3)
+!$acc& private(denom_p4,denom_p5,denom_p6,denom_h1,denom_h2,denom_h3)
+!$acc& private(denom,e_s,e_d1,e_d2,e_d)
+#endif
             do t_p4 = istart,istop
-             denom_p4 = dbl_mb(offset_p4+t_p4)
+!             write(6,'(a8,i5,f14.7,1x,f14.7)')
+!     &             'offset=',offset_p4+t_p4-k_evl_sorted,
+!     &              dbl_mb(offset_p4+t_p4),
+!     &              evals(offset_p4+t_p4-k_evl_sorted+1)
+!             denom_p4 = dbl_mb(offset_p4+t_p4)
+             denom_p4 = evals(offset_p4+t_p4-k_evl_sorted+1)
+
+!             if (offset_p4+t_p4-k_evl_sorted+1 .lt. 1) then
+!               call errquit('evals out-of-bounds',
+!     &                      offset_p4+t_p4-k_evl_sorted+1, CALC_ERR)
+!             endif
+!             if (offset_p4+t_p4-k_evl_sorted+1 .gt. nevals) then
+!               call errquit('evals out-of-bounds',
+!     &                      offset_p4+t_p4-k_evl_sorted+1, CALC_ERR)
+!             endif
+             
              do t_p5 = jstart,jstop
-              denom_p5 = dbl_mb(offset_p5+t_p5)
+              !denom_p5 = dbl_mb(offset_p5+t_p5)
+              denom_p5 = evals(offset_p5+t_p5-k_evl_sorted+1)
               do t_p6 = 1, range_p6
-               denom_p6 = dbl_mb(offset_p6+t_p6)
+               !denom_p6 = dbl_mb(offset_p6+t_p6)
+               denom_p6 = evals(offset_p6+t_p6-k_evl_sorted+1)
                do t_h1 = 1, range_h1
-                denom_h1 = dbl_mb(offset_h1+t_h1)
+                !denom_h1 = dbl_mb(offset_h1+t_h1)
+                denom_h1 = evals(offset_h1+t_h1-k_evl_sorted+1)
                 do t_h2 = 1, range_h2
-                 denom_h2 = dbl_mb(offset_h2+t_h2)
+                 !denom_h2 = dbl_mb(offset_h2+t_h2)
+                 denom_h2 = evals(offset_h2+t_h2-k_evl_sorted+1)
                  do t_h3 = 1, range_h3
-                  denom_h3 = dbl_mb(offset_h3+t_h3)
+                  !denom_h3 = dbl_mb(offset_h3+t_h3)
+                  denom_h3 = evals(offset_h3+t_h3-k_evl_sorted+1)
                   denom = 1.0d0 / ( ( denom_h1 + denom_h2 + denom_h3 )
      &                            - ( denom_p4 + denom_p5 + denom_p6 ) )
                   e_s  = f_singles(i)
@@ -285,12 +364,19 @@
      &               alloc_error, MA_ERR)
       endif
 ! ---------------------------
+      do p=1,3
+        cuda_err = cudaStreamDestroy(stream(p))
+        if (cuda_err.ne.0) then
+          call errquit('cudaStreamDestroy',cuda_err,UNKNOWN_ERR)
+        endif
+      end do
       end
 
       SUBROUTINE ccsd_t_singles_l_1_6dts_cutensor(f_t3,f_t1,
      &           d_v2,k_t1_offset,k_v2_offset,
      &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh,
+     &           stream)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = 1 * P( 9 ) * t ( p4 h1 )_t * v ( p5 p6 h2 h3 )_v
 !
 ! elimination of the transpositions (kowalski,august,2009)
@@ -307,6 +393,7 @@
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
+      integer(kind=cuda_stream_kind), intent(inout) :: stream
       integer :: p4b, p5b, p6b, h1b, h2b, h3b
       integer :: p4b_1, h1b_1, p5b_2, p6b_2, h2b_2, h3b_2
       integer :: dima, dimb
@@ -666,7 +753,8 @@
       SUBROUTINE ccsd_t_6dts_l_1_cutensor(f_t3,
      &           d_t2,d_v2,k_t2_offset,k_v2_offset,
      &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh,
+     &           stream)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
 !
 ! elimination of the transpositions (kowalski,august,2009)
@@ -683,6 +771,7 @@
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
+      integer(kind=cuda_stream_kind), intent(inout) :: stream
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, h7b
       integer :: p4b_1, p5b_1, h1b_1, h7b_1, p6b_2, h7b_2, h2b_2, h3b_2
       integer :: dima, dimb
@@ -1013,7 +1102,8 @@
       SUBROUTINE ccsd_t_6dts_l_2_cutensor(f_t3,
      &           d_t2,d_v2,k_t2_offset,k_v2_offset,
      &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
-     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh)
+     &           istart,istop,jstart,jstop,maxp4,maxp5,maxp,maxh,
+     &           stream)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( p7 ) * t ( p4 p7 h1 h2 )_t * v ( p5 p6 h3 p7 )_v
 !
 ! elimination of the transpositions (kowalski,august,2009)
@@ -1030,6 +1120,7 @@
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
+      integer(kind=cuda_stream_kind), intent(inout) :: stream
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, p7b
       integer :: p4b_1, p7b_1, h1b_1, h2b_1, p5b_2, p6b_2, h3b_2, p7b_2
       integer :: dima, dimb
@@ -1364,8 +1455,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
       double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1389,8 +1481,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
       double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1417,8 +1510,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
       double precision :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1445,8 +1539,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
       double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1471,8 +1566,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
       double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1499,8 +1595,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
       double precision :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -1527,8 +1624,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
       double precision :: triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -1553,8 +1651,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
       double precision :: triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -1581,8 +1680,9 @@
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
       double precision :: triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
-      double precision, intent(inout) :: t1sub(p4d,h1d)
+      double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -1614,6 +1714,7 @@
       double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1643,6 +1744,7 @@
       double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1676,6 +1778,7 @@
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1706,6 +1809,7 @@
       double precision :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p6=istart,istop
       do p4=jstart,jstop
       do p5=1,p5d
@@ -1737,6 +1841,7 @@
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p6=istart,istop
       do p4=jstart,jstop
       do p5=1,p5d
@@ -1771,6 +1876,7 @@
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p6=istart,istop
       do p4=jstart,jstop
       do p5=1,p5d
@@ -1801,6 +1907,7 @@
       double precision :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p6=jstart,jstop
       do p5=1,p5d
@@ -1832,6 +1939,7 @@
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p6=jstart,jstop
       do p5=1,p5d
@@ -1866,6 +1974,7 @@
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p6=jstart,jstop
       do p5=1,p5d
@@ -1898,6 +2007,7 @@
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1932,6 +2042,7 @@
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
       call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1964,6 +2075,7 @@
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p4=istart,istop
       do p5=jstart,jstop
       do p6=1,p6d
@@ -1998,6 +2110,7 @@
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -2032,6 +2145,7 @@
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
       call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -2064,6 +2178,7 @@
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p4=jstart,jstop
       do p6=1,p6d
@@ -2098,6 +2213,7 @@
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -2131,6 +2247,7 @@
       double precision :: scratch(h2d*h1d,p4d,p7d)
       integer :: h3,h2h1,p6,p5,p4,p7
       call cute_transpt2(t2sub,scratch,h2d,h1d,p4d,p7d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
@@ -2162,6 +2279,7 @@
       double precision :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p5=istart,istop
       do p6=jstart,jstop
       do p4=1,p4d
