@@ -309,10 +309,9 @@
       integer, intent(in) :: maxp,maxh
       integer :: p4b, p5b, p6b, h1b, h2b, h3b
       integer :: p4b_1, h1b_1, p5b_2, p6b_2, h2b_2, h3b_2
-      integer :: dimc, dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: dim_common, dima_sort, dima, dimb_sort, dimb
       integer :: a3(9,6)
       integer :: ia6,ja6
-      logical :: skipped
       double precision, allocatable :: f_t1_temp(:), f_t1_sort(:)
       double precision, allocatable :: f_v2_temp(:), f_v2_sort(:)
       integer :: dimhp, dimhhpp
@@ -424,12 +423,20 @@
           h2b=a3(ia6,5)
           h3b=a3(ia6,6)
 
+      if((p5b.le.p6b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
+
           spin_h1b=int_mb(k_spin+h1b-1)
           spin_h2b=int_mb(k_spin+h2b-1)
           spin_h3b=int_mb(k_spin+h3b-1)
           spin_p4b=int_mb(k_spin+p4b-1)
           spin_p5b=int_mb(k_spin+p5b-1)
           spin_p6b=int_mb(k_spin+p6b-1)
+
+      IF ((.not.restricted).or.
+     &    (spin_p4b+spin_p5b+spin_p6b+
+     &     spin_h1b+spin_h2b+spin_h3b.ne.12)) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
+     &    spin_h1b+spin_h2b+spin_h3b) THEN
 
           sym_h1b=int_mb(k_sym+h1b-1)
           sym_h2b=int_mb(k_sym+h2b-1)
@@ -438,6 +445,9 @@
           sym_p5b=int_mb(k_sym+p5b-1)
           sym_p6b=int_mb(k_sym+p6b-1)
 
+      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) .eq. ieor(irrep_v,irrep_t)) THEN
+
           range_h1b=int_mb(k_range+h1b-1)
           range_h2b=int_mb(k_range+h2b-1)
           range_h3b=int_mb(k_range+h3b-1)
@@ -445,19 +455,6 @@
           range_p5b=int_mb(k_range+p5b-1)
           range_p6b=int_mb(k_range+p6b-1)
 
-      if((p5b.le.p6b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
-      skipped = .false.
-      IF (.not.skipped) THEN
-
-      IF ((.not.restricted).or.
-     &    (spin_p4b+spin_p5b+spin_p6b+
-     &     spin_h1b+spin_h2b+spin_h3b.ne.12)) THEN
-      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
-     &    spin_h1b+spin_h2b+spin_h3b) THEN
-      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_p6b,ieor(sym_h1b,
-     &    ieor(sym_h2b,sym_h3b))))) .eq. ieor(irrep_v,irrep_t)) THEN
-      dimc = range_p4b * range_p5b * range_p6b 
-     &     * range_h1b * range_h2b * range_h3b
       IF (spin_p4b .eq. spin_h1b) THEN
       IF (ieor(sym_p4b,sym_h1b) .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
@@ -493,9 +490,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h3b)) then
 
       call acc_sd_6ds_2(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -504,9 +501,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h1b)) then
 
       call acc_sd_6ds_3(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -515,9 +512,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
 
       call acc_sd_6ds_4(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -526,9 +523,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h3b)) then
 
       call acc_sd_6ds_5(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -537,9 +534,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h1b)) then
 
       call acc_sd_6ds_6(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -548,9 +545,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p4b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
 
       call acc_sd_6ds_7(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -559,9 +556,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p4b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h3b)) then
 
       call acc_sd_6ds_8(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -570,9 +567,9 @@
      &                  maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p4b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h1b)) then
 
       call acc_sd_6ds_9(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
@@ -589,10 +586,9 @@
       END IF
       END IF
       END IF
-      END IF
 !
       END IF
-      END DO
+      end do ! ia6
       END
 
       SUBROUTINE ccsd_t_6dts_l_1_cutensor(f_t3,
@@ -617,10 +613,9 @@
       integer, intent(in) :: maxp,maxh
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, h7b
       integer :: p4b_1, p5b_1, h1b_1, h7b_1, p6b_2, h7b_2, h2b_2, h3b_2
-      integer :: dimc, dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: dim_common, dima_sort, dima, dimb_sort, dimb
       integer :: a3(9,6)
       integer :: ia6,ja6
-      logical :: skipped
       double precision, allocatable :: f_t2_temp(:), f_t2_sort(:)
       double precision, allocatable :: f_v2_sort(:)
       integer :: dimhhpp, dimhhhp
@@ -723,6 +718,11 @@
        end if
       enddo 
 !
+      DO h7b = 1,noab
+          spin_h7b=int_mb(k_spin+h7b-1)
+          sym_h7b=int_mb(k_sym+h7b-1)
+          range_h7b=int_mb(k_range+h7b-1)
+
       do ia6=1,9
           p4b=a3(ia6,1)
           p5b=a3(ia6,2)
@@ -731,13 +731,20 @@
           h2b=a3(ia6,5)
           h3b=a3(ia6,6)
 
+      if((p4b.le.p5b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
+
           spin_h1b=int_mb(k_spin+h1b-1)
           spin_h2b=int_mb(k_spin+h2b-1)
           spin_h3b=int_mb(k_spin+h3b-1)
           spin_p4b=int_mb(k_spin+p4b-1)
           spin_p5b=int_mb(k_spin+p5b-1)
           spin_p6b=int_mb(k_spin+p6b-1)
-          spin_h7b=int_mb(k_spin+h7b-1)
+
+      IF ((.not.restricted).or.
+     &    (spin_p4b+spin_p5b+spin_p6b+spin_h1b+
+     &     spin_h2b+spin_h3b.ne.12) ) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
+     &    spin_h1b+spin_h2b+spin_h3b) THEN
 
           sym_h1b=int_mb(k_sym+h1b-1)
           sym_h2b=int_mb(k_sym+h2b-1)
@@ -746,6 +753,11 @@
           sym_p5b=int_mb(k_sym+p5b-1)
           sym_p6b=int_mb(k_sym+p6b-1)
 
+      IF (ieor(sym_p4b,ieor(sym_p5b,
+     &    ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) 
+     &   .eq. ieor(irrep_v,irrep_t)) THEN
+
           range_h1b=int_mb(k_range+h1b-1)
           range_h2b=int_mb(k_range+h2b-1)
           range_h3b=int_mb(k_range+h3b-1)
@@ -753,25 +765,11 @@
           range_p5b=int_mb(k_range+p5b-1)
           range_p6b=int_mb(k_range+p6b-1)
 
-      if((p4b.le.p5b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
-      skipped = .false.
-      IF (.not.skipped) THEN
-      IF ((.not.restricted).or.
-     &    (spin_p4b+spin_p5b+spin_p6b+spin_h1b+
-     &     spin_h2b+spin_h3b.ne.12) ) THEN
-      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
-     &    spin_h1b+spin_h2b+spin_h3b) THEN
-      IF (ieor(sym_p4b,ieor(sym_p5b,
-     &    ieor(sym_p6b,ieor(sym_h1b,
-     &    ieor(sym_h2b,sym_h3b))))) 
-     &   .eq. ieor(irrep_v,irrep_t)) THEN
-      dimc = range_p4b * range_p5b * range_p6b * range_h1b 
-     &     * range_h2b * range_h3b
-!
-      DO h7b = 1,noab
-          spin_h7b=int_mb(k_spin+h7b-1)
-          sym_h7b=int_mb(k_sym+h7b-1)
-          range_h7b=int_mb(k_range+h7b-1)
+      !DO h7b = 1,noab
+      !    spin_h7b=int_mb(k_spin+h7b-1)
+      !    sym_h7b=int_mb(k_sym+h7b-1)
+      !    range_h7b=int_mb(k_range+h7b-1)
+
       IF (spin_p4b+spin_p5b .eq. 
      &    spin_h1b+spin_h7b) THEN
       IF (ieor(sym_p4b,ieor(sym_p5b,
@@ -792,8 +790,9 @@
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
      &                range_p4b,range_p5b,range_h7b,range_h1b,
      &                4,2,1,3,-1.0d0)
-      END IF
-      IF ((h1b .le. h7b)) THEN
+      !END IF
+      else
+      !IF ((h1b .le. h7b)) THEN
       CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
      &      (h7b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &       (p5b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
@@ -819,73 +818,73 @@
 !
 ! contributions are calculated here
 !
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
       call acc_sd_tx1_1(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h3b)) then
       call acc_sd_tx1_2(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h1b)) then
       call acc_sd_tx1_3(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p6b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p5b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
       call acc_sd_tx1_4(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p6b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p5b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h3b)) then
       call acc_sd_tx1_5(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) THEN
+      if (   (t_p4b .eq. p6b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p5b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h1b)) then
       call acc_sd_tx1_6(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p5b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
       call acc_sd_tx1_7(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p5b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h3b)) then
       call acc_sd_tx1_8(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p5b).and.(t_h1b .eq. h2b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h1b)) then
       call acc_sd_tx1_9(range_h3b,range_h2b,range_h1b,range_p6b,
      &               range_p5b,range_p4b,range_h7b,
      &               f_t3,f_t2_sort,f_v2_sort,
@@ -895,15 +894,15 @@
       END IF
       END IF
       END IF
+      !END DO !h7b loop
+!
+      END IF
+      END IF
+      END IF
+!
+      END IF
+      END DO ! ia6
       END DO !h7b loop
-!
-      END IF
-      END IF
-      END IF
-      END IF
-!
-      END IF
-      END DO
       END
 
       SUBROUTINE ccsd_t_6dts_l_2_cutensor(f_t3,
@@ -928,10 +927,9 @@
       integer, intent(in) :: maxp,maxh
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, p7b
       integer :: p4b_1, p7b_1, h1b_1, h2b_1, p5b_2, p6b_2, h3b_2, p7b_2
-      integer :: dimc, dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: dim_common, dima_sort, dima, dimb_sort, dimb
       integer :: a3(9,6)
       integer :: ia6,ja6
-      logical :: skipped
       double precision, allocatable :: f_t2_temp(:), f_t2_sort(:)
       double precision, allocatable :: f_v2_sort(:)
       integer :: dimhhpp, dimhppp
@@ -942,6 +940,7 @@
       integer :: spin_h1b,spin_h2b,spin_h3b
       integer :: sym_p4b,sym_p5b,sym_p6b,sym_p7b
       integer :: sym_h1b,sym_h2b,sym_h3b
+      integer :: cc
 
       dimhhpp = maxh*maxh*maxp*maxp
       dimhppp = maxh*maxp*maxp*maxp
@@ -1035,6 +1034,11 @@
        end if
       enddo 
 !
+      DO p7b = noab+1,noab+nvab
+          spin_p7b=int_mb(k_spin+p7b-1)
+          sym_p7b=int_mb(k_sym+p7b-1)
+          range_p7b=int_mb(k_range+p7b-1)
+      cc = 0
       do ia6=1,9
           p4b=a3(ia6,1)
           p5b=a3(ia6,2)
@@ -1043,12 +1047,20 @@
           h2b=a3(ia6,5)
           h3b=a3(ia6,6)
 
+      if((p5b.le.p6b).and.(h1b.le.h2b).and.(p4b.ne.0)) then
+
           spin_h1b=int_mb(k_spin+h1b-1)
           spin_h2b=int_mb(k_spin+h2b-1)
           spin_h3b=int_mb(k_spin+h3b-1)
           spin_p4b=int_mb(k_spin+p4b-1)
           spin_p5b=int_mb(k_spin+p5b-1)
           spin_p6b=int_mb(k_spin+p6b-1)
+
+      IF ((.not.restricted).or.
+     &    (spin_p4b+spin_p5b+spin_p6b+spin_h1b+
+     &     spin_h2b+spin_h3b.ne.12)) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
+     &    spin_h1b+spin_h2b+spin_h3b) THEN
 
           sym_h1b=int_mb(k_sym+h1b-1)
           sym_h2b=int_mb(k_sym+h2b-1)
@@ -1057,6 +1069,9 @@
           sym_p5b=int_mb(k_sym+p5b-1)
           sym_p6b=int_mb(k_sym+p6b-1)
 
+      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) .eq. ieor(irrep_v,irrep_t)) THEN
+
           range_h1b=int_mb(k_range+h1b-1)
           range_h2b=int_mb(k_range+h2b-1)
           range_h3b=int_mb(k_range+h3b-1)
@@ -1064,22 +1079,11 @@
           range_p5b=int_mb(k_range+p5b-1)
           range_p6b=int_mb(k_range+p6b-1)
 
-      if((p5b.le.p6b).and.(h1b.le.h2b).and.(p4b.ne.0)) then
-      skipped = .false.
-      IF (.not.skipped) THEN
-      IF ((.not.restricted).or.
-     &    (spin_p4b+spin_p5b+spin_p6b+spin_h1b+
-     &     spin_h2b+spin_h3b.ne.12)) THEN
-      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
-     &    spin_h1b+spin_h2b+spin_h3b) THEN
-      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_p6b,ieor(sym_h1b,
-     &    ieor(sym_h2b,sym_h3b))))) .eq. ieor(irrep_v,irrep_t)) THEN
-      dimc = range_p4b * range_p5b * range_p6b
-     &     * range_h1b * range_h2b * range_h3b
-      DO p7b = noab+1,noab+nvab
-          spin_p7b=int_mb(k_spin+p7b-1)
-          sym_p7b=int_mb(k_sym+p7b-1)
-          range_p7b=int_mb(k_range+p7b-1)
+      ! OLD STRUCTURE
+      !DO p7b = noab+1,noab+nvab
+      !    spin_p7b=int_mb(k_spin+p7b-1)
+      !    sym_p7b=int_mb(k_sym+p7b-1)
+      !    range_p7b=int_mb(k_range+p7b-1)
 
       IF (spin_p4b+spin_p7b .eq. 
      &    spin_h1b+spin_h2b) THEN
@@ -1101,8 +1105,9 @@
       CALL TCE_SORT_4(f_t2_temp,f_t2_sort,
      &                range_p7b,range_p4b,range_h1b,range_h2b,
      &                4,3,2,1,-1.0d0)
-      END IF
-      IF ((p4b .le. p7b)) THEN
+      !END IF
+      else
+      !IF ((p4b .le. p7b)) THEN
       CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
      &     (h2b_1 - 1 + noab * (h1b_1 - 1 + noab * 
      &     (p7b_1 - noab - 1 + nvab * (p4b_1 - noab - 1)))))
@@ -1128,90 +1133,99 @@
 !
 ! contributions are calculated here
 !
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_1(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &2b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h3b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h2b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_2(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &2b)) THEN
+      if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h2b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_3(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_4(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b, range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &2b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h3b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h2b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_5(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &2b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p4b)
+     & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h2b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_6(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p4b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h2b).and.(t_h3b .eq. h3b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_7(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &2b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p4b).and.(t_h1b .eq. h3b)
+     & .and. (t_h2b .eq. h1b).and.(t_h3b .eq. h2b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_8(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
 
       END IF
-      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &2b)) THEN
+      if (   (t_p4b .eq. p5b).and.(t_p5b .eq. p6b)
+     & .and. (t_p6b .eq. p4b).and.(t_h1b .eq. h1b)
+     & .and. (t_h2b .eq. h3b).and.(t_h3b .eq. h2b)) then
 
+      cc = cc + 1
       call acc_sd_ty1_9(range_h3b,range_h2b,range_h1b,range_p6b,
      &                  range_p5b,range_p4b,range_p7b,
      &                  f_t3,f_t2_sort,f_v2_sort,
@@ -1222,15 +1236,16 @@
       END IF
       END IF
       END IF
+      !END DO ! p7b loop
+!
+      END IF
+      END IF
+      END IF
+!
+      END IF
+      END DO ! ia6
+      print*,'p7b,cc=',p7b,cc
       END DO ! p7b loop
-!
-      END IF
-      END IF
-      END IF
-      END IF
-!
-      END IF
-      END DO
       END
 
       subroutine acc_sd_6ds_1(h3d,h2d,h1d,p6d,p5d,p4d,
