@@ -1461,16 +1461,16 @@
 
       END IF
 
-      END IF
-      END IF
-      END IF
+      END IF ! dima & dimb
+      END IF ! sym 4712 & irrep_t
+      END IF ! spin 47=12
       !END DO ! p7b loop
 !
-      END IF
-      END IF
-      END IF
+      END IF ! sym x6 & irrep_v & irrep_t
+      END IF ! spin x6
+      END IF ! (.not.restricted).or. ...
 !
-      END IF
+      END IF ! (p5b.le.p6b).and.(h1b.le.h2b).and.(p4b.ne.0)
       END DO ! ia6
 !      write(6,'(a4,i2,1x,a3,i2,1x,a5,i2)') 
 !     &        'p7b=',p7b,'cc=',cc,'comm=',comm
