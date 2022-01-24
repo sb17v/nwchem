@@ -267,6 +267,10 @@ c
      1  +nmo(ipol)-nfv(ipol)-nfc(ipol),"sorted evl",
      2  l_evl_sorted,k_evl_sorted))
      3  call errquit("tce_tile: MA problem",3,MA_ERR)
+      write(6,'(a11,a2i14,1x,a2,i14,1x,a5,i14,1x,i14)') 
+     &        'sorted evl:','k=',k_evl_sorted,'l=',l_evl_sorted,
+     &        'diff=',k_evl_sorted-l_evl_sorted,
+     &        nmo(1)-nfv(1)-nfc(1)+nmo(ipol)-nfv(ipol)-nfc(ipol)
       nirreps = sym_number_ops(geom) + 1
       if (nodezero.and.util_print('tile',print_debug)) then
         write(LuOut,*) "Number of irreps = ",nirreps
