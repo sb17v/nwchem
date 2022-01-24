@@ -20,6 +20,7 @@ endif
 
 ifdef USE_CUTENSOR
   OBJ_OPTIMIZE += ccsd_t_6dts_cutensor.o
+  #FOPTIONS += -Mextend
 endif
 
 LIB_INCLUDES = -I../include
