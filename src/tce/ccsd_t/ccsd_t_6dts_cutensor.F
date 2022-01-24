@@ -309,7 +309,7 @@
       integer, intent(in) :: maxp,maxh
       integer :: p4b, p5b, p6b, h1b, h2b, h3b
       integer :: p4b_1, h1b_1, p5b_2, p6b_2, h2b_2, h3b_2
-      integer :: dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: dima, dimb
       integer :: a3(9,6)
       integer :: ia6,ja6
       double precision, allocatable :: f_t1_temp(:), f_t1_sort(:,:)
@@ -462,11 +462,8 @@
       IF (ieor(sym_p4b,sym_h1b) .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
       CALL TCE_RESTRICTED_4(p5b,p6b,h2b,h3b,p5b_2,p6b_2,h2b_2,h3b_2)
-      dim_common = 1
-      dima_sort = range_p4b * range_h1b
-      dima = dim_common * dima_sort
-      dimb_sort = range_p5b * range_p6b * range_h2b * range_h3b
-      dimb = dim_common * dimb_sort
+      dima = range_p4b * range_h1b
+      dimb = range_p5b * range_p6b * range_h2b * range_h3b
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
       CALL GET_HASH_BLOCK_MA(f_t1,f_t1_temp,dima, int_mb(k_t1_offset),
      &                       (h1b_1 - 1 + noab * (p4b_1 - noab - 1)))
@@ -542,8 +539,6 @@
 
       IF (spin_p4b .eq. spin_h1b) THEN
       IF (ieor(sym_p4b,sym_h1b) .eq. irrep_t) THEN
-
-
 
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &    (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. 
@@ -690,7 +685,7 @@
       integer, intent(in) :: maxp,maxh
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, h7b
       integer :: p4b_1, p5b_1, h1b_1, h7b_1, p6b_2, h7b_2, h2b_2, h3b_2
-      integer :: dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: dima, dimb
       integer :: a3(9,6)
       integer :: ia6,ja6
       double precision, allocatable :: f_t2_temp(:), f_t2_sort(:)
@@ -852,18 +847,13 @@
       !    sym_h7b=int_mb(k_sym+h7b-1)
       !    range_h7b=int_mb(k_range+h7b-1)
 
-      IF (spin_p4b+spin_p5b .eq. 
-     &    spin_h1b+spin_h7b) THEN
-      IF (ieor(sym_p4b,ieor(sym_p5b,
-     &    ieor(sym_h1b,sym_h7b))) 
+      IF (spin_p4b+spin_p5b .eq. spin_h1b+spin_h7b) THEN
+      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_h1b,sym_h7b))) 
      &    .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_4(p4b,p5b,h1b,h7b,p4b_1,p5b_1,h1b_1,h7b_1)
       CALL TCE_RESTRICTED_4(p6b,h7b,h2b,h3b,p6b_2,h7b_2,h2b_2,h3b_2)
-      dim_common = range_h7b
-      dima_sort = range_p4b * range_p5b * range_h1b
-      dimb_sort = range_p6b * range_h2b * range_h3b
-      dima = dim_common * dima_sort
-      dimb = dim_common * dimb_sort
+      dima = range_h7b * range_p4b * range_p5b * range_h1b
+      dimb = range_h7b * range_p6b * range_h2b * range_h3b
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
       IF ((h7b .lt. h1b)) THEN
       CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
@@ -1042,7 +1032,7 @@
       integer, intent(in) :: maxp,maxh
       integer :: p4b, p5b, p6b, h1b, h2b, h3b, p7b
       integer :: p4b_1, p7b_1, h1b_1, h2b_1, p5b_2, p6b_2, h3b_2, p7b_2
-      integer :: dim_common, dima_sort, dima, dimb_sort, dimb
+      integer :: dima, dimb
       integer :: a3(9,6)
       integer :: ia6,ja6
       double precision, allocatable :: f_t2_temp(:), f_t2_sort(:)
@@ -1203,18 +1193,13 @@
       !    sym_p7b=int_mb(k_sym+p7b-1)
       !    range_p7b=int_mb(k_range+p7b-1)
 
-      IF (spin_p4b+spin_p7b .eq. 
-     &    spin_h1b+spin_h2b) THEN
-      IF (ieor(sym_p4b,ieor(sym_p7b,
-     &    ieor(sym_h1b,sym_h2b))) 
+      IF (spin_p4b+spin_p7b .eq. spin_h1b+spin_h2b) THEN
+      IF (ieor(sym_p4b,ieor(sym_p7b,ieor(sym_h1b,sym_h2b))) 
      &    .eq. irrep_t) THEN
       CALL TCE_RESTRICTED_4(p4b,p7b,h1b,h2b,p4b_1,p7b_1,h1b_1,h2b_1)
       CALL TCE_RESTRICTED_4(p5b,p6b,h3b,p7b,p5b_2,p6b_2,h3b_2,p7b_2)
-      dim_common = range_p7b
-      dima_sort = range_p4b * range_h1b * range_h2b
-      dima = dim_common * dima_sort
-      dimb_sort = range_p5b * range_p6b * range_h3b
-      dimb = dim_common * dimb_sort
+      dima = range_p7b * range_p4b * range_h1b * range_h2b
+      dimb = range_p7b * range_p5b * range_p6b * range_h3b
       IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
       IF ((p7b .lt. p4b)) THEN
       CALL GET_HASH_BLOCK(d_t2,f_t2_temp,dima,int_mb(k_t2_offset),
