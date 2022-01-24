@@ -1005,6 +1005,71 @@
       comm = comm + 1
       end if
       END IF
+
+      END IF ! dima & dimb
+      END IF ! sym 4517
+      END IF ! spin 45=17
+      !END DO !h7b loop
+!
+      END IF ! sym x6 & irrep_t
+      END IF ! spin x4
+      END IF ! (.not.restricted).or. ...
+!
+      END IF ! (p4b.le.p5b).and.(h2b.le.h3b).and.(p4b.ne.0)
+      END DO ! ia6
+
+
+
+      do ia6=1,9
+          p4b=a3(ia6,1)
+          p5b=a3(ia6,2)
+          p6b=a3(ia6,3)
+          h1b=a3(ia6,4)
+          h2b=a3(ia6,5)
+          h3b=a3(ia6,6)
+
+      if((p4b.le.p5b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
+
+          spin_h1b=int_mb(k_spin+h1b-1)
+          spin_h2b=int_mb(k_spin+h2b-1)
+          spin_h3b=int_mb(k_spin+h3b-1)
+          spin_p4b=int_mb(k_spin+p4b-1)
+          spin_p5b=int_mb(k_spin+p5b-1)
+          spin_p6b=int_mb(k_spin+p6b-1)
+
+      IF ((.not.restricted).or.
+     &    (spin_p4b+spin_p5b+spin_p6b+spin_h1b+
+     &     spin_h2b+spin_h3b.ne.12) ) THEN
+      IF (spin_p4b+spin_p5b+spin_p6b .eq. 
+     &    spin_h1b+spin_h2b+spin_h3b) THEN
+
+          sym_h1b=int_mb(k_sym+h1b-1)
+          sym_h2b=int_mb(k_sym+h2b-1)
+          sym_h3b=int_mb(k_sym+h3b-1)
+          sym_p4b=int_mb(k_sym+p4b-1)
+          sym_p5b=int_mb(k_sym+p5b-1)
+          sym_p6b=int_mb(k_sym+p6b-1)
+
+      IF (ieor(sym_p4b,ieor(sym_p5b,
+     &    ieor(sym_p6b,ieor(sym_h1b,
+     &    ieor(sym_h2b,sym_h3b))))) 
+     &   .eq. ieor(irrep_v,irrep_t)) THEN
+
+          range_h1b=int_mb(k_range+h1b-1)
+          range_h2b=int_mb(k_range+h2b-1)
+          range_h3b=int_mb(k_range+h3b-1)
+          range_p4b=int_mb(k_range+p4b-1)
+          range_p5b=int_mb(k_range+p5b-1)
+          range_p6b=int_mb(k_range+p6b-1)
+
+      !DO h7b = 1,noab
+      !    spin_h7b=int_mb(k_spin+h7b-1)
+      !    sym_h7b=int_mb(k_sym+h7b-1)
+      !    range_h7b=int_mb(k_range+h7b-1)
+
+      IF (spin_p4b+spin_p5b .eq. spin_h1b+spin_h7b) THEN
+      IF (ieor(sym_p4b,ieor(sym_p5b,ieor(sym_h1b,sym_h7b))) 
+     &    .eq. irrep_t) THEN
 !
 !  no need to zero d_c - it has already been done in ccsd_t
 !  k_c_sort is not used here
@@ -1111,7 +1176,6 @@
 
       END IF
 !
-      END IF ! dima & dimb
       END IF ! sym 4517
       END IF ! spin 45=17
       !END DO !h7b loop
