@@ -1,5 +1,4 @@
 #define CUDA 1
-#define T1D 1
 
       module tce_ccsd_t_cutensor
 
@@ -24,16 +23,16 @@
       integer, intent(in) :: xmem, size_t1
       integer :: t_h1b, t_h1, t_h2b, t_h2, t_h3b, t_h3
       integer :: t_p4b, t_p4, t_p5b, t_p5, t_p6b, t_p6
-#if T1D
+#ifdef T1D
       double precision, allocatable :: f_singles(:)
       double precision, allocatable :: f_doubles1(:)
       double precision, allocatable :: f_doubles2(:)
       integer :: i, size
 #else
-#warning This is broken right now!
       double precision, allocatable :: f_singles(:,:,:,:,:,:)
       double precision, allocatable :: f_doubles1(:,:,:,:,:,:)
       double precision, allocatable :: f_doubles2(:,:,:,:,:,:)
+      integer :: x_p5, x_p4
 #endif
       double precision, allocatable :: t1_local(:)
       integer :: alloc_error
@@ -210,10 +209,10 @@
             end if
             maxp4=slice_dp4
             maxp5=slice_dp5
-#if T1D
-           size = slice_dp4 * slice_dp5
-     &          * range_p6  * range_h1
-     &          * range_h2  * range_h3
+#ifdef T1D
+            size = slice_dp4 * slice_dp5
+     &           * range_p6  * range_h1
+     &           * range_h2  * range_h3
             allocate(f_singles(1:size), f_doubles1(1:size),
      &               f_doubles2(1:size), stat=alloc_error)
 #else
@@ -246,7 +245,7 @@
              jstart=(jj-1)*(slice_dp5)+1
              jstop=int_mb(k_range+t_p5b-1)
             end if
-            f_singles = 0.0d0
+            f_singles  = 0.0d0
             f_doubles1 = 0.0d0
             f_doubles2 = 0.0d0
             call ccsd_t_singles_l_1_6dts_cutensor(f_singles,
@@ -282,16 +281,7 @@
 !
 ! factor = [ 1/36, 1/18, 1/12, 1/6, 1/4, 1/3, 1/2, 1, 2]
 !
-!            do t_p4 = 1,range_p4
-!             denom_p4 = dbl_mb(offset_p4+t_p4)
-!             print*,'index_p=',offset_p4+t_p4-k_evl_sorted
-!            enddo
-!            do t_h3 = 1,range_h3
-!             denom_h3 = dbl_mb(offset_h3+t_h3)
-!             print*,'index_h=',offset_h3+t_h3-k_evl_sorted
-!            enddo
-
-            print*,'SANDWITCH',util_wallsec()
+            print*,'SANDWICH',util_wallsec()
 !$acc parallel loop collapse(6) reduction(+:energy1,energy2)
             do t_p4 = istart,istop
              !denom_p4 = dbl_mb(offset_p4+t_p4)
@@ -314,7 +304,6 @@
                   denom_h3 = evals(offset_h3+t_h3-k_evl_sorted+1)
                   denom = 1.0d0 / ( ( denom_h1 + denom_h2 + denom_h3 )
      &                            - ( denom_p4 + denom_p5 + denom_p6 ) )
-
 #if T1D
                   i = 1 + (t_h3-1) + range_h3 * (
      &                  + (t_h2-1) + range_h2 * (
@@ -326,14 +315,11 @@
                   e_d1 = f_doubles1(i)
                   e_d2 = f_doubles2(i)
 #else
-                  block
-                    integer :: x_p5, x_p4
-                    x_p5 = 1+t_p5-jstart
-                    x_p5 = 1+t_p4-istart
-                    e_s  = f_singles(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
-                    e_d1 = f_doubles1(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
-                    e_d2 = f_doubles2(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
-                  end block
+                  x_p5 = 1+t_p5-jstart
+                  x_p4 = 1+t_p4-istart
+                  e_s  = f_singles(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
+                  e_d1 = f_doubles1(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
+                  e_d2 = f_doubles2(t_h3,t_h2,t_h1,t_p6,x_p5,x_p4)
 #endif
                   e_d  = e_d1 + e_d2
                   energy1 = energy1 + factor*denom * e_d * e_d
