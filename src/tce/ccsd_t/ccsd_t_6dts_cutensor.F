@@ -30,6 +30,7 @@
       double precision, allocatable :: f_doubles2(:)
       integer :: i, size
 #else
+#warning This is broken right now!
       double precision, allocatable :: f_singles(:,:,:,:,:,:)
       double precision, allocatable :: f_doubles1(:,:,:,:,:,:)
       double precision, allocatable :: f_doubles2(:,:,:,:,:,:)
