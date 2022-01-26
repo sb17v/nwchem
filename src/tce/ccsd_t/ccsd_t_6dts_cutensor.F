@@ -1,4 +1,5 @@
 #define CUTENSOR 1
+#define ASYNC 1
 
       module tce_ccsd_t_cutensor
 
@@ -32,14 +33,14 @@
       integer :: t_h1b, t_h1, t_h2b, t_h2, t_h3b, t_h3
       integer :: t_p4b, t_p4, t_p5b, t_p5, t_p6b, t_p6
 #ifdef T1D
-      double precision, allocatable, device :: f_singles(:)
-      double precision, allocatable, device :: f_doubles1(:)
-      double precision, allocatable, device :: f_doubles2(:)
+      double precision, allocatable, managed :: f_singles(:)
+      double precision, allocatable, managed :: f_doubles1(:)
+      double precision, allocatable, managed :: f_doubles2(:)
       integer :: i, size
 #else
-      double precision, allocatable, device :: f_singles(:,:,:,:,:,:)
-      double precision, allocatable, device :: f_doubles1(:,:,:,:,:,:)
-      double precision, allocatable, device :: f_doubles2(:,:,:,:,:,:)
+      double precision, allocatable, managed :: f_singles(:,:,:,:,:,:)
+      double precision, allocatable, managed :: f_doubles1(:,:,:,:,:,:)
+      double precision, allocatable, managed :: f_doubles2(:,:,:,:,:,:)
       integer :: x_p5, x_p4
 #endif
       double precision, allocatable, managed :: t1_local(:)
@@ -401,7 +402,7 @@
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout), device :: f_t3(*)
+      double precision, intent(inout), managed :: f_t3(:,:,:,:,:,:)
       double precision, intent(in), managed :: f_t1(*)
       integer, intent(in) :: d_v2, k_t1_offset, k_v2_offset
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
@@ -430,6 +431,8 @@
       double precision, parameter :: beta = 1.0d0
       integer(kind=cuda_stream_kind), intent(inout) :: stream
       integer(4) :: cuda_err
+      double precision, allocatable, managed :: jeff(:,:,:,:,:,:)
+      integer :: j(6)
 #else
       integer :: stream ! unused
 #endif
@@ -454,7 +457,10 @@
       dimhp   = maxh*maxp
       dimhhpp = maxh*maxh*maxp*maxp
 
+      j = shape(f_t3) 
+      print*,'shape=',j
       allocate( f_t1_temp(1:dimhp), f_t1_sort(1:dimhp,9),
+     &          jeff(1:j(1),1:j(2),1:j(3),1:j(4),1:j(5),1:j(6)),
      &          f_v2_sort(1:dimhhpp,9), stat=alloc_error)
       if (alloc_error.ne.0) then
         call errquit("MA ccsd_t_singles_l_1_6dts_cutensor",
@@ -671,7 +677,7 @@
      &    (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. 
      &    (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) THEN
 
-#if CUTENSOR
+!!!#if CUTENSOR
       sT1 = [range_p4b,range_h1b] ! 41
       eT1 = [maxp4,range_h1b]     ! 41
       cut_status = cutensorInitTensorDescriptor(cut_handle,dT1,
@@ -798,15 +804,32 @@
         call errquit('cudaFree workspace S1_1',alloc_error,MA_ERR)
       endif
 #endif
-#else
+!!!#else
       cc = cc + 1
       call acc_sd_6ds_1(range_h3b,range_h2b,
      &                  range_h1b,range_p6b,
      &                  range_p5b,range_p4b,
-     &                  f_t3,f_t1_sort(:,ia6),f_v2_sort(:,ia6),
+!!!     &                  f_t3,f_t1_sort(:,ia6),f_v2_sort(:,ia6),
+     &                  jeff,f_t1_sort(:,ia6),f_v2_sort(:,ia6),
      &                  istart,istop,jstart,jstop,
      &                  maxp4,maxp5)
-#endif
+      
+      block
+       integer :: a,b,c,d,e,f
+       double precision :: x,y
+      do concurrent (a=1:j(1),b=1:j(2),c=1:j(3),
+     &               d=1:j(4),e=1:j(5),f=1:j(6))
+        x = f_t3(a,b,c,d,e,f)
+        y = jeff(a,b,c,d,e,f)
+        if (ABS(x-y).gt.1.0d-10) then
+          write(6,'(6i8,2f20.14)') a,b,c,d,e,f,x,y
+        !else 
+        !  write(6,'(6i8,a4)') a,b,c,d,e,f,'OKAY'
+        endif
+      end do
+        STOP
+      end block
+!!!#endif
       END IF
       if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
      & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
@@ -933,7 +956,7 @@
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout), device :: f_t3(*)
+      double precision, intent(inout), managed :: f_t3(*)
       integer, intent(in) :: d_t2, d_v2
       integer, intent(in) :: k_t2_offset, k_v2_offset
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
@@ -1352,7 +1375,7 @@
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout), device :: f_t3(*)
+      double precision, intent(inout), managed :: f_t3(*)
       integer, intent(in) :: d_t2, d_v2
       integer, intent(in) :: k_t2_offset, k_v2_offset
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
@@ -1759,7 +1782,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1785,7 +1808,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1814,7 +1837,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1843,7 +1866,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1870,7 +1893,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1899,7 +1922,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1928,7 +1951,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1955,7 +1978,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1984,7 +2007,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision, device :: triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
+      double precision, managed :: triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -2016,7 +2039,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -2046,7 +2069,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3,h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -2078,7 +2101,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h1d,h3d*h2d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
@@ -2111,7 +2134,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -2141,7 +2164,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3,h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
@@ -2176,7 +2199,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
@@ -2209,7 +2232,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -2239,7 +2262,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3,h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
@@ -2274,7 +2297,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision, device :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
@@ -2307,7 +2330,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision, device :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2342,7 +2365,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2h1,p6,p5,p4,p7
-      double precision, device :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
@@ -2375,7 +2398,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision, device :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2410,7 +2433,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision, device :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2445,7 +2468,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2h1,p6,p5,p4,p7
-      double precision, device :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
@@ -2478,7 +2501,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision, device :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2513,7 +2536,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision, device :: triplesx(h3d,h2d,h1d,p4d,maxp5,maxp4)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2546,7 +2569,7 @@
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision, device :: triplesx(h2d*h1d,h3d,p4d,maxp5,maxp4)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
@@ -2578,7 +2601,7 @@
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision, device :: triplesx(h2d,h3d,h1d,p4d,maxp5,maxp4)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
