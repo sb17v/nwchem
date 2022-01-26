@@ -465,6 +465,7 @@
         call errquit("MA ccsd_t_singles_l_1_6dts_cutensor",
      &               2*dimhhpp,MA_ERR)
       endif
+      jeff = 0.0d0
 !
       a3(1,1)=t_p4b
       a3(1,2)=t_p5b
