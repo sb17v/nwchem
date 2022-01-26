@@ -1,15 +1,23 @@
-#define CUDA 1
+#define CUTENSOR 1
 
       module tce_ccsd_t_cutensor
 
-      use cudafor
+      use cutensorex
       implicit none
+
+      type(cutensorHandle) :: cut_handle 
+      type(cutensorContractionFind) :: cut_find
+      type(cudaDataType), parameter :: cut_double = 
+     &                                 cudaDataType(CUDA_R_64F)
+      type(cutensorComputeType), parameter :: cut_compF64 = 
+     &                                        CUTENSOR_R_MIN_64F
 
       contains
 
       SUBROUTINE ccsd_t_6dts_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
      &            d_v2,k_v2_offset,energy1,energy2,size_t1,xmem)
       use cudafor
+      use cutensorex
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
@@ -24,17 +32,17 @@
       integer :: t_h1b, t_h1, t_h2b, t_h2, t_h3b, t_h3
       integer :: t_p4b, t_p4, t_p5b, t_p5, t_p6b, t_p6
 #ifdef T1D
-      double precision, allocatable :: f_singles(:)
-      double precision, allocatable :: f_doubles1(:)
-      double precision, allocatable :: f_doubles2(:)
+      double precision, allocatable, device :: f_singles(:)
+      double precision, allocatable, device :: f_doubles1(:)
+      double precision, allocatable, device :: f_doubles2(:)
       integer :: i, size
 #else
-      double precision, allocatable :: f_singles(:,:,:,:,:,:)
-      double precision, allocatable :: f_doubles1(:,:,:,:,:,:)
-      double precision, allocatable :: f_doubles2(:,:,:,:,:,:)
+      double precision, allocatable, device :: f_singles(:,:,:,:,:,:)
+      double precision, allocatable, device :: f_doubles1(:,:,:,:,:,:)
+      double precision, allocatable, device :: f_doubles2(:,:,:,:,:,:)
       integer :: x_p5, x_p4
 #endif
-      double precision, allocatable :: t1_local(:)
+      double precision, allocatable, managed :: t1_local(:)
       integer :: alloc_error
       integer :: nxtask
       integer :: next
@@ -53,17 +61,16 @@
       integer :: maxp4,maxp5
       integer :: slice_dp4,slice_dp5,qp4,qp5
       integer :: xlocal
-! ---------------------------------------
       integer :: maxh, maxp,h,p
-! ---------------------------------------
       double precision :: energy(2)
       double precision :: factor,denom
       double precision :: e_s, e_d, e_d1, e_d2
       double precision :: denom_p4,denom_p5,denom_p6
       double precision :: denom_h1,denom_h2,denom_h3
-#if CUDA
+#if CUTENSOR
       integer(kind=cuda_stream_kind) :: stream(3)
-      integer :: cuda_err
+      integer(4) :: cuda_err
+      type(cutensorStatus) :: cut_status
 #else
       integer :: stream(3)
 #endif
@@ -71,13 +78,26 @@
       double precision, allocatable :: evals(:)
       external nxtask
 
-#if CUDA
+#if CUTENSOR
       do p=1,3
         cuda_err = cudaStreamCreate(stream(p))
         if (cuda_err.ne.0) then
+          write(6,*) cudaGetErrorString(cuda_err)
           call errquit('cudaStreamCreate',cuda_err,UNKNOWN_ERR)
         endif
       enddo
+      ! init the library
+      cut_status = cutensorInit(cut_handle)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInit',int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      ! init the find algorithm to default
+      cut_status = cutensorInitContractionFind(cut_handle,cut_find,
+     &                                         CUTENSOR_ALGO_DEFAULT)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionFind',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
 #endif
 !
 ! Here we determine the maximum tile dimension
@@ -105,21 +125,6 @@
       t1_local = 0.0d0
       call get_block(d_t1,t1_local,size_t1,0)
 ! -------------------------------
-
-!      block
-!        integer :: x, y, ymin, ymax
-!        ymin = huge(x)
-!        ymax = 0
-!        do x = 1,noab+nvab
-!           !y = k_evl_sorted+int_mb(k_offset+x-1)-1
-!           y = int_mb(k_offset+x-1)-1
-!           ymin = min(y,ymin)
-!           ymax = max(y,ymax)
-!        enddo
-!        write(6,'(a4,i14,1x,a4,i14,1x,a5,i15)') 
-!     &          'min=',ymin,'max=',ymax,'diff=',ymax-ymin
-!      end block
-
       nevals = nmo(1)-nfv(1)-nfc(1)+nmo(ipol)-nfv(ipol)-nfc(ipol)
       allocate(evals(1:nevals), stat=alloc_error)
       if (alloc_error.ne.0) then
@@ -367,10 +372,11 @@
      &               alloc_error, MA_ERR)
       endif
 ! ---------------------------
-#if CUDA
+#if CUTENSOR
       do p=1,3
         cuda_err = cudaStreamDestroy(stream(p))
         if (cuda_err.ne.0) then
+          write(6,*) cudaGetErrorString(cuda_err)
           call errquit('cudaStreamDestroy',cuda_err,UNKNOWN_ERR)
         endif
       end do
@@ -386,20 +392,44 @@
 !
 ! elimination of the transpositions (kowalski,august,2009)
 !
+      use iso_c_binding !, only :: c_null_ptr
+      use cudafor
+      use cutensorex
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout) :: f_t3(*)
-      double precision, intent(in) :: f_t1(*)
+      double precision, intent(inout), device :: f_t3(*)
+      double precision, intent(in), managed :: f_t1(*)
       integer, intent(in) :: d_v2, k_t1_offset, k_v2_offset
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
-#if CUDA
+#if CUTENSOR
+      type(cutensorStatus) :: cut_status
+      integer(4), parameter :: two = 2
+      integer(8), dimension(2) :: eT1 ! extent
+      integer(8), dimension(2) :: sT1 ! stride
+      integer(4), dimension(2) :: mT1 ! modes
+      integer(4), parameter :: four = 4
+      integer(8), dimension(4) :: eV2 ! extent
+      integer(8), dimension(4) :: sV2 ! stride
+      integer(4), dimension(4) :: mV2 ! modes
+      integer(4), parameter :: six = 6
+      integer(8), dimension(6) :: eT3
+      integer(4), dimension(6) :: mT3
+      integer(4) :: aT1, aV2, aT3
+      integer(8) :: workspaceSize
+      type(c_devptr) :: workspace
+      type(cutensorDescriptor) :: dT1, dV2, dT3
+      type(cutensorContractionDescriptor) :: dX
+      type(cutensorContractionPlan) :: pX
+      double precision :: alpha
+      double precision, parameter :: beta = 1.0d0
       integer(kind=cuda_stream_kind), intent(inout) :: stream
+      integer(4) :: cuda_err
 #else
       integer :: stream ! unused
 #endif
@@ -408,8 +438,9 @@
       integer :: dima, dimb
       integer :: a3(9,6)
       integer :: ia6,ja6
-      double precision, allocatable :: f_t1_temp(:), f_t1_sort(:,:)
-      double precision, allocatable :: f_v2_sort(:,:)
+      double precision, allocatable :: f_t1_temp(:)
+      double precision, allocatable, managed :: f_t1_sort(:,:)
+      double precision, allocatable, managed :: f_v2_sort(:,:)
       integer :: dimhp, dimhhpp
       integer :: alloc_error
       integer :: range_p4b,range_p5b,range_p6b
@@ -640,6 +671,134 @@
      &    (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. 
      &    (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) THEN
 
+#if CUTENSOR
+      sT1 = [range_p4b,range_h1b] ! 41
+      eT1 = [maxp4,range_h1b]     ! 41
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dT1,
+     &                               two,eT1,
+     &                               c_null_ptr, ! no stride
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor T1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                        f_t1_sort(:,ia6), dT1, aT1)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement T1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      sV2 = [range_h3b,range_h2b,range_p6b,range_p5b] ! 3265
+      eV2 = [range_h3b,range_h2b,range_p6b,maxp5]     ! 3265
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dV2,
+     &                               four,eV2,
+     &                               c_null_ptr, ! no stride
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor V2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                        f_v2_sort(:,ia6), dV2, aV2)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement V2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      ! no stride here
+      eT3 = [range_h3b,range_h2b,range_h1b,range_p6b,maxp5,maxp4] ! 321654
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dT3,
+     &                               six,eT3,
+     &                               c_null_ptr, ! no stride
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor T3',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                                 f_t3, dT3, aT3)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement T3',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      mT1 = [4,1]
+      mV2 = [3,2,6,5]
+      mT3 = [3,2,1,6,5,4]
+      cut_status = cutensorInitContractionDescriptor(cut_handle,dX,
+     &                         dT1,mT1,aT1, dV2,mV2,aV2,
+     &                         dT3,mT3,aT3, dT3,mT3,aT3, cut_compF64)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionDescriptor S1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorContractionGetWorkspace(cut_handle,
+     &                                dX, cut_find,
+     &                                CUTENSOR_WORKSPACE_RECOMMENDED,
+     &                                workspaceSize)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorContractionGetWorkspace S1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+#if ASYNC
+      alloc_error = cudaMallocAsync(workspace, workspaceSize, stream)
+      if (alloc_error.ne.0) then
+        call errquit('cudaMallocAsync S1_1',
+     &               alloc_error,MA_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#else
+      alloc_error = cudaMalloc(workspace, workspaceSize)
+      if (alloc_error.ne.0) then
+        call errquit('cudaMalloc S1_1',alloc_error,MA_ERR)
+      endif
+#endif
+      cut_status = cutensorInitContractionPlan(cut_handle, pX, dX,
+     &                         cut_find, workspaceSize)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionPlan S1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      alpha = 1.0d0
+      cut_status = cutensorContraction(cut_handle, pX,
+     &                     alpha, f_t1_sort(:,ia6), f_v2_sort(:,ia6),
+     &                     beta,  f_t3, f_t3,
+     &                     workspace, workspaceSize, stream)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorContraction S1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#if ASYNC
+      alloc_error = cudaFreeAsync(workspace, stream)
+      if (alloc_error.ne.0) then
+        call errquit('cudaFreeAsync workspace S1_1',
+     &               alloc_error,MA_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#else
+      alloc_error = cudaFree(workspace)
+      if (alloc_error.ne.0) then
+        call errquit('cudaFree workspace S1_1',alloc_error,MA_ERR)
+      endif
+#endif
+#else
       cc = cc + 1
       call acc_sd_6ds_1(range_h3b,range_h2b,
      &                  range_h1b,range_p6b,
@@ -647,7 +806,7 @@
      &                  f_t3,f_t1_sort(:,ia6),f_v2_sort(:,ia6),
      &                  istart,istop,jstart,jstop,
      &                  maxp4,maxp5)
-
+#endif
       END IF
       if (   (t_p4b .eq. p4b).and.(t_p5b .eq. p5b)
      & .and. (t_p6b .eq. p6b).and.(t_h1b .eq. h2b)
@@ -774,13 +933,13 @@
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout) :: f_t3(*)
+      double precision, intent(inout), device :: f_t3(*)
       integer, intent(in) :: d_t2, d_v2
       integer, intent(in) :: k_t2_offset, k_v2_offset
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
-#if CUDA
+#if CUTENSOR
       integer(kind=cuda_stream_kind), intent(inout) :: stream
 #else
       integer :: stream ! unused
@@ -1193,13 +1352,13 @@
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout) :: f_t3(*)
+      double precision, intent(inout), device :: f_t3(*)
       integer, intent(in) :: d_t2, d_v2
       integer, intent(in) :: k_t2_offset, k_v2_offset
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
-#if CUDA
+#if CUTENSOR
       integer(kind=cuda_stream_kind), intent(inout) :: stream
 #else
       integer :: stream ! unused
@@ -1600,7 +1759,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
-      double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1626,7 +1785,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1655,7 +1814,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1684,7 +1843,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
-      double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1711,7 +1870,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1740,7 +1899,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h1d,h3d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1769,7 +1928,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3h2,h1,p6,p5,p4
-      double precision :: triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d*h2d,h1d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1796,7 +1955,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision :: triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h1d,h2d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1825,7 +1984,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d
       integer :: h3,h2,h1,p6,p5,p4
-      double precision :: triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
+      double precision, device :: triplesx(h1d,h3d,h2d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t1sub(p4d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,p5d)
 !$acc parallel loop collapse(4)
@@ -1857,7 +2016,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d*h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1887,7 +2046,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3,h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h1d,h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1919,7 +2078,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h1d,h3d*h2d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h1d,h3d*h2d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
@@ -1952,7 +2111,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1982,7 +2141,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3,h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
@@ -2017,7 +2176,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision, device :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
@@ -2050,7 +2209,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d*h2d,h1d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -2080,7 +2239,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3,h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h1d,h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
@@ -2115,7 +2274,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       integer :: h3h2,h1,p6,p5,p4,h7
-      double precision :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
+      double precision, device :: triplesx(h1d,h3d*h2d,p5d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
@@ -2148,7 +2307,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2183,7 +2342,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2h1,p6,p5,p4,p7
-      double precision :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
@@ -2216,7 +2375,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2251,7 +2410,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h2d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2286,7 +2445,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2h1,p6,p5,p4,p7
-      double precision :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h2d*h1d,h3d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
@@ -2319,7 +2478,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
+      double precision, device :: triplesx(h2d,h3d,h1d,p6d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2354,7 +2513,7 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7
-      double precision :: triplesx(h3d,h2d,h1d,p4d,maxp5,maxp4)
+      double precision, device :: triplesx(h3d,h2d,h1d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
@@ -2387,7 +2546,7 @@
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d*h1d,h3d,p4d,maxp5,maxp4)
+      double precision, device :: triplesx(h2d*h1d,h3d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(h2d*h1d,p4d,p7d)
@@ -2419,7 +2578,7 @@
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d,h3d,h1d,p4d,maxp5,maxp4)
+      double precision, device :: triplesx(h2d,h3d,h1d,p4d,maxp5,maxp4)
       double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
