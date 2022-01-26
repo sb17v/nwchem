@@ -458,7 +458,6 @@
       dimhhpp = maxh*maxh*maxp*maxp
 
       j = shape(f_t3) 
-      print*,'shape=',j
       allocate( f_t1_temp(1:dimhp), f_t1_sort(1:dimhp,9),
      &          jeff(1:j(1),1:j(2),1:j(3),1:j(4),1:j(5),1:j(6)),
      &          f_v2_sort(1:dimhhpp,9), stat=alloc_error)
@@ -678,11 +677,10 @@
      &    (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) THEN
 
 !!!#if CUTENSOR
-      sT1 = [range_p4b,range_h1b] ! 41
-      eT1 = [maxp4,range_h1b]     ! 41
+      eT1 = [maxp4,range_h1b] ! 41
+      sT1 = [1,range_p4b]
       cut_status = cutensorInitTensorDescriptor(cut_handle,dT1,
-     &                               two,eT1,
-     &                               c_null_ptr, ! no stride
+     &                               two,eT1,sT1,
      &                               cut_double,
      &                               CUTENSOR_OP_IDENTITY)
       if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
@@ -696,11 +694,11 @@
      &               int(cut_status%stat),UNKNOWN_ERR)
       endif
 
-      sV2 = [range_h3b,range_h2b,range_p6b,range_p5b] ! 3265
-      eV2 = [range_h3b,range_h2b,range_p6b,maxp5]     ! 3265
+      eV2 = [range_h3b,range_h2b,range_p6b,maxp5] ! 3265
+      sV2 = [1,range_h3b,range_h3b*range_h2b,
+     &       range_h3b*range_h2b*range_p6b]
       cut_status = cutensorInitTensorDescriptor(cut_handle,dV2,
-     &                               four,eV2,
-     &                               c_null_ptr, ! no stride
+     &                               four,eV2,sV2,
      &                               cut_double,
      &                               CUTENSOR_OP_IDENTITY)
       if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
@@ -815,19 +813,25 @@
      &                  maxp4,maxp5)
       
       block
+       integer(8) :: errors
        integer :: a,b,c,d,e,f
        double precision :: x,y
+      errors = 0
       do concurrent (a=1:j(1),b=1:j(2),c=1:j(3),
      &               d=1:j(4),e=1:j(5),f=1:j(6))
+     &              reduce(+:errors)
         x = f_t3(a,b,c,d,e,f)
         y = jeff(a,b,c,d,e,f)
         if (ABS(x-y).gt.1.0d-10) then
-          write(6,'(6i8,2f20.14)') a,b,c,d,e,f,x,y
+          errors = errors + 1
+        !  write(6,'(6i8,2f20.14)') a,b,c,d,e,f,x,y
         !else 
         !  write(6,'(6i8,a4)') a,b,c,d,e,f,'OKAY'
         endif
       end do
-        STOP
+      write(6,'(a5,i2,a8,i20,a11,4i10)') 'ia6=',ia6,' errors=',errors,
+     &        'startstop=',istart,istop,jstart,jstop
+      !call errquit('JEFF',0,UNKNOWN_ERR)
       end block
 !!!#endif
       END IF
