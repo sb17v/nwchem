@@ -409,28 +409,20 @@
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: maxp,maxh
 #if CUTENSOR
-      type(cutensorStatus) :: cut_status
+      integer(kind=cuda_stream_kind), intent(inout) :: stream
+      integer(4) :: cuda_err
       integer(4), parameter :: two = 2
-      integer(8), dimension(2) :: eT1 ! extent
-      integer(8), dimension(2) :: sT1 ! stride
-      integer(4), dimension(2) :: mT1 ! modes
       integer(4), parameter :: four = 4
-      integer(8), dimension(4) :: eV2 ! extent
-      integer(8), dimension(4) :: sV2 ! stride
-      integer(4), dimension(4) :: mV2 ! modes
       integer(4), parameter :: six = 6
-      integer(8), dimension(6) :: eT3
-      integer(4), dimension(6) :: mT3
-      integer(4) :: aT1, aV2, aT3
       integer(8) :: workspaceSize
       type(c_devptr) :: workspace
+      type(cutensorStatus) :: cut_status
       type(cutensorDescriptor) :: dT1, dV2, dT3
       type(cutensorContractionDescriptor) :: dX
       type(cutensorContractionPlan) :: pX
       double precision :: alpha
       double precision, parameter :: beta = 1.0d0
-      integer(kind=cuda_stream_kind), intent(inout) :: stream
-      integer(4) :: cuda_err
+      ! debug
       double precision, allocatable, managed :: jeff(:,:,:,:,:,:)
       integer :: j(6)
 #else
@@ -458,6 +450,7 @@
       dimhhpp = maxh*maxh*maxp*maxp
 
       j = shape(f_t3) 
+      !print*,'shape=',j
       allocate( f_t1_temp(1:dimhp), f_t1_sort(1:dimhp,9),
      &          jeff(1:j(1),1:j(2),1:j(3),1:j(4),1:j(5),1:j(6)),
      &          f_v2_sort(1:dimhhpp,9), stat=alloc_error)
@@ -678,6 +671,17 @@
      &    (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) THEN
 
 !!!#if CUTENSOR
+      block
+      integer(8), dimension(2) :: eT1 ! extent
+      integer(8), dimension(2) :: sT1 ! stride
+      integer(4), dimension(2) :: mT1 ! modes
+      integer(8), dimension(4) :: eV2 ! extent
+      integer(8), dimension(4) :: sV2 ! stride
+      integer(4), dimension(4) :: mV2 ! modes
+      integer(8), dimension(6) :: eT3
+      integer(4), dimension(6) :: mT3
+      integer(4) :: aT1, aV2, aT3
+
       eT1 = [maxp4,range_h1b] ! 41
       sT1 = [1,range_p4b]
       cut_status = cutensorInitTensorDescriptor(cut_handle,dT1,
@@ -803,6 +807,7 @@
         call errquit('cudaFree workspace S1_1',alloc_error,MA_ERR)
       endif
 #endif
+      end block
 !!!#else
       cc = cc + 1
       call acc_sd_6ds_1(range_h3b,range_h2b,
