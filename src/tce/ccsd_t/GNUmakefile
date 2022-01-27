@@ -20,6 +20,7 @@ endif
 
 ifdef USE_CUTENSOR
   OBJ_OPTIMIZE += ccsd_t_6dts_cutensor.o
+  OBJ_OPTIMIZE += ccsd_t_cutensor.o
   #FOPTIONS += -Mextend
 endif
 
