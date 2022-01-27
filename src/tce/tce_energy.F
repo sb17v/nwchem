@@ -3,6 +3,7 @@
 ! $Id$
 ! 
       use tce_ccsd_t_cutensor
+      use tce_ccsd_t_cutensor_nodts
       implicit none
 #include "mafdecls.fh"
 #include "tcgmsg.fh"
@@ -3370,24 +3371,29 @@ c
               end if 
 #else
               if(.not.slice) then
-              if (nodezero) then
-                write(LuOut,'(a23)') 'Using plain CCSD(T) code'
-              endif
-              call ccsd_t(d_t1,k_t1_offset,d_t2,k_t2_offset,
-     1                    d_v2,k_v2_offset,pt3_1,pt3_2,size_t1)
+               if (nodezero) then
+                 write(LuOut,'(a23)') 'Using plain CCSD(T) CUT'
+               endif
+               call ccsd_t_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
+     1                     d_v2,k_v2_offset,pt3_1_cut,pt3_2_cut,size_t1)
+               if (nodezero) then
+                 write(LuOut,'(a24)') 'Using plain CCSD(T) code'
+               endif
+               call ccsd_t(d_t1,k_t1_offset,d_t2,k_t2_offset,
+     1                     d_v2,k_v2_offset,pt3_1,pt3_2,size_t1)
               else
-              if (nodezero) then
-                write(LuOut,'(a24)') 'Using sliced CCSD(T) CUT'
-              endif
-              call ccsd_t_6dts_cutensor(d_t1,k_t1_offset,
-     1                    d_t2,k_t2_offset,
-     1                    d_v2,k_v2_offset,
-     1                    pt3_1_cut,pt3_2_cut,size_t1,xmem)
-              if (nodezero) then
-                write(LuOut,'(a25)') 'Using sliced CCSD(T) code'
-              endif
-              call ccsd_t_6dts(d_t1,k_t1_offset,d_t2,k_t2_offset,
-     1                    d_v2,k_v2_offset,pt3_1,pt3_2,size_t1,xmem)
+               if (nodezero) then
+                 write(LuOut,'(a24)') 'Using sliced CCSD(T) CUT'
+               endif
+               call ccsd_t_6dts_cutensor(d_t1,k_t1_offset,
+     1                     d_t2,k_t2_offset,
+     1                     d_v2,k_v2_offset,
+     1                     pt3_1_cut,pt3_2_cut,size_t1,xmem)
+               if (nodezero) then
+                 write(LuOut,'(a25)') 'Using sliced CCSD(T) code'
+               endif
+               call ccsd_t_6dts(d_t1,k_t1_offset,d_t2,k_t2_offset,
+     1                     d_v2,k_v2_offset,pt3_1,pt3_2,size_t1,xmem)
               end if
               if (nodezero) call util_flush(LuOut)
 #endif
