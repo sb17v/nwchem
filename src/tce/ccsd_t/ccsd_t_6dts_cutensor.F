@@ -1,7 +1,7 @@
 #define CUTENSOR 1
 #define ASYNC 1
 
-      module tce_ccsd_t_cutensor
+      module tce_ccsd_t_cutensor_dts
 
       use cutensorex
       implicit none
@@ -1837,7 +1837,6 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_6ds_3(h3d,h2d,h1d,p6d,p5d,p4d,
@@ -1866,7 +1865,6 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_6ds_4(h3d,h2d,h1d,p6d,p5d,p4d,
@@ -1893,7 +1891,6 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_6ds_5(h3d,h2d,h1d,p6d,p5d,p4d,
@@ -1922,7 +1919,6 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_6ds_6(h3d,h2d,h1d,p6d,p5d,p4d,
@@ -1951,7 +1947,6 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_6ds_7(h3d,h2d,h1d,p6d,p5d,p4d,
@@ -1978,7 +1973,6 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_6ds_8(h3d,h2d,h1d,p6d,p5d,p4d,
@@ -2007,7 +2001,6 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_6ds_9(h3d,h2d,h1d,p6d,p5d,p4d,
@@ -2036,13 +2029,11 @@
       enddo
       enddo
       enddo
-      return
       end
 
 
 
-      subroutine acc_sd_tx1_1(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_1(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       implicit none
@@ -2068,11 +2059,9 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_2(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_2(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       implicit none
@@ -2100,13 +2089,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_3(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_3(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
@@ -2133,11 +2121,9 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_4(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_4(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       implicit none
@@ -2163,13 +2149,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_5(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_5(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
@@ -2198,13 +2183,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_6(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_6(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
@@ -2231,11 +2215,9 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_7(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_7(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
       implicit none
@@ -2261,13 +2243,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_8(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_8(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
@@ -2296,13 +2277,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_tx1_9(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               h7d,
+      subroutine acc_sd_tx1_9(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
@@ -2329,13 +2309,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_ty1_1(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
+      subroutine acc_sd_ty1_1(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2364,13 +2343,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_ty1_2(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
+      subroutine acc_sd_ty1_2(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2397,13 +2375,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_ty1_3(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
+      subroutine acc_sd_ty1_3(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2432,13 +2409,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_ty1_4(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
+      subroutine acc_sd_ty1_4(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2467,13 +2443,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_ty1_5(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
+      subroutine acc_sd_ty1_5(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2500,13 +2475,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_ty1_6(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
+      subroutine acc_sd_ty1_6(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2535,13 +2509,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
-      subroutine acc_sd_ty1_7(h3d,h2d,h1d,p6d,p5d,p4d,
-     &               p7d,
-     &               triplesx,t2sub,v2sub,
+      subroutine acc_sd_ty1_7(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
+     &                        triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2570,12 +2543,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_ty1_8(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,
      &                  istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2602,12 +2575,12 @@
       enddo
       enddo
       enddo
-      return
       end
 !
       subroutine acc_sd_ty1_9(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
-     &               triplesx,t2sub,v2sub,
-     &                  istart,istop,jstart,jstop,maxp4,maxp5)
+     &                        triplesx,t2sub,v2sub,
+     &                        istart,istop,jstart,jstop,maxp4,maxp5)
+      use cute_transpt
       implicit none
       integer, intent(in) :: istart,istop,jstart,jstop,maxp4,maxp5
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
@@ -2636,62 +2609,6 @@
       enddo
       enddo
       enddo
-      return
       end
 
-      subroutine cute_transpt2(t2sub,scratch,h1d,p5d,p4d,h7d)
-      implicit none
-      integer, intent(in) :: h1d,p5d,p4d,h7d
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: scratch(h1d,p5d,p4d,h7d)
-      integer :: h1,p5,p4,h7,pp5,hh1
-!$acc parallel loop collapse(4)
-      do h7=1,h7d
-         do p4=1,p4d
-            do p5=1,p5d
-               do h1=1,h1d
-                  scratch(h1,p5,p4,h7)=t2sub(h7,p4,p5,h1)
-               enddo
-            enddo
-         enddo
-      enddo
-      end
-
-      subroutine cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
-      implicit none
-      integer, intent(in) :: p4d,h1d,h2d,p7d
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
-      integer :: p4,h1,h2,p7
-!$acc parallel loop collapse(4)
-      do p4=1,p4d
-         do h1=1,h1d
-            do h2=1,h2d
-               do p7=1,p7d
-                  scratch(p7,h2,h1,p4)=t2sub(p7,p4,h1,h2)
-               enddo
-            enddo
-         enddo
-      enddo
-      end
-
-
-      subroutine cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
-      implicit none
-      integer, intent(in) :: h3d,h2d,p6d,h7d
-      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
-      integer :: h3,h2,p6,h7
-!$acc parallel loop collapse(4)
-      do p6=1,p6d
-         do h2=1,h2d
-            do h3=1,h3d
-               do h7=1,h7d
-                  scratch(h7,h3,h2,p6)=v2sub(h3,h2,p6,h7)
-               enddo
-            enddo
-         enddo
-      enddo
-      end
-
-      end module tce_ccsd_t_cutensor
+      end module tce_ccsd_t_cutensor_dts

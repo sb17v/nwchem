@@ -1,9 +1,10 @@
-      module tce_ccsd_t_cutensor_nodts
+      module tce_ccsd_t_cutensor
 
       contains
 
       subroutine ccsd_t_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
-     &            d_v2,k_v2_offset,energy1,energy2,size_t1)
+     &                           d_v2,k_v2_offset,energy1,energy2,
+     &                           size_t1)
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
@@ -11,23 +12,21 @@
 #include "errquit.fh"
 #include "tce.fh"
 #include "tce_main.fh"
-#include "ccsd_t_ps.fh"
-      integer :: d_t1
-      integer :: k_t1_offset
-      integer :: d_t2
-      integer :: k_t2_offset
-      integer :: d_v2
-      integer :: k_v2_offset
+      integer, intent(in) :: d_t1, k_t1_offset
+      integer, intent(in) :: d_t2, k_t2_offset
+      integer, intent(in) :: d_v2, k_v2_offset
+      double precision, intent(inout) :: energy1,energy2
+      integer, intent(in) :: size_t1
       integer :: t_h1b, t_h1
       integer :: t_h2b, t_h2
       integer :: t_h3b, t_h3
       integer :: t_p4b, t_p4
       integer :: t_p5b, t_p5
       integer :: t_p6b, t_p6
-      double precision, allocatable :: f_singles(:),f_doubles(:)
+      double precision, allocatable, managed :: f_singles(:)
+      double precision, allocatable, managed :: f_doubles(:)
       integer :: alloc_error
-      integer :: size_t3,i
-      integer :: nxtask0
+      integer :: size_t3
       integer :: next
       integer :: nprocs
       integer :: count
@@ -37,18 +36,18 @@
       integer :: range_h1,range_h2,range_h3
 ! - T1/X1 LOCALIZATION -------------------
       integer :: l_t1_local,k_t1_local
-      integer :: size_t1
 ! ---------------------------------------
       double precision :: energy(2)
-      double precision :: energy1,energy2
-      integer :: k_aux,k_list,l_aux,l_list
+!      integer :: k_aux,k_list,l_aux,l_list
+      integer, allocatable :: f_aux(:), f_list(:)
       integer :: tot_task,w_thresh,task_thresh
       integer :: k,iptr,k_grain
       double precision :: wall
       integer :: tasks_skip
-      integer :: n_progr,pct_progr
-      parameter(n_progr=20)
+      integer :: pct_progr
+      integer, parameter :: n_progr=20
       logical :: i_progr(n_progr)
+      integer :: nxtask0
       external nxtask0
 !
 ! - T1/X1 LOCALIZATION ----------
@@ -86,10 +85,15 @@
       wall=-util_wallsec()
       tot_task= ccsd_t_6tasks_cutensor(restricted,noab,nvab,
      &                        int_mb(k_spin),int_mb(k_sym))
-      if (.not.ma_push_get(mt_int,7*tot_task,"list.task",
-     &  l_list,k_list)) call errquit("k_list",1,MA_ERR)
-      if (.not.ma_push_get(mt_int,7*tot_task,"auxtask",
-     &  l_aux,k_aux)) call errquit("k_aux",2,MA_ERR)
+!      if (.not.ma_push_get(mt_int,7*tot_task,"list.task",
+!     &  l_list,k_list)) call errquit("k_list",1,MA_ERR)
+!      if (.not.ma_push_get(mt_int,7*tot_task,"auxtask",
+!     &  l_aux,k_aux)) call errquit("k_aux",2,MA_ERR)
+      allocate( f_list(7*tot_task), f_aux(7*tot_task),
+     &          stat=alloc_error)
+      if (alloc_error.ne.0) then
+        call errquit('ccsd_t_cutensor: MA error task list/aux',0,MA_ERR)
+      endif
 !
 !     get first task with weight lt ? 8
 !
@@ -99,11 +103,16 @@
       call ccsd_t_neword_cutensor(tot_task, w_thresh,task_thresh,
      &     restricted,noab,nvab,
      &     int_mb(k_spin),int_mb(k_sym),
-     &     int_mb(k_range),
-     &     int_mb(k_aux),int_mb(k_list))
+     &     int_mb(k_range), f_aux, f_list)
+!     &     int_mb(k_aux),int_mb(k_list))
 
-      if (.not.MA_POP_STACK(l_aux))
-     &     call errquit('ordering',3,MA_ERR)
+!      if (.not.MA_POP_STACK(l_aux))
+!     &     call errquit('ordering',3,MA_ERR)
+      deallocate( f_aux, stat=alloc_error)
+      if (alloc_error.ne.0) then
+        call errquit('ccsd_t_cutensor',112,MA_ERR)
+      endif
+
       count = 0
       k_grain=1
       tasks_skip=0
@@ -118,7 +127,8 @@
 !
          if (next.eq.count) then
             call ccsd_t_loop_cutensor(k,energy1,energy2,
-     &              int_mb(k_list),int_mb(k_range),int_mb(k_offset),
+     &              f_list, !int_mb(k_list),
+     &              int_mb(k_range),int_mb(k_offset),
      &              f_singles,f_doubles,
      &              k_t1_local,k_t1_offset,
      &              d_t2,d_v2,k_t2_offset,k_v2_offset,
@@ -149,7 +159,8 @@
          do k=task_thresh,tot_task
             if (next.eq.count) then
                call ccsd_t_loop_cutensor(k,energy1,energy2,
-     &                 int_mb(k_list),int_mb(k_range),int_mb(k_offset),
+     &                 f_list, !int_mb(k_list),
+     &                 int_mb(k_range),int_mb(k_offset),
      &                 f_singles,f_doubles,
      &                 k_t1_local,k_t1_offset,
      &                 d_t2,d_v2,k_t2_offset,k_v2_offset,
@@ -174,15 +185,11 @@
       endif
       endif
 
-      if (.not.MA_POP_STACK(l_list))
-     &     call errquit('ordering',3,MA_ERR)
-      deallocate( f_doubles, stat=alloc_error)
+!      if (.not.MA_POP_STACK(l_list))
+!     &     call errquit('ordering',3,MA_ERR)
+      deallocate( f_list, f_singles, f_doubles, stat=alloc_error)
       if (alloc_error.ne.0) then
         call errquit('ccsd_t doubles',3,MA_ERR)
-      endif
-      deallocate( f_singles, stat=alloc_error)
-      if (alloc_error.ne.0) then
-        call errquit('ccsd_t singles',4,MA_ERR)
       endif
       next = nxtask0(-nprocs,k_grain,tasks_skip)
 !      call ga_sync()
@@ -207,7 +214,7 @@
      &                      r_p4,r_p5,r_p6,
      &                      energy1,energy2)
       implicit none
-      integer :: h1b, h2b, h3b, p4b, p5b, p6b
+      integer, intent(in) :: h1b, h2b, h3b, p4b, p5b, p6b
       integer :: r_h1,r_h2,r_h3
       integer :: r_p4,r_p5,r_p6
       double precision :: o_h1(r_h1),o_h2(r_h2),o_h3(r_h3)
@@ -269,7 +276,6 @@
      &     restricted,k_evl_sorted,size_t3)
       implicit none
 #include "mafdecls.fh"
-#include "ccsd_t_ps.fh"
       integer, intent(in) :: k
       double precision, intent(inout) :: energy1,energy2
       integer, intent(in) :: k_list(7,*)
@@ -385,8 +391,7 @@
       integer(8) :: range_p4,range_p5,range_p6
       integer(8) :: range_h1,range_h2,range_h3
       integer :: nsplits,ii,w_in
-      integer :: highindx
-      parameter (highindx=7)
+      integer, parameter :: highindx=7
       task_thresh=tot_task
       m=0
       do t_p4b = noab+1,noab+nvab
@@ -854,12 +859,9 @@
       END
 
 
-      subroutine ccsd_t_doubles_cutensor(a_i0,d_t2,d_v2,
+      subroutine ccsd_t_doubles_cutensor(f_t3,d_t2,d_v2,
      &           k_t2_offset,k_v2_offset,
      &           t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b)
-!     $Id$
-!     This is a Fortran77 program generated by Tensor Contraction Engine v.1.0
-!     Copyright (c) Battelle & Pacific Northwest National Laboratory (2002)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( p7 ) * t ( p4 p7 h1 h2 )_t * v ( p5 p6 h3 p7 )_v
       implicit none
@@ -868,25 +870,15 @@
 #include "util.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      integer :: t_p4b
-      integer :: t_p5b
-      integer :: t_p6b
-      integer :: t_h1b
-      integer :: t_h2b
-      integer :: t_h3b
-      integer :: d_t2
-      integer :: k_t2_offset
-      integer :: d_v2
-      integer :: k_v2_offset
-      integer :: l_v2sub
-      integer :: l_t2sub
-      integer :: l_scratch
-      double precision :: a_i0(*)
+      double precision, intent(inout) :: f_t3(:)
+      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
+      integer :: d_t2, k_t2_offset
+      integer :: d_v2, k_v2_offset
       double precision, allocatable :: d_t2sub(:)
       double precision, allocatable :: d_v2sub(:)
       double precision, allocatable :: d_scratch(:)
       integer :: alloc_error
-      integer :: range_p4,range_h1,ii
+      integer :: range_p4,range_h1
       integer :: t2size,v2size
       call cute_t_v2t2lgth(t2size,v2size)
       allocate(d_t2sub(1:t2size), stat=alloc_error)
@@ -903,37 +895,38 @@
       endif
       CALL ccsd_t_doubles_cutensor_12(d_t2,
      &     k_t2_offset,d_v2,k_v2_offset,
-     &     a_i0,t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
+     &     f_t3,t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
      &     d_v2sub,d_t2sub,d_scratch)
       deallocate(d_v2sub)
       deallocate(d_scratch)
       deallocate(d_t2sub)
       END
 
+      ! compute v2sub and t2sub max length
       subroutine cute_t_v2t2lgth(t2size,v2size)
       implicit none
 #include "mafdecls.fh"
 #include "tce.fh"
-!     compute v2sub and t2sub max length
-      integer :: t2size,v2size ! [out]
-      integer :: range_p4,range_h1,ii
+      integer, intent(out) :: t2size,v2size
+      integer :: range_p4,range_h1,i
       range_p4=0
-      do ii = noab+1,noab+nvab
-         range_p4 = max(range_p4,int_mb(k_range+ii-1))
+      do i = noab+1,noab+nvab
+         range_p4 = max(range_p4,int_mb(k_range+i-1))
       enddo
       range_h1=0
-      do ii = 1,noab
-         range_h1 = max(range_h1,int_mb(k_range+ii-1))
+      do i = 1,noab
+         range_h1 = max(range_h1,int_mb(k_range+i-1))
       enddo
       t2size=(range_p4**2)*(range_h1**2)
-      v2size=max((range_p4)*(range_h1**3),
-     &     (range_p4**3)*(range_h1))
+      v2size=max((range_p4)*(range_h1**3),(range_p4**3)*(range_h1))
       end
 
       subroutine ccsd_t_doubles_cutensor_12(d_a,k_a_offset,
      &                                      d_b,k_b_offset,
-     &           triplesx,t_p4b,t_p5b,t_p6b,t_h1b,t_h2b,t_h3b,
-     &     v2sub,t2sub,scratch)
+     &                                      triplesx,
+     &                                      t_p4b,t_p5b,t_p6b,
+     &                                      t_h1b,t_h2b,t_h3b,
+     &                                      v2sub,t2sub,scratch)
 !     This is a Fortran77 program generated by Tensor Contraction Engine v.1.0
 !     Copyright (c) Battelle & Pacific Northwest National Laboratory (2002)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
@@ -946,68 +939,39 @@
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-#include "ccsd_t_ps.fh"
 #include "util.fh"
-      integer :: d_a
-      integer :: k_a_offset
-      integer :: d_b
-      integer :: k_b_offset
-      integer :: t_p4b
-      integer :: t_p5b
-      integer :: t_p6b
-      integer :: t_h1b
-      integer :: t_h2b
-      integer :: t_h3b
-      integer :: p4b
-      integer :: p5b
-      integer :: p6b
-      integer :: h1b
-      integer :: h2b
-      integer :: h3b
-      integer :: dimc
-      integer :: l_c_sort
-      integer :: k_c_sort
+      integer, intent(in) :: d_a, k_a_offset
+      integer, intent(in) :: d_b, k_b_offset
+      double precision, intent(inout) :: triplesx(:)
+      integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
+      double precision, intent(in) :: t2sub(:),v2sub(:),scratch(:)
+      integer :: p4b, p5b, p6b, h1b, h2b, h3b
+      integer :: k_c_sort, l_c_sort
       integer :: h7b,p7b
       integer :: p5b_2,p7b_1,h2b_1,p7b_2
-      integer :: p4b_1
-      integer :: p5b_1
-      integer :: h1b_1
-      integer :: h7b_1
-      integer :: p6b_2
-      integer :: h7b_2
-      integer :: h2b_2
-      integer :: h3b_2
+      integer :: p4b_1, p5b_1, h1b_1, h7b_1
+      integer :: p6b_2, h7b_2, h2b_2, h3b_2
+      integer :: dima, dimb, dimc
       integer :: dim_common
       integer :: dima_sort
-      integer :: dima
       integer :: dimb_sort
-      integer :: dimb
-      integer :: l_a
-      integer :: k_a
-      integer :: l_b
-      integer :: k_b
-! -- peta-exa --
+      integer :: k_a, l_a
+      integer :: k_b, l_b
       integer :: a3(9,6)
       integer :: ia6,ja6
-! --------------
-      double precision :: triplesx(*)
-! --------------
-      integer :: k_range_h3b_1
-      integer :: k_range_h2b_1
-      integer :: k_range_h1b_1
-      integer :: k_range_p6b_1
-      integer :: k_range_p5b_1
-      integer :: k_range_p4b_1
-      integer :: k_range_h7b_1
-      integer :: k_range_p7b_1
+      integer :: range_h3b
+      integer :: range_h2b
+      integer :: range_h1b
+      integer :: range_p6b
+      integer :: range_p5b
+      integer :: range_p4b
+      integer :: range_h7b
+      integer :: range_p7b
       integer :: k_a_srt_len
       integer :: k_b_srt_len
-      integer :: l_t2sub,l_triplesx,l_v2sub
-      double precision :: t2sub(*),v2sub(*),scratch(*)
-      logical :: tce_hashnsort,lresult
-      external tce_hashnsort
-      logical :: tce_hashnsort_2
-      external tce_hashnsort_2
+      integer :: l_triplesx
+      logical :: tce_hashnsort,tce_hashnsort_2, lresult
+      external tce_hashnsort, tce_hashnsort_2
       integer :: n_h7b
       integer :: n_p7b
       double precision :: t0
@@ -1118,12 +1082,12 @@
 !
 !
 !from l_triplesx
-      k_range_h3b_1 = int_mb(k_range+h3b-1)
-      k_range_h2b_1 = int_mb(k_range+h2b-1)
-      k_range_h1b_1 = int_mb(k_range+h1b-1)
-      k_range_p6b_1 = int_mb(k_range+p6b-1)
-      k_range_p5b_1 = int_mb(k_range+p5b-1)
-      k_range_p4b_1 = int_mb(k_range+p4b-1)
+      range_h3b = int_mb(k_range+h3b-1)
+      range_h2b = int_mb(k_range+h2b-1)
+      range_h1b = int_mb(k_range+h1b-1)
+      range_p6b = int_mb(k_range+p6b-1)
+      range_p5b = int_mb(k_range+p5b-1)
+      range_p4b = int_mb(k_range+p4b-1)
 
 !     prep. work
 !     figure out  cycles to work on
@@ -1150,86 +1114,86 @@
      &           p4b,p5b,h1b,h7b,
      &           p6b,h2b,h3b,
      &           t2sub,v2sub)) then
-            k_range_h7b_1 = int_mb(k_range+h7b-1)
+            range_h7b = int_mb(k_range+h7b-1)
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d1_1(k_range_h3b_1,k_range_h2b_1,
-     &     k_range_h1b_1,k_range_p6b_1,
-     &     k_range_p5b_1,k_range_p4b_1,
-     &     k_range_h7b_1,
+         call cutensor_t_d1_1(range_h3b,range_h2b,
+     &     range_h1b,range_p6b,
+     &     range_p5b,range_p4b,
+     &     range_h7b,
      &     triplesx,t2sub,v2sub)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d1_2(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_h7b_1,
+         call cutensor_t_d1_2(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_h7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-      call cutensor_t_d1_3(k_range_h3b_1,k_range_h2b_1,
-     &     k_range_h1b_1,k_range_p6b_1,
-     &     k_range_p5b_1,k_range_p4b_1,
-     &     k_range_h7b_1,
+      call cutensor_t_d1_3(range_h3b,range_h2b,
+     &     range_h1b,range_p6b,
+     &     range_p5b,range_p4b,
+     &     range_h7b,
      &     triplesx,t2sub,v2sub,scratch)
        END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d1_4(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_h7b_1,
+         call cutensor_t_d1_4(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_h7b,
      &        triplesx,t2sub,v2sub)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-      call cutensor_t_d1_5(k_range_h3b_1,k_range_h2b_1,
-     &     k_range_h1b_1,k_range_p6b_1,
-     &     k_range_p5b_1,k_range_p4b_1,
-     &     k_range_h7b_1,
+      call cutensor_t_d1_5(range_h3b,range_h2b,
+     &     range_h1b,range_p6b,
+     &     range_p5b,range_p4b,
+     &     range_h7b,
      &     triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-         call cutensor_t_d1_6(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_h7b_1,
+         call cutensor_t_d1_6(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_h7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d1_7(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_h7b_1,
+         call cutensor_t_d1_7(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_h7b,
      &        triplesx,t2sub,v2sub)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d1_8(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_h7b_1,
+         call cutensor_t_d1_8(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_h7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
      & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &1b)) THEN
-         call cutensor_t_d1_9(k_range_h3b_1,k_range_h2b_1,
-     &     k_range_h1b_1,k_range_p6b_1,
-     &     k_range_p5b_1,k_range_p4b_1,
-     &     k_range_h7b_1,
+         call cutensor_t_d1_9(range_h3b,range_h2b,
+     &     range_h1b,range_p6b,
+     &     range_p5b,range_p4b,
+     &     range_h7b,
      &     triplesx,t2sub,v2sub,scratch)
       END IF
       endif
@@ -1338,12 +1302,12 @@
       dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) * int_mb(k_ra
      &nge+p6b-1) * int_mb(k_range+h1b-1) * int_mb(k_range+h2b-1) * int_m
      &b(k_range+h3b-1)
-      k_range_h3b_1 = int_mb(k_range+h3b-1)
-      k_range_h2b_1 = int_mb(k_range+h2b-1)
-      k_range_h1b_1 = int_mb(k_range+h1b-1)
-      k_range_p6b_1 = int_mb(k_range+p6b-1)
-      k_range_p5b_1 = int_mb(k_range+p5b-1)
-      k_range_p4b_1 = int_mb(k_range+p4b-1)
+      range_h3b = int_mb(k_range+h3b-1)
+      range_h2b = int_mb(k_range+h2b-1)
+      range_h1b = int_mb(k_range+h1b-1)
+      range_p6b = int_mb(k_range+p6b-1)
+      range_p5b = int_mb(k_range+p5b-1)
+      range_p4b = int_mb(k_range+p4b-1)
 !     figure out  cycles to work on
       n_p7b=0
       DO p7b = noab+1,noab+nvab
@@ -1369,88 +1333,87 @@
      &        p5b,p6b,h3b,
      &        t2sub,v2sub)) then
 
-            k_range_p7b_1 = int_mb(k_range+p7b-1)
+            range_p7b = int_mb(k_range+p7b-1)
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d2_1(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_1(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
-         call cutensor_t_d2_2(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_2(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
-         call cutensor_t_d2_3(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_3(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub)
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d2_4(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_4(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
 
-         call cutensor_t_d2_5(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_5(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
-         call cutensor_t_d2_6(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_6(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
-         call cutensor_t_d2_7(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_7(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub)
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
      &2b)) THEN
-         call cutensor_t_d2_8(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
+         call cutensor_t_d2_8(range_h3b,range_h2b,
+     &        range_h1b,range_p6b,
+     &        range_p5b,range_p4b,
+     &        range_p7b,
      &        triplesx,t2sub,v2sub,scratch)
       END IF
       IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
      &2b)) THEN
-         call cutensor_t_d2_9(k_range_h3b_1,k_range_h2b_1,
-     &        k_range_h1b_1,k_range_p6b_1,
-     &        k_range_p5b_1,k_range_p4b_1,
-     &        k_range_p7b_1,
-     &        triplesx,t2sub,v2sub,scratch)
+         call cutensor_t_d2_9(range_h3b,range_h2b,range_h1b,
+     &                        range_p6b,range_p5b,range_p4b,
+     &                        range_p7b,
+     &                        triplesx,t2sub,v2sub,scratch)
       END IF
       endif
       END DO ! p7b loop
@@ -1465,12 +1428,11 @@
       subroutine cutensor_t_d1_1(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub)
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
-      integer :: h2h3
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h3d*h2d,h1d,p6d,p5d,p4d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1489,14 +1451,15 @@
 !
       subroutine cutensor_t_d1_2(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h3d,h1d,h2d,p6d,p5d,p4d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(*)
       double precision :: scratch(h7d,h3d,h2d,p6d)
-      double precision :: v2sub(*)
-      call cute_t_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7
+      call cute_transpt2_7326( v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1517,17 +1480,16 @@
 !
       subroutine cutensor_t_d1_3(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
-      integer :: h3h2
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h1d,h3d*h2d,p6d,p5d,p4d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
+!      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d*h2d,p6d)
-!      double precision :: v2sub(h3d*h2d,p6d,h7d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(h3d,h2d,p6d,h7d)
-      call cute_t_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
+      call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1548,12 +1510,11 @@
      &               triplesx,t2sub,v2sub)
       implicit none
 
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
-      integer :: h2h3
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h3d*h2d,h1d,p5d,p4d,p6d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
       do p6=1,p6d
       do p4=1,p4d
       do p5=1,p5d
@@ -1572,15 +1533,16 @@
 !
       subroutine cutensor_t_d1_5(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
 
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h3d,h1d,h2d,p5d,p4d,p6d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
       double precision :: scratch(h7d,h3d,h2d,p6d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(h3d,h2d,p6d,h7d)
-      call cute_t_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7
+      call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
       do p6=1,p6d
       do p4=1,p4d
       do p5=1,p5d
@@ -1601,16 +1563,16 @@
 !
       subroutine cutensor_t_d1_6(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
 
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
-      integer :: h2h3
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h1d,h3d*h2d,p5d,p4d,p6d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(*)
       double precision :: scratch(h7d,h3d*h2d,p6d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(*)
-      call cute_t_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
+      call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
       do p6=1,p6d
       do p4=1,p4d
       do p5=1,p5d
@@ -1630,12 +1592,11 @@
       subroutine cutensor_t_d1_7(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub)
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
-      integer :: h2h3
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h3d*h2d,h1d,p5d,p6d,p4d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
       do p4=1,p4d
       do p6=1,p6d
       do p5=1,p5d
@@ -1654,14 +1615,15 @@
 !
       subroutine cutensor_t_d1_8(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h3d,h1d,h2d,p5d,p6d,p4d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(*)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(*)
       double precision :: scratch(h7d,h3d,h2d,p6d)
-      call cute_t_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7
+      call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
       do p4=1,p4d
       do p6=1,p6d
       do p5=1,p5d
@@ -1682,15 +1644,15 @@
 !
       subroutine cutensor_t_d1_9(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      integer :: h3,h2,h1,p6,p5,p4,h7
-      integer :: h3h2
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
       double precision :: triplesx(h1d,h3d*h2d,p5d,p6d,p4d)
+      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in) :: v2sub(*)
       double precision :: scratch(h7d,h3d*h2d,p6d)
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: v2sub(*)
-      call cute_t_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+      integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
+      call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
       do p4=1,p4d
       do p6=1,p6d
       do p5=1,p5d
@@ -1709,13 +1671,15 @@
 !
       subroutine cutensor_t_d2_1(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h3d,h2d,h1d,p6d,p5d,p4d)
-      double precision :: scratch(p7d,h2d,h1d,p4d),t2sub(*)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
+      double precision, intent(in) :: t2sub(*)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1736,14 +1700,15 @@
 !
       subroutine cutensor_t_d2_2(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
-      integer :: h2h1
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h2d*h1d,h3d,p6d,p5d,p4d)
-      double precision :: scratch(h2d*h1d,p4d,p7d),t2sub(*)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
+      double precision, intent(in) :: t2sub(*)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(h2d*h1d,p4d,p7d)
+      integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
+      call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1762,14 +1727,15 @@
 !
       subroutine cutensor_t_d2_3(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h2d,h3d,h1d,p6d,p5d,p4d)
-      double precision :: t2sub(p7d,p4d,h1d,h2d)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
-      call cute_t_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1790,13 +1756,15 @@
 !
       subroutine cutensor_t_d2_4(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h3d,h2d,h1d,p6d,p4d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d),t2sub(*)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
+      double precision, intent(in) :: t2sub(*)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(p7d,h2d,h1d,p4d)
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
       do p5=1,p5d
       do p4=1,p4d
       do p6=1,p6d
@@ -1817,14 +1785,15 @@
 !
       subroutine cutensor_t_d2_5(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
-      integer :: h2h1
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h2d*h1d,h3d,p6d,p4d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d),t2sub(*)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
+      double precision, intent(in) :: t2sub(*)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision :: scratch(h2d*h1d,p4d,p7d)
+      integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
+      call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
       do p5=1,p5d
       do p4=1,p4d
       do p6=1,p6d
@@ -1843,14 +1812,15 @@
 !
       subroutine cutensor_t_d2_6(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h2d,h3d,h1d,p6d,p4d,p5d)
-      double precision :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
       do p5=1,p5d
       do p4=1,p4d
       do p6=1,p6d
@@ -1870,15 +1840,16 @@
       end
 !
       subroutine cutensor_t_d2_7(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
-     &               triplesx,t2sub,v2sub)
+     &                           triplesx,t2sub,v2sub)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h3d,h2d,h1d,p4d,p6d,p5d)
-      double precision :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
       do p5=1,p5d
       do p6=1,p6d
       do p4=1,p4d
@@ -1899,14 +1870,15 @@
 !
       subroutine cutensor_t_d2_8(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
      &               triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
-      integer :: h2h1
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
+      integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
       double precision :: triplesx(h2d*h1d,h3d,p4d,p6d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d),t2sub(*)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
+      double precision :: scratch(h2d*h1d,p4d,p7d)
+      double precision, intent(in) :: t2sub(*)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
       do p5=1,p5d
       do p6=1,p6d
       do p4=1,p4d
@@ -1924,15 +1896,17 @@
       end
 !
       subroutine cutensor_t_d2_9(h3d,h2d,h1d,p6d,p5d,p4d,p7d,
-     &               triplesx,t2sub,v2sub,scratch)
+     &                           triplesx,t2sub,v2sub,scratch)
+      use cute_transpt
       implicit none
-      integer :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      integer :: h3,h2,h1,p6,p5,p4,p7
+      integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       double precision :: triplesx(h2d,h3d,h1d,p4d,p6d,p5d)
-      double precision :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       double precision :: scratch(p7d,h2d,h1d,p4d)
-      double precision :: v2sub(p7d,h3d,p6d,p5d)
-      call cute_t_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
+      integer :: h3,h2,h1,p6,p5,p4,p7
+      call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p5=1,p5d
       do p6=1,p6d
       do p4=1,p4d
@@ -1951,57 +1925,5 @@
       enddo
       end
 
-      subroutine cute_t_transpt2(t2sub,scratch,h1d,p5d,p4d,h7d)
-      implicit none
-      integer :: h1d,p5d,p4d,h7d
-      double precision :: t2sub(h7d,p4d,p5d,h1d)
-      double precision :: scratch(h1d,p5d,p4d,h7d)
-      integer :: h1,p5,p4,h7
-      do h7=1,h7d
-         do p4=1,p4d
-            do p5=1,p5d
-               do h1=1,h1d
-                  scratch(h1,p5,p4,h7)=t2sub(h7,p4,p5,h1)
-               enddo
-            enddo
-         enddo
-      enddo
-      end
 
-
-      subroutine cute_t_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
-      implicit none
-      integer :: p4d,h1d,h2d,p7d
-      double precision :: t2sub(p7d,p4d,h1d,h2d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
-      integer :: p4,h1,h2,p7
-      do p4=1,p4d
-         do h1=1,h1d
-            do h2=1,h2d
-               do p7=1,p7d
-                  scratch(p7,h2,h1,p4)=t2sub(p7,p4,h1,h2)
-               enddo
-            enddo
-         enddo
-      enddo
-      end
-
-
-      subroutine cute_t_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
-      implicit none
-      integer :: h3d,h2d,p6d,h7d
-      double precision :: v2sub(h3d,h2d,p6d,h7d)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
-      integer :: h3,h2,p6,h7
-      do p6=1,p6d
-         do h2=1,h2d
-            do h3=1,h3d
-               do h7=1,h7d
-                  scratch(h7,h3,h2,p6)=v2sub(h3,h2,p6,h7)
-               enddo
-            enddo
-         enddo
-      enddo
-      end
-
-      end module tce_ccsd_t_cutensor_nodts
+      end module tce_ccsd_t_cutensor
