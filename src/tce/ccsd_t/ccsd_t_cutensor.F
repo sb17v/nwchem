@@ -1177,18 +1177,21 @@
       h2b=a3(ia6,5)
       h3b=a3(ia6,6)
       if(((p5b.le.p6b).and.(h1b.le.h2b).and.(p4b.ne.0)).and.
-     & ((.not.restricted).or.(int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1
-     &)+int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+i
-     &nt_mb(k_spin+h3b-1).ne.12)).and.
-     & (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
-     & .eq. int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-
-     &1)).and.
-     & (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),ieor(int_mb(
-     &k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),ieor(int_mb(k_sym+h2b-1),int
-     &_mb(k_sym+h3b-1)))))) .eq. ieor(irrep_v,irrep_t))) then
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) * int_mb(k_ra
-     &nge+p6b-1) * int_mb(k_range+h1b-1) * int_mb(k_range+h2b-1) * int_m
-     &b(k_range+h3b-1)
+     &   ((.not.restricted).or.
+     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
+     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
+     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12))
+     &   .and.
+     &   (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
+     &    int_mb(k_spin+p6b-1) .eq. int_mb(k_spin+h1b-1)+
+     &    int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)).and.
+     &   (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
+     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
+     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) 
+     &    .eq. ieor(irrep_v,irrep_t))) then
+      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1)
+     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
+     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
       range_h3b = int_mb(k_range+h3b-1)
       range_h2b = int_mb(k_range+h2b-1)
       range_h1b = int_mb(k_range+h1b-1)
