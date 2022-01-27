@@ -3,7 +3,7 @@
 ! $Id$
 ! 
       use tce_ccsd_t_cutensor
-      use tce_ccsd_t_cutensor_nodts
+      use tce_ccsd_t_cutensor_dts
       implicit none
 #include "mafdecls.fh"
 #include "tcgmsg.fh"
