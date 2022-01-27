@@ -1347,6 +1347,7 @@
       double precision :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch,h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1377,6 +1378,7 @@
       double precision :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1430,6 +1432,7 @@
       double precision :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p6=1,p6d
       do p4=1,p4d
       do p5=1,p5d
@@ -1460,6 +1463,7 @@
       double precision :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p6=1,p6d
       do p4=1,p4d
       do p5=1,p5d
@@ -1511,6 +1515,7 @@
       double precision :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p6=1,p6d
       do p5=1,p5d
@@ -1540,6 +1545,7 @@
       double precision :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p6=1,p6d
       do p5=1,p5d
@@ -1567,6 +1573,7 @@
       double precision :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1596,6 +1603,7 @@
       double precision :: scratch(h2d*h1d,p4d,p7d)
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1623,6 +1631,7 @@
       double precision :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1652,6 +1661,7 @@
       double precision :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
+!$acc parallel loop collapse(4)
       do p5=1,p5d
       do p4=1,p4d
       do p6=1,p6d
@@ -1681,6 +1691,7 @@
       double precision :: scratch(h2d*h1d,p4d,p7d)
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
+!$acc parallel loop collapse(4)
       do p5=1,p5d
       do p4=1,p4d
       do p6=1,p6d
@@ -1708,6 +1719,7 @@
       double precision :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p5=1,p5d
       do p4=1,p4d
       do p6=1,p6d
@@ -1737,6 +1749,7 @@
       double precision :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
+!$acc parallel loop collapse(4)
       do p5=1,p5d
       do p6=1,p6d
       do p4=1,p4d
@@ -1766,6 +1779,7 @@
       double precision, intent(in) :: t2sub(*)
       double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
+!$acc parallel loop collapse(4)
       do p5=1,p5d
       do p6=1,p6d
       do p4=1,p4d
