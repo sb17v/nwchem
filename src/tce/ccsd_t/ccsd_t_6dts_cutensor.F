@@ -26,10 +26,11 @@
 #include "errquit.fh"
 #include "tce.fh"
 #include "tce_main.fh"
+      integer, intent(in) :: d_t1, k_t1_offset
+      integer, intent(in) :: d_t2, k_t2_offset
+      integer, intent(in) :: d_v2, k_v2_offset
       double precision, intent(inout) :: energy1,energy2
-      integer, intent(in) :: d_t1, d_t2, d_v2
-      integer, intent(in) :: k_t1_offset, k_t2_offset, k_v2_offset
-      integer, intent(in) :: xmem, size_t1
+      integer, intent(in) :: size_t1, xmem
       integer :: t_h1b, t_h1, t_h2b, t_h2, t_h3b, t_h3
       integer :: t_p4b, t_p4, t_p5b, t_p5, t_p6b, t_p6
 #ifdef T1D
@@ -45,7 +46,6 @@
 #endif
       double precision, allocatable, managed :: t1_local(:)
       integer :: alloc_error
-      integer :: nxtask
       integer :: next
       integer :: nprocs
       integer :: count
@@ -77,6 +77,7 @@
 #endif
       integer :: nevals
       double precision, allocatable :: evals(:)
+      integer :: nxtask
       external nxtask
 
 #if CUTENSOR
