@@ -418,17 +418,11 @@
       task_thresh=tot_task
       m=0
       do t_p4b = noab+1,noab+nvab
-       range_p4 = krange(t_p4b)
        do t_p5b = t_p4b,noab+nvab
-        range_p5 = krange(t_p5b)
         do t_p6b = t_p5b,noab+nvab
-         range_p6 = krange(t_p6b)
          do t_h1b = 1,noab
-          range_h1 = krange(t_h1b)
           do t_h2b = t_h1b,noab
-           range_h2 = krange(t_h2b)
            do t_h3b = t_h2b,noab
-            range_h3 = krange(t_h3b)
             if (kspin(t_p4b)+kspin(t_p5b)+kspin(t_p6b).eq.
      &          kspin(t_h1b)+kspin(t_h2b)+kspin(t_h3b)) then
             if ((.not.restricted).or.
@@ -437,6 +431,12 @@
             if (ieor(ksym(t_p4b),ieor(ksym(t_p5b),ieor(ksym(t_p6b),
      &          ieor(ksym(t_h1b),ieor(ksym(t_h2b),ksym(t_h3b)
      &              ))))).eq.0) then
+            range_p4 = krange(t_p4b)
+            range_p5 = krange(t_p5b)
+            range_p6 = krange(t_p6b)
+            range_h1 = krange(t_h1b)
+            range_h2 = krange(t_h2b)
+            range_h3 = krange(t_h3b)
             m=m+1
             kaux(1,m)=t_p4b
             kaux(2,m)=t_p5b
@@ -445,7 +445,7 @@
             kaux(5,m)=t_h2b
             kaux(6,m)=t_h3b
             kaux(7,m)=range_p4*range_p5*range_p6
-     &                      *range_h1*range_h2*range_h3
+     &               *range_h1*range_h2*range_h3
             endif
             endif
             endif
@@ -821,13 +821,13 @@
 #include "util.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout) :: f_t3(:)
+      double precision, intent(inout), managed :: f_t3(:)
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer :: d_t2, k_t2_offset
       integer :: d_v2, k_v2_offset
-      double precision, allocatable :: d_t2sub(:)
-      double precision, allocatable :: d_v2sub(:)
-      double precision, allocatable :: d_scratch(:)
+      double precision, allocatable, managed :: d_t2sub(:)
+      double precision, allocatable, managed :: d_v2sub(:)
+      double precision, allocatable, managed :: d_scratch(:)
       integer :: alloc_error
       integer :: range_p4,range_h1
       integer :: maxp,maxh
@@ -883,9 +883,10 @@
 #include "util.fh"
       integer, intent(in) :: d_a, k_a_offset
       integer, intent(in) :: d_b, k_b_offset
-      double precision, intent(inout) :: triplesx(:)
+      double precision, intent(inout), managed :: triplesx(:)
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
-      double precision, intent(in) :: t2sub(:),v2sub(:),scratch(:)
+      double precision, intent(in), managed :: t2sub(:),v2sub(:)
+      double precision, intent(in), managed :: scratch(:)
       integer :: h1b, h2b, h3b, p4b, p5b, p6b, h7b,p7b
       integer :: p5b_2,p7b_1,h2b_1,p7b_2
       integer :: p4b_1, p5b_1, h1b_1, h7b_1
@@ -1256,7 +1257,6 @@
      &                      p4b,p7b,h1b,h2b,p5b,p6b,h3b,
      &                      t2sub,v2sub)) then
             range_p7b = int_mb(k_range+p7b-1)
-            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
             if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
@@ -1266,7 +1266,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and.
      &          (t_h2b .eq. h1b) .and. (t_h3b .eq. h2b)) then
@@ -1276,7 +1275,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
@@ -1286,7 +1284,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
@@ -1296,7 +1293,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and.
      &          (t_h2b .eq. h1b) .and. (t_h3b .eq .h2b)) then
@@ -1307,7 +1303,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h3b) .and. (t_h3b .eq .h2b)) then
@@ -1317,7 +1312,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
      &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
@@ -1327,7 +1321,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
      &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h3b) .and.
      &          (t_h2b .eq. h1b) .and. (t_h3b .eq .h2b)) then
@@ -1337,7 +1330,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
                      end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
      &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h3b) .and. (t_h3b .eq .h2b)) then
@@ -1585,9 +1577,9 @@
      &               triplesx,t2sub,v2sub)
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d*h2d,h1d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
 !$acc parallel loop collapse(4)
       do p4=1,p4d
@@ -1611,10 +1603,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d,h1d,h2d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch,h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1641,11 +1633,11 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h1d,h3d*h2d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
-!      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
-      double precision :: scratch(h7d,h3d*h2d,p6d)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d,h2d,p6d,h7d)
+!      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, intent(in), managed :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1670,9 +1662,9 @@
       implicit none
 
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d*h2d,h1d,p5d,p4d,p6d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p5d,p4d,p6d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
 !$acc parallel loop collapse(4)
       do p6=1,p6d
@@ -1697,10 +1689,10 @@
       implicit none
 
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d,h1d,h2d,p5d,p4d,p6d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p5d,p4d,p6d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d,h2d,p6d,h7d)
+      double precision, intent(in), managed :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1728,10 +1720,10 @@
       implicit none
 
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h1d,h3d*h2d,p5d,p4d,p6d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d*h2d,p6d)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p5d,p4d,p6d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1755,9 +1747,9 @@
      &               triplesx,t2sub,v2sub)
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d*h2d,h1d,p5d,p6d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p5d,p6d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
 !$acc parallel loop collapse(4)
       do p4=1,p4d
@@ -1781,10 +1773,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d,h1d,h2d,p5d,p6d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p5d,p6d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1811,10 +1803,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h1d,h3d*h2d,p5d,p6d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d*h2d,p6d)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p5d,p6d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1839,10 +1831,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h3d,h2d,h1d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
 !$acc parallel loop collapse(4)
@@ -1869,10 +1861,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d*h1d,h3d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(h2d*h1d,p4d,p7d)
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
 !$acc parallel loop collapse(4)
@@ -1897,10 +1889,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d,h3d,h1d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
@@ -1927,10 +1919,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h3d,h2d,h1d,p6d,p4d,p5d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p6d,p4d,p5d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
 !$acc parallel loop collapse(4)
@@ -1957,10 +1949,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d*h1d,h3d,p6d,p4d,p5d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p6d,p4d,p5d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(h2d*h1d,p4d,p7d)
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
 !$acc parallel loop collapse(4)
@@ -1985,10 +1977,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d,h3d,h1d,p6d,p4d,p5d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p6d,p4d,p5d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
@@ -2015,10 +2007,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h3d,h2d,h1d,p4d,p6d,p5d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p4d,p6d,p5d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
@@ -2046,10 +2038,10 @@
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
-      double precision :: triplesx(h2d*h1d,h3d,p4d,p6d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p4d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(h2d*h1d,p4d,p7d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
 !$acc parallel loop collapse(4)
       do p5=1,p5d
@@ -2073,10 +2065,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d,h3d,h1d,p4d,p6d,p5d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p4d,p6d,p5d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
