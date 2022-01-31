@@ -1325,6 +1325,7 @@
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p5=1,p5d
       do p6=1,p6d
@@ -1409,6 +1410,7 @@
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
+!$acc parallel loop collapse(4)
       do p6=1,p6d
       do p4=1,p4d
       do p5=1,p5d
@@ -1493,6 +1495,7 @@
       double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
       double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
+!$acc parallel loop collapse(4)
       do p4=1,p4d
       do p6=1,p6d
       do p5=1,p5d
