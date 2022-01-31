@@ -16,7 +16,8 @@
       contains
 
       SUBROUTINE ccsd_t_6dts_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
-     &            d_v2,k_v2_offset,energy1,energy2,size_t1,xmem)
+     &                                d_v2,k_v2_offset,energy1,energy2,
+     &                                size_t1,xmem)
       use cudafor
       use cutensorex
       implicit none
@@ -75,10 +76,10 @@
 #else
       integer :: stream(3)
 #endif
-      integer :: nevals
-      double precision, allocatable :: evals(:)
       integer :: nxtask
       external nxtask
+      integer :: nevals
+      double precision, allocatable :: evals(:)
 
 #if CUTENSOR
       do p=1,3

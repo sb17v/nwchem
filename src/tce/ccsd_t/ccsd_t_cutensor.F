@@ -1,10 +1,25 @@
       module tce_ccsd_t_cutensor
 
+      use cutensorex
+      implicit none
+
+      type(cutensorHandle) :: cut_handle 
+      type(cutensorContractionFind) :: cut_find
+      type(cudaDataType), parameter :: cut_double = 
+     &                                 cudaDataType(CUDA_R_64F)
+      type(cutensorComputeType), parameter :: cut_compF64 = 
+     &                                        CUTENSOR_R_MIN_64F
+      integer, parameter :: nstream = 3
+      integer(kind=cuda_stream_kind) :: stream(3)
+
       contains
 
       subroutine ccsd_t_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
      &                           d_v2,k_v2_offset,energy1,energy2,
      &                           size_t1)
+      use cudafor
+      use cutensorex
+      use openacc
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
@@ -40,8 +55,31 @@
       integer :: pct_progr
       integer, parameter :: n_progr=20
       logical :: i_progr(n_progr)
+      integer(4) :: cuda_err
+      type(cutensorStatus) :: cut_status
       integer :: nxtask0
       external nxtask0
+
+      do k=1,nstream
+        cuda_err = cudaStreamCreate(stream(k))
+        if (cuda_err.ne.0) then
+          write(6,*) cudaGetErrorString(cuda_err)
+          call errquit('cudaStreamCreate',cuda_err,UNKNOWN_ERR)
+        endif
+        call acc_set_cuda_stream( k, stream(k) )
+      enddo
+      ! init the library
+      cut_status = cutensorInit(cut_handle)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInit',int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      ! init the find algorithm to default
+      cut_status = cutensorInitContractionFind(cut_handle,cut_find,
+     &                                         CUTENSOR_ALGO_DEFAULT)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionFind',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
 ! - T1/X1 LOCALIZATION ----------
       allocate(t1_local(1:size_t1), stat=alloc_error)
       if (alloc_error.ne.0) then
@@ -183,6 +221,13 @@
      &               alloc_error, MA_ERR)
       endif
 ! ---------------------------
+      do k=1,nstream
+        cuda_err = cudaStreamDestroy(stream(k))
+        if (cuda_err.ne.0) then
+          write(6,*) cudaGetErrorString(cuda_err)
+          call errquit('cudaStreamDestroy',cuda_err,UNKNOWN_ERR)
+        endif
+      end do
       end
 
       subroutine ccsd_t_dot_cutensor(a_singles, a_doubles,
@@ -536,7 +581,6 @@
       integer :: k_a, l_a, k_b, l_b
       integer :: a3(9,6)
       integer :: ia6,ja6
-      logical, parameter :: skipped = .false.
 
       a3(1,1)=t_p4b
       a3(1,2)=t_p5b
@@ -627,7 +671,6 @@
         h2b=a3(ia6,5)
         h3b=a3(ia6,6)
         if((p5b.le.p6b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
-        if (.not.skipped) then
         if ((.not.restricted).or.
      &       (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
      &        int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
@@ -644,8 +687,7 @@
      &         int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1) * 
      &         int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
         if (int_mb(k_spin+p4b-1).eq.int_mb(k_spin+h1b-1)) then
-        if (ieor(int_mb(k_sym+p4b-1),int_mb(k_sym+h1b-1))
-     &                 .eq.irrep_t) then
+        if (ieor(int_mb(k_sym+p4b-1),int_mb(k_sym+h1b-1)).eq.irrep_t) then
         CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
         CALL TCE_RESTRICTED_4(p5b,p6b,h2b,h3b,p5b_2,p6b_2,h2b_2,h3b_2)
         dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h1b-1)
@@ -681,7 +723,7 @@
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
      &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -689,7 +731,7 @@
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
      &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -697,7 +739,7 @@
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
      &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
-        call sd_t_s1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -705,7 +747,7 @@
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
      &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -713,7 +755,7 @@
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
      &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -721,7 +763,7 @@
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
      &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
-        call sd_t_s1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -729,7 +771,7 @@
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
      &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -737,7 +779,7 @@
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
      &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -745,7 +787,7 @@
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
      &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
-        call sd_t_s1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+        call cutensor_t_s1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -763,8 +805,6 @@
         end if
         end if
         end if
-        end if
-!       
         end if
       end do
       end
@@ -1317,6 +1357,230 @@
       end do ! ia6 loop
       end
 
+      subroutine cutensor_t_s1_1(h3d,h2d,h1d,p6d,p5d,p4d,triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h2d,h1d,p6d,p5d,p4d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p4=1,p4d
+      do p5=1,p5d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h2,h1,p6,p5,p4)=triplesx(h3,h2,h1,p6,p5,p4)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_2(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p6d,p5d,p4d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p4=1,p4d
+      do p5=1,p5d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d ! interchanging h1 and h2 was a huge win with Cray+OpenMP
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p6,p5,p4)=triplesx(h3,h1,h2,p6,p5,p4)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_3(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p6d,p5d,p4d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p4=1,p4d
+      do p5=1,p5d
+      do p6=1,p6d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p6,p5,p4)=triplesx(h1,h3,h2,p6,p5,p4)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_4(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h2d,h1d,p6d,p4d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p4=1,p4d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h2,h1,p6,p4,p5)=triplesx(h3,h2,h1,p6,p4,p5)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_5(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p6d,p4d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p4=1,p4d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p6,p4,p5)=triplesx(h3,h1,h2,p6,p4,p5)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_6(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p6d,p4d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p4=1,p4d
+      do p6=1,p6d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p6,p4,p5)=triplesx(h1,h3,h2,p6,p4,p5)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_7(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h2d,h1d,p4d,p6d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p6=1,p6d
+      do p4=1,p4d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h2,h1,p4,p6,p5)=triplesx(h3,h2,h1,p4,p6,p5)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_8(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p4d,p6d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p6=1,p6d
+      do p4=1,p4d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p4,p6,p5)=triplesx(h3,h1,h2,p4,p6,p5)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_9(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p4d,p6d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p6=1,p6d
+      do p4=1,p4d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p4,p6,p5)=triplesx(h1,h3,h2,p4,p6,p5)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
       subroutine cutensor_t_d1_1(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub)
       implicit none
