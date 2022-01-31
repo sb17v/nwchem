@@ -576,7 +576,7 @@
       integer :: h1b, h2b, h3b, p4b, p5b, p6b
       integer :: k_c_sort, l_c_sort
       integer :: h1b_1, h2b_2, h3b_2, p4b_1, p5b_2, p6b_2
-      integer :: dima, dimb, dimc, dima_sort, dimb_sort
+      integer :: dima, dimb, dima_sort, dimb_sort
       integer :: k_a_sort, l_a_sort, k_b_sort, l_b_sort
       integer :: k_a, l_a, k_b, l_b
       integer :: a3(9,6)
@@ -683,9 +683,6 @@
      &      ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
      &      ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) 
      &     .eq.ieor(irrep_v,irrep_t)) then
-        dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) * 
-     &         int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1) * 
-     &         int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
         if (int_mb(k_spin+p4b-1).eq.int_mb(k_spin+h1b-1)) then
         if (ieor(int_mb(k_sym+p4b-1),int_mb(k_sym+h1b-1)).eq.irrep_t) then
         CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
@@ -891,7 +888,7 @@
       integer :: p5b_2,p7b_1,h2b_1,p7b_2
       integer :: p4b_1, p5b_1, h1b_1, h7b_1
       integer :: p6b_2, h7b_2, h2b_2, h3b_2
-      integer :: dima, dimb, dimc, dima_sort, dimb_sort
+      integer :: dima, dimb, dima_sort, dimb_sort
       integer :: k_c_sort, l_c_sort
       integer :: k_a, l_a
       integer :: k_b, l_b
@@ -1008,9 +1005,6 @@
      &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
      &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1))))))
      &    .eq. ieor(irrep_v,irrep_t))) then
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
-     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
-     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
       range_h3b = int_mb(k_range+h3b-1)
       range_h2b = int_mb(k_range+h2b-1)
       range_h1b = int_mb(k_range+h1b-1)
@@ -1225,9 +1219,6 @@
      &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
      &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) 
      &    .eq. ieor(irrep_v,irrep_t))) then
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1)
-     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
-     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
       range_h3b = int_mb(k_range+h3b-1)
       range_h2b = int_mb(k_range+h2b-1)
       range_h1b = int_mb(k_range+h1b-1)
