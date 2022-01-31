@@ -955,38 +955,35 @@
       h2b=a3(ia6,5)
       h3b=a3(ia6,6)
       if(((p4b.le.p5b).and.(h2b.le.h3b).and.(p4b.ne.0)).and.
-     & ((.not.restricted).or.(int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1
-     &)+int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+i
-     &nt_mb(k_spin+h3b-1).ne.12)).and.
-     & (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+int_mb(k_spin+p6b-1)
-     & .eq. int_mb(k_spin+h1b-1)+int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-
-     &1)).and.
-     & (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),ieor(int_mb(
-     &k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),ieor(int_mb(k_sym+h2b-1),int
-     &_mb(k_sym+h3b-1)))))) .eq. ieor(irrep_v,irrep_t))) then
-
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) * int_mb(k_ra
-     &nge+p6b-1) * int_mb(k_range+h1b-1) * int_mb(k_range+h2b-1) * int_m
-     &b(k_range+h3b-1)
-!
+     &   ((.not.restricted).or.
+     &    (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
+     &     int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
+     &     int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1).ne.12))
+     &   .and.
+     &   (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
+     &    int_mb(k_spin+p6b-1) .eq. int_mb(k_spin+h1b-1)+
+     &    int_mb(k_spin+h2b-1)+int_mb(k_spin+h3b-1)).and.
+     &   (ieor(int_mb(k_sym+p4b-1),ieor(int_mb(k_sym+p5b-1),
+     &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
+     &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1))))))
+     &    .eq. ieor(irrep_v,irrep_t))) then
+      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
+     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
+     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
       range_h3b = int_mb(k_range+h3b-1)
       range_h2b = int_mb(k_range+h2b-1)
       range_h1b = int_mb(k_range+h1b-1)
       range_p6b = int_mb(k_range+p6b-1)
       range_p5b = int_mb(k_range+p5b-1)
       range_p4b = int_mb(k_range+p4b-1)
-
 !     prep. work
 !     figure out  cycles to work on
       n_h7b=0
       do h7b = 1,noab
-         if(tce_hashnsort(.true.,
-     &        d_a, d_b,
-     &        k_a_offset,k_b_offset,
-     &        p4b,p5b,h1b,h7b,
-     &        p6b,h2b,h3b,
-     &        t2sub,v2sub
-     &        )) then
+         if(tce_hashnsort(.true., d_a, d_b,
+     &                    k_a_offset,k_b_offset,
+     &                    p4b,p5b,h1b,h7b, p6b,h2b,h3b,
+     &                    t2sub,v2sub)) then
             n_h7b=n_h7b+1
          endif
       enddo
@@ -995,96 +992,94 @@
 
          do h7b_in=ga_nodeid()+1,ga_nodeid()+noab
             h7b=mod(h7b_in,noab)+1
-            if(tce_hashnsort(.false.,
-     &           d_a, d_b,
-     &           k_a_offset,k_b_offset,
-     &           p4b,p5b,h1b,h7b,
-     &           p6b,h2b,h3b,
-     &           t2sub,v2sub)) then
-            range_h7b = int_mb(k_range+h7b-1)
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d1_1(range_h3b,range_h2b,
-     &     range_h1b,range_p6b,
-     &     range_p5b,range_p4b,
-     &     range_h7b,
-     &     triplesx,t2sub,v2sub)
-      end if
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d1_2(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_h7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) then
-      call cutensor_t_d1_3(range_h3b,range_h2b,
-     &     range_h1b,range_p6b,
-     &     range_p5b,range_p4b,
-     &     range_h7b,
-     &     triplesx,t2sub,v2sub,scratch)
-       end if
-      if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d1_4(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_h7b,
-     &        triplesx,t2sub,v2sub)
-      end if
-      if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) then
-      call cutensor_t_d1_5(range_h3b,range_h2b,
-     &     range_h1b,range_p6b,
-     &     range_p5b,range_p4b,
-     &     range_h7b,
-     &     triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) then
-         call cutensor_t_d1_6(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_h7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d1_7(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_h7b,
-     &        triplesx,t2sub,v2sub)
-      end if
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d1_8(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_h7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
-     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &1b)) then
-         call cutensor_t_d1_9(range_h3b,range_h2b,
-     &     range_h1b,range_p6b,
-     &     range_p5b,range_p4b,
-     &     range_h7b,
-     &     triplesx,t2sub,v2sub,scratch)
-      end if
-      endif
-      end do !h7b loop
+            if(tce_hashnsort(.false., d_a, d_b,
+     &                       k_a_offset,k_b_offset,
+     &                       p4b,p5b,h1b,h7b,p6b,h2b,h3b,
+     &                       t2sub,v2sub)) then
+                range_h7b = int_mb(k_range+h7b-1)
+                if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
+     &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
+     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+                    call cutensor_t_d1_1(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub)
+                end if
+                if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
+     &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h2b) .and. 
+     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+                    call cutensor_t_d1_2(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub,scratch)
+                end if
+                if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and.
+     &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h2b) .and. 
+     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+                    call cutensor_t_d1_3(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub,scratch)
+                end if
+                if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
+     &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h1b) .and. 
+     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+                    call cutensor_t_d1_4(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub)
+                end if
+                if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
+     &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and.
+     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+                    call cutensor_t_d1_5(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub,scratch)
+                end if
+                if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
+     &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and. 
+     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+                    call cutensor_t_d1_6(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub,scratch)
+                end if
+                if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and.
+     &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h1b) .and. 
+     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+                    call cutensor_t_d1_7(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub)
+                end if
+                if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and.
+     &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and.
+     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+                    call cutensor_t_d1_8(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub,scratch)
+                end if
+                if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. 
+     &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and. 
+     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+                    call cutensor_t_d1_9(range_h3b,range_h2b,
+     &                                   range_h1b,range_p6b,
+     &                                   range_p5b,range_p4b,
+     &                                   range_h7b,
+     &                                   triplesx,t2sub,v2sub,scratch)
+                end if
+            endif ! hashnsort
+         end do !h7b loop
       endif ! n_h7b.ne.0
       end if
       end do !ia6 loop
@@ -1216,96 +1211,103 @@
 
       do p7b_in= ga_nodeid()+1,nvab+ga_nodeid()
          p7b=mod(p7b_in,nvab)+noab+1
-         if(tce_hashnsort_2(.false.,
-     &        d_a, d_b,
-     &        k_a_offset,k_b_offset,
-     &        p4b,p7b,h1b,h2b,
-     &        p5b,p6b,h3b,
-     &        t2sub,v2sub)) then
-
+         if(tce_hashnsort_2(.false., d_a, d_b,
+     &                      k_a_offset,k_b_offset,
+     &                      p4b,p7b,h1b,h2b,p5b,p6b,h3b,
+     &                      t2sub,v2sub)) then
             range_p7b = int_mb(k_range+p7b-1)
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d2_1(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &2b)) then
-         call cutensor_t_d2_2(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &2b)) then
-         call cutensor_t_d2_3(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub)
-      end if
-      if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d2_4(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &2b)) then
-
-         call cutensor_t_d2_5(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &2b)) then
-         call cutensor_t_d2_6(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
-     &3b)) then
-         call cutensor_t_d2_7(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub)
-      end if
-      if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
-     &2b)) then
-         call cutensor_t_d2_8(range_h3b,range_h2b,
-     &        range_h1b,range_p6b,
-     &        range_p5b,range_p4b,
-     &        range_p7b,
-     &        triplesx,t2sub,v2sub,scratch)
-      end if
-      if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
-     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
-     &2b)) then
-         call cutensor_t_d2_9(range_h3b,range_h2b,range_h1b,
-     &                        range_p6b,range_p5b,range_p4b,
-     &                        range_p7b,
-     &                        triplesx,t2sub,v2sub,scratch)
-      end if
-      endif
+            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+            if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
+     &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
+     &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
+                call cutensor_t_d2_1(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub,scratch)
+            end if
+            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
+            if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
+     &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and.
+     &          (t_h2b .eq. h1b) .and. (t_h3b .eq. h2b)) then
+                call cutensor_t_d2_2(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub,scratch)
+            end if
+            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
+            if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
+     &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
+     &          (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
+                call cutensor_t_d2_3(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub)
+            end if
+            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+            if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
+     &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
+     &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
+                call cutensor_t_d2_4(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub,scratch)
+            end if
+            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
+            if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
+     &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and.
+     &          (t_h2b .eq. h1b) .and. (t_h3b .eq .h2b)) then
+           
+                call cutensor_t_d2_5(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub,scratch)
+            end if
+            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
+            if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
+     &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
+     &          (t_h2b .eq. h3b) .and. (t_h3b .eq .h2b)) then
+                call cutensor_t_d2_6(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub,scratch)
+            end if
+            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+            if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
+     &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and.
+     &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
+                call cutensor_t_d2_7(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub)
+            end if
+            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
+            if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
+     &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h3b) .and.
+     &          (t_h2b .eq. h1b) .and. (t_h3b .eq .h2b)) then
+                call cutensor_t_d2_8(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub,scratch)
+                     end if
+            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
+            if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
+     &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and.
+     &          (t_h2b .eq. h3b) .and. (t_h3b .eq .h2b)) then
+                call cutensor_t_d2_9(range_h3b,range_h2b,
+     &                               range_h1b,range_p6b,
+     &                               range_p5b,range_p4b,
+     &                               range_p7b,
+     &                               triplesx,t2sub,v2sub,scratch)
+            end if
+         endif ! hashnsort
       end do ! p7b loop
 
       endif ! n_p7b.ne.0
