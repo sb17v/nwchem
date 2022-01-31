@@ -719,7 +719,7 @@
      &                        (p5b_2-1)))),h3b_2,h2b_2,p6b_2,p5b_2)
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
+     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b .eq. h3b)) then
         call cutensor_t_s1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -727,7 +727,7 @@
         
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b .eq. h3b)) then
         call cutensor_t_s1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -735,7 +735,7 @@
         
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b .eq. h1b)) then
         call cutensor_t_s1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -743,7 +743,7 @@
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
+     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b .eq. h3b)) then
         call cutensor_t_s1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -751,7 +751,7 @@
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b .eq. h3b)) then
         call cutensor_t_s1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -759,7 +759,7 @@
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b .eq. h1b)) then
         call cutensor_t_s1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -767,7 +767,7 @@
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
-     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
+     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b .eq. h3b)) then
         call cutensor_t_s1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -775,7 +775,7 @@
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b .eq. h3b)) then
         call cutensor_t_s1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -783,7 +783,7 @@
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b .eq. h1b)) then
         call cutensor_t_s1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
@@ -1025,6 +1025,10 @@
 
       if(n_h7b.gt.0) then
 
+      ! all d1 contractions use
+      ! t2sub(h7d,p4d,p5d,h1d)
+      ! v2sub(h3d,h2d,p6d,h7d)
+
          do h7b_in=ga_nodeid()+1,ga_nodeid()+noab
             h7b=mod(h7b_in,noab)+1
             if(tce_hashnsort(.false., d_a, d_b,
@@ -1032,9 +1036,12 @@
      &                       p4b,p5b,h1b,h7b,p6b,h2b,h3b,
      &                       t2sub,v2sub)) then
                 range_h7b = int_mb(k_range+h7b-1)
+
+
+
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
-     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_1(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1043,7 +1050,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h1b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_2(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1052,7 +1059,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and.
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+     &              (t_h2b .eq. h3b) .and. (t_h3b .eq. h1b)) then
                     call cutensor_t_d1_3(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1061,7 +1068,7 @@
                 end if
                 if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h1b) .and. 
-     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_4(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1070,7 +1077,7 @@
                 end if
                 if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and.
-     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h1b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_5(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1079,7 +1086,7 @@
                 end if
                 if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+     &              (t_h2b .eq. h3b) .and. (t_h3b .eq. h1b)) then
                     call cutensor_t_d1_6(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1088,7 +1095,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h1b) .and. 
-     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_7(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1097,7 +1104,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and.
-     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h1b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_8(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1106,7 +1113,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. 
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+     &              (t_h2b .eq. h3b) .and. (t_h3b .eq. h1b)) then
                     call cutensor_t_d1_9(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1241,6 +1248,10 @@
 
       if(n_p7b.ne.0) then
 
+      ! all d2 contractions use
+      ! t2sub(p7d,p4d,h1d,h2d)
+      ! v2sub(p7d,h3d,p6d,p5d)
+
       do p7b_in= ga_nodeid()+1,nvab+ga_nodeid()
          p7b=mod(p7b_in,nvab)+noab+1
          if(tce_hashnsort_2(.false., d_a, d_b,
@@ -1268,7 +1279,7 @@
             end if
             if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
-     &          (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
+     &          (t_h2b .eq. h3b) .and. (t_h3b .eq. h2b)) then
                 call cutensor_t_d2_3(range_h3b,range_h2b,
      &                               range_h1b,range_p6b,
      &                               range_p5b,range_p4b,
