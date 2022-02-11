@@ -9,8 +9,12 @@
      &                                 cudaDataType(CUDA_R_64F)
       type(cutensorComputeType), parameter :: cut_compF64 = 
      &                                        CUTENSOR_R_MIN_64F
-      integer, parameter :: nstream = 3
-      integer(kind=cuda_stream_kind) :: stream(3)
+      integer(kind=cuda_stream_kind) :: stream
+
+      ! because 2/4/6 are default integers, we need fixed-width versions
+      integer(4), parameter :: two = 2
+      integer(4), parameter :: four = 4
+      integer(4), parameter :: six = 6
 
       contains
 
@@ -60,14 +64,11 @@
       integer :: nxtask0
       external nxtask0
 
-      do k=1,nstream
-        cuda_err = cudaStreamCreate(stream(k))
-        if (cuda_err.ne.0) then
-          write(6,*) cudaGetErrorString(cuda_err)
-          call errquit('cudaStreamCreate',cuda_err,UNKNOWN_ERR)
-        endif
-        call acc_set_cuda_stream( k, stream(k) )
-      enddo
+      cuda_err = cudaStreamCreate(stream)
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamCreate',cuda_err,UNKNOWN_ERR)
+      endif
       ! init the library
       cut_status = cutensorInit(cut_handle)
       if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
@@ -221,13 +222,11 @@
      &               alloc_error, MA_ERR)
       endif
 ! ---------------------------
-      do k=1,nstream
-        cuda_err = cudaStreamDestroy(stream(k))
-        if (cuda_err.ne.0) then
-          write(6,*) cudaGetErrorString(cuda_err)
-          call errquit('cudaStreamDestroy',cuda_err,UNKNOWN_ERR)
-        endif
-      end do
+      cuda_err = cudaStreamDestroy(stream)
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamDestroy',cuda_err,UNKNOWN_ERR)
+      endif
       end
 
       subroutine ccsd_t_dot_cutensor(a_singles, a_doubles,
@@ -871,6 +870,9 @@
      &                                      t_h1b,t_h2b,t_h3b,
      &                                      v2sub,t2sub,scratch)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
+      use iso_c_binding
+      use cudafor
+      use cutensorex
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
@@ -903,6 +905,28 @@
       integer :: n_h7b
       integer :: n_p7b
       integer :: h7b_in,p7b_in
+
+      type(cutensorStatus) :: cut_status
+      type(cutensorDescriptor) :: dT2, dV2, dT3
+      type(cutensorContractionDescriptor) :: dX
+      type(cutensorContractionPlan) :: pX
+      double precision :: alpha
+      double precision, parameter :: beta = 1.0d0
+
+      integer(8), dimension(4) :: eT2 ! extent
+      integer(8), dimension(4) :: sT2 ! stride
+      integer(4), dimension(4) :: mT2 ! modes
+      integer(8), dimension(4) :: eV2 ! extent
+      integer(8), dimension(4) :: sV2 ! stride
+      integer(4), dimension(4) :: mV2 ! modes
+      integer(8), dimension(6) :: eT3
+      integer(4), dimension(6) :: mT3
+      integer(4) :: aT2, aV2, aT3
+
+      integer :: alloc_error
+      integer(4) :: cuda_err
+      integer(8) :: workspaceSize
+      type(c_devptr) :: workspace
 
       a3(1,1)=t_p4b
       a3(1,2)=t_p5b
@@ -1037,16 +1061,138 @@
      &                       t2sub,v2sub)) then
                 range_h7b = int_mb(k_range+h7b-1)
 
-
-
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &              (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) then
-                    call cutensor_t_d1_1(range_h3b,range_h2b,
-     &                                   range_h1b,range_p6b,
-     &                                   range_p5b,range_p4b,
-     &                                   range_h7b,
-     &                                   triplesx,t2sub,v2sub)
+
+      ! t2sub(h7d,p4d,p5d,h1d)
+      eT2 = [range_h7b,range_p4b,range_p5b,range_h1b]
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dT2,
+     &                               four,eT2,c_null_ptr,
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor T2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                        t2sub, dT2, aT2)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement T2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      ! v2sub(h3d,h2d,p6d,h7d)
+      eV2 = [range_h3b,range_h2b,range_p6b,range_h7b] ! 3267
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dV2,
+     &                               four,eV2,c_null_ptr,
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor V2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                        v2sub, dV2, aV2)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement V2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      ! no stride here
+      eT3 = [range_h3b,range_h2b,range_h1b,range_p6b,range_p5b,range_p4b] ! 321654
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dT3,
+     &                               six,eT3,c_null_ptr,
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor T3',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                                 triplesx, dT3, aT3)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement T3',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      mT2 = [7,4,5,1]
+      mV2 = [3,2,6,7]
+      mT3 = [3,2,1,6,5,4]
+      cut_status = cutensorInitContractionDescriptor(cut_handle,dX,
+     &                         dT2,mT2,aT2, dV2,mV2,aV2,
+     &                         dT3,mT3,aT3, dT3,mT3,aT3, cut_compF64)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionDescriptor D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      workspaceSize = 0
+      cut_status = cutensorContractionGetWorkspace(cut_handle,
+     &                                dX, cut_find,
+     &                                CUTENSOR_WORKSPACE_RECOMMENDED,
+     &                                workspaceSize)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorContractionGetWorkspace D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+#if ASYNC
+      alloc_error = cudaMallocAsync(workspace, workspaceSize, stream)
+      if (alloc_error.ne.0) then
+        call errquit('cudaMallocAsync D1_1',alloc_error,MA_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#else
+      alloc_error = cudaMalloc(workspace, workspaceSize)
+      if (alloc_error.ne.0) then
+        call errquit('cudaMalloc D1_1',alloc_error,MA_ERR)
+      endif
+#endif
+      cut_status = cutensorInitContractionPlan(cut_handle, pX, dX,
+     &                         cut_find, workspaceSize)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionPlan D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      alpha = -1.0d0
+      cut_status = cutensorContraction(cut_handle, pX,
+     &                     alpha, t2sub, v2sub,
+     &                     beta, triplesx, triplesx,
+     &                     workspace, workspaceSize, stream)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorContraction D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#if ASYNC
+      alloc_error = cudaFreeAsync(workspace, stream)
+      if (alloc_error.ne.0) then
+        call errquit('cudaFreeAsync workspace D1_1',
+     &               alloc_error,MA_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#else
+      alloc_error = cudaFree(workspace)
+      if (alloc_error.ne.0) then
+        call errquit('cudaFree workspace D1_1',alloc_error,MA_ERR)
+      endif
+#endif
+!                    call cutensor_t_d1_1(range_h3b,range_h2b,
+!     &                                   range_h1b,range_p6b,
+!     &                                   range_p5b,range_p4b,
+!     &                                   range_h7b,
+!     &                                   triplesx,t2sub,v2sub)
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h2b) .and. 
