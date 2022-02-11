@@ -12,7 +12,6 @@ SUBDIRS = md5
 EXTRA_OBJ =    $(OBJDIR)\util_v_stub.obj
 
 BLAS =         $(OBJDIR)\dfill.obj \
-               $(OBJDIR)\zfill.obj \
                $(OBJDIR)\ifill.obj \
                $(OBJDIR)\mabyte_fill.obj
 

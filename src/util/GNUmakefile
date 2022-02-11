@@ -169,7 +169,7 @@ ifeq ($(_USE_ELPA),Y)
  LIB_DEFINES += -DUSE_ELPA
 endif
 
-       BLAS = dfill.o ifill.o  mabyte_fill.o zfill.o
+       BLAS = dfill.o ifill.o  mabyte_fill.o
 
    LIB_TARGETS = testsolve testecce
 
