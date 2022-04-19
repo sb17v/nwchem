@@ -109,7 +109,7 @@
       double precision :: tt0, tt1, tc0, tc1
       integer(INT32) :: shi
       type(cublasHandle) :: handle(8)
-      integer(kind=cuda_stream_kind) :: stream(8)
+      integer(kind=cuda_stream_kind) :: stream(10)
       integer(INT32) :: nv4, no4 ! cublasDgemm requires 32-bit integers
       integer(INT32), parameter :: cu_op_n = CUBLAS_OP_N
       integer(INT32), parameter :: cu_op_t = CUBLAS_OP_T
@@ -125,13 +125,18 @@
 !
       tt0 = util_wallsec()
       ! setup CUDA streams
-      do shi=1,8
+      do shi=1,size(stream)
         err = cudaStreamCreate(stream(shi))
         if (err.ne.0) call errquit('cudaStreamCreate',err,UNKNOWN_ERR)
+      end do
+      do shi=1,size(handle)
         err = cublasCreate(handle(shi))
         if (err.ne.0) call errquit('cublasCreate',err,UNKNOWN_ERR)
         err = cublasSetStream(handle(shi), stream(shi))
         if (err.ne.0) call errquit('cublasSetStream',err,UNKNOWN_ERR)
+      end do
+      do shi=size(handle)+1,size(stream)
+        call acc_set_cuda_stream(shi,stream(shi))
       end do
 !
 ! device-only temp arrays
@@ -321,15 +326,15 @@
                      !t1v2(:) = t1((i-1)*nvir+1:i*nvir)
                      !dintc1(:) = Dja(1+(i-1)*nvir:i*nvir)
                      !dintx1(:) = Djia(1:nvir)
-                     err = cudaMemcpy(t1v2,t1((i-1)*nvir+1),nvir)
+                     err = cudaMemcpyAsync(t1v2,t1((i-1)*nvir+1),nvir,stream(10))
                      if (err.ne.0) then
                        call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
                      endif
-                     err = cudaMemcpy(dintc1,Dja(1+(i-1)*nvir),nvir)
+                     err = cudaMemcpyAsync(dintc1,Dja(1+(i-1)*nvir),nvir,stream(9))
                      if (err.ne.0) then
                        call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
                      endif
-                     err = cudaMemcpy(dintx1,Djia,nvir)
+                     err = cudaMemcpyAsync(dintx1,Djia,nvir,stream(9))
                      if (err.ne.0) then
                        call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
                      endif
@@ -362,15 +367,15 @@
                         !t1v1(:) = t1((k-1)*nvir+1:k*nvir)
                         !dintc2(:) = Dja(1+(k-1)*nvir:k*nvir)
                         !dintx2(:) = Djka(1+(k-klo)*nvir:(k-klo+1)*nvir)
-                        err = cudaMemcpy(t1v1,t1((k-1)*nvir+1),nvir)
+                        err = cudaMemcpyAsync(t1v1,t1((k-1)*nvir+1),nvir,stream(9))
                         if (err.ne.0) then
                           call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
                         endif
-                        err = cudaMemcpy(dintc2,Dja(1+(k-1)*nvir),nvir)
+                        err = cudaMemcpyAsync(dintc2,Dja(1+(k-1)*nvir),nvir,stream(10))
                         if (err.ne.0) then
                           call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
                         endif
-                        err = cudaMemcpy(dintx2,Djka(1+(k-klo)*nvir),nvir)
+                        err = cudaMemcpyAsync(dintx2,Djka(1+(k-klo)*nvir),nvir,stream(10))
                         if (err.ne.0) then
                           call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
                         endif
@@ -860,9 +865,11 @@
 !
 ! CUDA stuff
 !
-      do shi=1,8
+      do shi=1,size(handle)
         err = cublasDestroy(handle(shi))
         if (err.ne.0) call errquit('cublasDestroy',err,UNKNOWN_ERR)
+      end do
+      do shi=1,size(stream)
         err = cudaStreamDestroy(stream(shi))
         if (err.ne.0) call errquit('cudaStreamDestroy',err,UNKNOWN_ERR)
       end do
