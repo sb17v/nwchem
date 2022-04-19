@@ -76,7 +76,7 @@ c A1
             call dfill(nbf*nbf,0.0d00,scra,1)
             call ga_get(g_nexch,ad2+1,ad2+nocc,ad1+1,ad1+nocc,
      &                  scrb,nocc)
-            call daxpy(nocc*nocc,0.5d00,scrb,1,scra,1)
+            call yaxpy(nocc*nocc,0.5d00,scrb,1,scra,1)
             ad1=(i-1)*nocc+j
             call ga_get(g_x,1,nbf*nbf,ad1,ad1,scrb,nbf*nbf)
             ad1=0

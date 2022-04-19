@@ -49,7 +49,7 @@ C
 C
 C        Form t(i,a) * t(j,b)
 C
-            Call dgemm('T', 'N', NVir, NVir, 1,
+            Call ygemm('T', 'N', NVir, NVir, 1,
      $           1.0d0, T1(I, 1), LDT1, T1(J, 1), LDT1,
      $           0.0d0, Dbl_MB(i_Scr1), NVir)
             Call GA_Acc(g_Tau, (I-1)*NVir+1, I*NVir,

@@ -68,7 +68,7 @@
 #endif
 !$omp do schedule(guided)
       do ii=1,nocc
-        call dgemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
+        call ygemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
      &             snsi(1,1,1,ii),nbf,0.0d0,bufa(1,tid),nact)
         ! matrix transpose
         do jj=1,nocc
@@ -81,7 +81,7 @@
 !$omp critical
         call ga_put(g_x,ad1+1,ad1+nfik,ad2+1,ad2+nocc,bufb(1,tid),nfik)
 !$omp end critical
-        call dgemm('n','n',nact*nfi,nocc,nfk,1.0d0,bufa(1,tid),nact*nfi,
+        call ygemm('n','n',nact*nfi,nocc,nfk,1.0d0,bufa(1,tid),nact*nfi,
      &               cmo(klo,ncor+1),nbf,0.0d0,bufb(1,tid),nact*nfi)
         ad1=(ilo-1)*nact
         ad2=(ii-1)*nocc
@@ -98,7 +98,7 @@
 #endif
 !$omp end critical
         if (ilo.ne.klo)then
-          call dgemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
+          call ygemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
      &               sisn(1,1,1,ii),nbf,0.0d0,bufa(1,tid),nact)
           ! matrix transpose
           do jj=1,nocc
@@ -112,7 +112,7 @@
           call ga_put(g_x,ad1+1,ad1+nfik,ad2+1,ad2+nocc,
      &                bufb(1,tid),nfik)
 !$omp end critical
-          call dgemm('n','n',nact*nfk,nocc,nfi,1.0d0,bufa(1,tid),
+          call ygemm('n','n',nact*nfk,nocc,nfi,1.0d0,bufa(1,tid),
      &               nact*nfk,cmo(ilo,ncor+1),nbf,0.0d0,bufb(1,tid),
      &               nact*nfk)
           ad1=(klo-1)*nact
@@ -167,7 +167,7 @@
       endif
       nfik=nfi*nfk
       do ii=1,nocc
-        call dgemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
+        call ygemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
      &             snsi(1,1,1,ii),nbf,0.0d0,scra,nact)
         ! matrix transpose
         do jj=1,nocc
@@ -178,7 +178,7 @@
         ad1=offki
         ad2=(ii-1)*nocc
         call ga_put(g_x,ad1+1,ad1+nfik,ad2+1,ad2+nocc,scrb,nfik)
-        call dgemm('n','n',nact*nfi,nocc,nfk,1.0d0,scra,nact*nfi,
+        call ygemm('n','n',nact*nfi,nocc,nfk,1.0d0,scra,nact*nfi,
      &               cmo(klo,ncor+1),nbf,0.0d0,scrb,nact*nfi)
         ad1=(ilo-1)*nact
         ad2=(ii-1)*nocc
@@ -190,7 +190,7 @@
      &              nact*nfi,1.0d0)
 #endif
         if (ilo.ne.klo)then
-          call dgemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
+          call ygemm('t','n',nact,nfik,nbf,1.0d0,cmo(1,ncor+1),nbf,
      &               sisn(1,1,1,ii),nbf,0.0d0,scra,nact)
           ! matrix transpose
           do jj=1,nocc
@@ -201,7 +201,7 @@
           ad1=offik
           ad2=(ii-1)*nocc
           call ga_put(g_x,ad1+1,ad1+nfik,ad2+1,ad2+nocc,scrb,nfik)
-          call dgemm('n','n',nact*nfk,nocc,nfi,1.0d0,scra,nact*nfk,
+          call ygemm('n','n',nact*nfk,nocc,nfi,1.0d0,scra,nact*nfk,
      &                 cmo(ilo,ncor+1),nbf,0.0d0,scrb,nact*nfk)
           ad1=(klo-1)*nact
           ad2=(ii-1)*nocc

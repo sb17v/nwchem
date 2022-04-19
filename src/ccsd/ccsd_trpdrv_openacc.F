@@ -109,7 +109,7 @@
       double precision :: tt0, tt1, tc0, tc1
       integer(INT32) :: shi
       type(cublasHandle) :: handle(8)
-      integer(kind=cuda_stream_kind) :: stream(8)
+      integer(kind=cuda_stream_kind) :: stream(10)
       integer(INT32) :: nv4, no4 ! cublasDgemm requires 32-bit integers
       integer(INT32), parameter :: cu_op_n = CUBLAS_OP_N
       integer(INT32), parameter :: cu_op_t = CUBLAS_OP_T
@@ -125,17 +125,22 @@
 !
       tt0 = util_wallsec()
       ! setup CUDA streams
-      do shi=1,8
+      do shi=1,size(stream)
         err = cudaStreamCreate(stream(shi))
         if (err.ne.0) call errquit('cudaStreamCreate',err,UNKNOWN_ERR)
+      end do
+      do shi=1,size(handle)
         err = cublasCreate(handle(shi))
         if (err.ne.0) call errquit('cublasCreate',err,UNKNOWN_ERR)
         err = cublasSetStream(handle(shi), stream(shi))
         if (err.ne.0) call errquit('cublasSetStream',err,UNKNOWN_ERR)
       end do
+      do shi=size(handle)+1,size(stream)
+        call acc_set_cuda_stream(shi,stream(shi))
+      end do
 !
 ! device-only temp arrays
-! produced by DGEMM, consumed by TENGY
+! produced by YGEMM, consumed by TENGY
 !
       allocate( f1n(1:nvir,1:nvir), f1t(1:nvir,1:nvir),
      &          f2n(1:nvir,1:nvir), f2t(1:nvir,1:nvir),
@@ -158,7 +163,7 @@
      &          t1v1(1:nvir), t1v2(1:nvir), stat=alloc_error)
       if (alloc_error.ne.0) call errquit('CXT1 temps',6,MA_ERR)
 !
-! H/D arrays, produced by GA Get, consumed by DGEMM
+! H/D arrays, produced by GA Get, consumed by YGEMM
 !
       allocate( Tij(1:lnvv),      Tkj(1:kchunk*lnvv),
      &          Tia(1:lnov*nocc), Tka(1:kchunk*lnov),
@@ -197,7 +202,17 @@
           i_progr(klo)=.true.
        enddo
       inode=-1
+      if (occsdps) then
+         call pstat_on(ps_gasync)
+      else
+         call qenter('gasync',0)
+      endif
       next=nxtask(nodes, 1)
+      if (occsdps) then
+         call pstat_off(ps_gasync)
+      else
+         call qexit('gasync',0)
+      endif
       do klo = 1, nocc, kchunk
          akold=0
          khi = min(nocc, klo+kchunk-1)
@@ -207,6 +222,11 @@
                inode=inode+1
                if (inode.eq.next)then
 
+                  if (occsdps) then
+                     call pstat_on(ps_nbget)
+                  else
+                     call qenter('nbget',0)
+                  endif
                   call ga_nbget(g_objv,1+(j-1)*lnov,j*lnov,av,av,Dja,
      &                          lnov,nbh_objv1)
                   do k = klo, khi
@@ -222,7 +242,17 @@
                   call ga_nbget(g_objo,lnovv+lnoov+(klo-1)*lnov+1,
      &                          lnovv+lnoov+khi*lnov,j,j,Kkj,
      &                          (khi-klo+1)*lnov,nbh_objo3)
+                  if (occsdps) then
+                     call pstat_off(ps_nbget)
+                  else
+                     call qexit('nbget',0)
+                  endif
                   if (akold .ne. a) then
+                     if (occsdps) then
+                        call pstat_on(ps_nbget)
+                     else
+                        call qenter('nbget',0)
+                     endif
                      akold = a
                      call ga_nbget(g_coul,1,lnvv,(a-oseg_lo)*nocc+klo,
      &                    (a-oseg_lo)*nocc+khi,Jka,lnvv,nbh_coul1)
@@ -234,6 +264,11 @@
                      call ga_nbget(g_objv,1+2*lnoov+(klo-1)*lnov,
      &                    2*lnoov+khi*lnov,av,av,Xka,(khi-klo+1)*lnov,
      &                    nbh_objv3)
+                     if (occsdps) then
+                        call pstat_off(ps_nbget)
+                     else
+                        call qexit('nbget',0)
+                     endif
                      got_ak=.true.
                   else
                      got_ak=.false.
@@ -246,6 +281,11 @@
 
                   do i=1,nocc
 
+                     if (occsdps) then
+                        call pstat_on(ps_nbget)
+                     else
+                        call qenter('nbget',0)
+                     endif
                      call ga_nbget(g_objv,1+(j-1)*nvir+(i-1)*lnov,
      &                    j*nvir+(i-1)*lnov,av,av,Djia,nvir,nbh_objv5)
                      call ga_nbget(g_objo,(i-1)*lnvv+1,i*lnvv,j,j,Tij,
@@ -262,27 +302,63 @@
      &                    lnoov+i*lnov,av,av,Tia,lnov,nbh_objv6)
                      call ga_nbget(g_objv,1+2*lnoov+(i-1)*lnov,
      &                    2*lnoov+i*lnov,av,av,Xia,lnov,nbh_objv7)
-
                      if (occsdps) then
+                        call pstat_off(ps_nbget)
                         call pstat_on(ps_accwait)
                      else
+                        call qexit('nbget',0)
                         call qenter('accwait',0)
                      endif
-!$acc wait(9)
-!$acc wait(10)
+                     do shi=9,10
+                      err = cudaStreamSynchronize(stream(shi))
+                      if (err.ne.0) then
+                       call errquit('cudaStreamSync',err,UNKNOWN_ERR)
+                      endif
+                     enddo
                      if (occsdps) then
                         call pstat_off(ps_accwait)
+                        call pstat_on(ps_nbget)
                      else
                         call qexit('accwait',0)
+                        call qenter('nbget',0)
                      endif
-
-                     t1v2(:) = t1((i-1)*nvir+1:i*nvir)
                      if(i.eq.1) then
                         call ga_nbwait(nbh_objv1) ! Dja
                      endif
-                     dintc1(:) = Dja(1+(i-1)*nvir:i*nvir)
                      call ga_nbwait(nbh_objv5) ! Djia
-                     dintx1(:) = Djia(1:nvir)
+                     if (occsdps) then
+                        call pstat_off(ps_nbget)
+                        call pstat_on(ps_gpumove)
+                     else
+                        call qexit('nbget',0)
+                        call qenter('gpumove',0)
+                     endif
+                     t1v2(:) = t1((i-1)*nvir+1:i*nvir)    ! 10
+                     !err = cudaMemcpyAsync(t1v2,t1((i-1)*nvir+1),nvir,stream(10))
+                     !if (err.ne.0) then
+                     !  call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                     !endif
+                     dintc1(:) = Dja(1+(i-1)*nvir:i*nvir) !  9
+                     !err = cudaMemcpyAsync(dintc1,Dja(1+(i-1)*nvir),nvir,stream(9))
+                     !if (err.ne.0) then
+                     !  call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                     !endif
+                     dintx1(:) = Djia(1:nvir)             !  9
+                     !err = cudaMemcpyAsync(dintx1,Djia,nvir,stream(9))
+                     !if (err.ne.0) then
+                     !  call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                     !endif
+                     do shi=9,10
+                      err = cudaStreamSynchronize(stream(shi))
+                      if (err.ne.0) then
+                       call errquit('cudaStreamSync',err,UNKNOWN_ERR)
+                      endif
+                     enddo
+                     if (occsdps) then
+                        call pstat_off(ps_gpumove)
+                     else
+                        call qexit('gpumove',0)
+                     endif
 
                      do k=klo,min(khi,i)
                         if (occsdps) then
@@ -290,22 +366,57 @@
                         else
                            call qenter('accwait',0)
                         endif
-!$acc wait(9)           
-!$acc wait(10)          
+                        do shi=9,10
+                         err = cudaStreamSynchronize(stream(shi))
+                         if (err.ne.0) then
+                          call errquit('cudaStreamSync',err,UNKNOWN_ERR)
+                         endif
+                        enddo
                         if (occsdps) then
                            call pstat_off(ps_accwait)
+                           call pstat_on(ps_nbget)
                         else
                            call qexit('accwait',0)
+                           call qenter('nbget',0)
                         endif
-
-                        t1v1(:) = t1((k-1)*nvir+1:k*nvir)
-                        dintc2(:) = Dja(1+(k-1)*nvir:k*nvir)
                         if(i.eq.1) then
                            call ga_nbwait(nbh_objv4(k)) ! Djka
                         endif
+                        if (occsdps) then
+                           call pstat_off(ps_nbget)
+                           call pstat_on(ps_gpumove)
+                        else
+                           call qexit('nbget',0)
+                           call qenter('gpumove',0)
+                        endif
+                        t1v1(:) = t1((k-1)*nvir+1:k*nvir)    !  9
+                        !err = cudaMemcpyAsync(t1v1,t1((k-1)*nvir+1),nvir,stream(9))
+                        !if (err.ne.0) then
+                        !  call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                        !endif
+                        dintc2(:) = Dja(1+(k-1)*nvir:k*nvir) ! 10
+                        !err = cudaMemcpyAsync(dintc2,Dja(1+(k-1)*nvir),nvir,stream(10))
+                        !if (err.ne.0) then
+                        !  call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                        !endif
                         dintx2(:) = Djka(1+(k-klo)*nvir:(k-klo+1)*nvir)
+                        !err = cudaMemcpyAsync(dintx2,Djka(1+(k-klo)*nvir),nvir,stream(10))
+                        !if (err.ne.0) then
+                        !  call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                        !endif
+                        do shi=9,10
+                         err = cudaStreamSynchronize(stream(shi))
+                         if (err.ne.0) then
+                          call errquit('cudaStreamSync',err,UNKNOWN_ERR)
+                         endif
+                        enddo
+                        if (occsdps) then
+                           call pstat_off(ps_gpumove)
+                        else
+                           call qexit('gpumove',0)
+                        endif
 !
-!  These are the input dependencies for the DGEMM calls below.
+!  These are the input dependencies for the YGEMM calls below.
 !  We wait on all of them here because GA is not even remotely thread-safe.
 !  All of these are independent of k, so we wait on them only
 !  at the first trip of the loop.
@@ -422,27 +533,27 @@
 
                         if (occsdps) then
                            call pstat_on(ps_doxxx)
+                           call pstat_on(ps_accwait)
                         else
                            call qenter('doxxx',0)
+                           call qenter('accwait',0)
+                        endif
+                        do shi=9,10
+                         err = cudaStreamSynchronize(stream(shi))
+                         if (err.ne.0) then
+                          call errquit('cudaStreamSync',err,UNKNOWN_ERR)
+                         endif
+                        enddo
+                        if (occsdps) then
+                           call pstat_off(ps_accwait)
+                        else
+                           call qexit('accwait',0)
                         endif
 
                         tc0 = util_wallsec()
 
                         nv4 = nvir ! no possibility of overflow
                         no4 = nocc
-
-                        if (occsdps) then
-                           call pstat_on(ps_accwait)
-                        else
-                           call qenter('accwait',0)
-                        endif
-!$acc wait(9)           
-!$acc wait(10)          
-                        if (occsdps) then
-                           call pstat_off(ps_accwait)
-                        else
-                           call qexit('accwait',0)
-                        endif
 
                         err = cublasDgemm_v2(handle(1),
      &                        cu_op_n,cu_op_t,
@@ -594,7 +705,7 @@
                           call errquit('cudaDeviceSync',err,UNKNOWN_ERR)
                         endif
 
-                        ! 8 pairs of DGEMM w/ VVV and VVO cost, 2 for FMA
+                        ! 8 pairs of YGEMM w/ VVV and VVO cost, 2 for FMA
                         dgemm_flops = 8*nvir*nvir*(nocc+nvir)*2
                         agg_flops = agg_flops + dgemm_flops
 
@@ -694,8 +805,12 @@
                   else
                      call qenter('accwait',0)
                   endif
-!$acc wait(9)     
-!$acc wait(10)    
+                  do shi=9,10
+                   err = cudaStreamSynchronize(stream(shi))
+                   if (err.ne.0) then
+                    call errquit('cudaStreamSync',err,UNKNOWN_ERR)
+                   endif
+                  enddo
                   if (occsdps) then
                      call pstat_off(ps_accwait)
                   else
@@ -710,7 +825,17 @@
                      write(6,1234)me,a,j,emp4,emp5
  1234                format(' me aijk',3i5,2e15.5)
                   end if
+                  if (occsdps) then
+                     call pstat_on(ps_gasync)
+                  else
+                     call qenter('gasync',0)
+                  endif
                   next=nxtask(nodes, 1)
+                  if (occsdps) then
+                     call pstat_off(ps_gasync)
+                  else
+                     call qexit('gasync',0)
+                  endif
             if(me.eq.0) then
                pct_progr=(a-(ncor+nocc)+((klo-1)/kchunk)*nvir)*n_progr/
      &                   ((nocc/kchunk)*nvir)+1
@@ -732,10 +857,20 @@
             end do
          end do
       end do
+      if (occsdps) then
+         call pstat_on(ps_gasync)
+      else
+         call qenter('gasync',0)
+      endif
       call ga_sync()
       next=nxtask(-nodes, 1)
-      tt1=util_wallsec()
       call ga_dgop(msg_cc_diis1,agg_flops,1, '+')
+      if (occsdps) then
+         call pstat_off(ps_gasync)
+      else
+         call qexit('gasync',0)
+      endif
+      tt1=util_wallsec()
       if(me.eq.0) then
          write(6,4322) ' ccsd(t): 100% done, Aggregate Gflops=',
      &        1e-9*agg_flops/(tt1-tt0),' in ',(tt1-tt0),' secs'
@@ -769,9 +904,11 @@
 !
 ! CUDA stuff
 !
-      do shi=1,8
+      do shi=1,size(handle)
         err = cublasDestroy(handle(shi))
         if (err.ne.0) call errquit('cublasDestroy',err,UNKNOWN_ERR)
+      end do
+      do shi=1,size(stream)
         err = cudaStreamDestroy(stream(shi))
         if (err.ne.0) call errquit('cudaStreamDestroy',err,UNKNOWN_ERR)
       end do

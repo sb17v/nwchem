@@ -221,7 +221,7 @@
             call ga_get(g_sht2,1,nact*nact,ij,ij,
      &                  bufe(1,tid),nact*nact)
 !$omp end critical
-            !call dscal(nact*nact,2.0d0,bufe(1,tid),1)
+            !call yscal(nact*nact,2.0d0,bufe(1,tid),1)
             do k=1,nact*nact
                 bufe(k,tid) = bufe(k,tid) * 2.0d0
             enddo
@@ -456,10 +456,10 @@
 !-----------------------------------------------------------------------
             if (dob(2).eq.2)then
             ad1=nocc+1
-            call dgemm('n','n',nvir,nvir,nocc,1.0d0,bufb(ad1,tid),
+            call ygemm('n','n',nvir,nvir,nocc,1.0d0,bufb(ad1,tid),
      &                 nact,t1,nocc,0.0d0,bufa(1,tid),nvir)
             ad1=nocc*nact+1
-            call dgemm('t','n',nvir,nvir,nocc,1.0d0,t1,nocc,
+            call ygemm('t','n',nvir,nvir,nocc,1.0d0,t1,nocc,
      &                 bufb(ad1,tid),nact,1.0d0,bufa(1,tid),nvir)
             ad1=(i-1)*nvir
             ad2=(j-1)*nvir
@@ -587,7 +587,7 @@
             call ga_get(g_nt2,ad2+1,ad2+nvir,ad1+1,ad1+nvir,
      &                  bufe(1,tid),nvir)
 !$omp end critical
-            call dgemm('n','n',nvir,nvir,nvir,1.0d0,gabe,
+            call ygemm('n','n',nvir,nvir,nvir,1.0d0,gabe,
      &                 nvir,bufe(1,tid),nvir,0.0d0,bufd(1,1,tid),nvir)
 !$omp critical
             call ga_acc(g_nht2,ad2+1,ad2+nvir,ad1+1,ad1+nvir,
@@ -617,7 +617,7 @@
             call ga_get(g_nt2,1,lnov,ad1,ad1,
      &                  bufe(1,tid),lnov)
 !$omp end critical
-            call dgemm('n','n',nvir,nocc,nocc,-1.0d0,bufe(1,tid),
+            call ygemm('n','n',nvir,nocc,nocc,-1.0d0,bufe(1,tid),
      &                 nvir,giu,nocc,0.0d0,buff(1,tid),nvir)
 !$omp critical
             call ga_acc(g_nht2,1,lnov,ad1,ad1,buff(1,tid),lnov,1.0d0)
@@ -680,7 +680,7 @@
             call ga_get(g_nexch,ad2+1,ad2+nact,ad1+1,ad1+nact,
      &                  bufd(1,1,tid),nact)
 !$omp end critical
-            call dgemm('n','n',nvir,nvir,nocc,-1.0d0,bufd(nocc+1,1,tid),
+            call ygemm('n','n',nvir,nvir,nocc,-1.0d0,bufd(nocc+1,1,tid),
      &                 nact,t1,nocc,0.0d0,bufc(nocc+1,nocc+1,tid),nact)
             do k=1,nact
               do l=1,nact
@@ -707,7 +707,7 @@
             call ga_get(g_ncoul,ad2+1,ad2+nact,ad1+1,ad1+nact,
      &                  bufd(1,1,tid),nact)
 !$omp end critical
-            call dgemm('n','n',nvir,nvir,nocc,-1.0d0,bufd(nocc+1,1,tid),
+            call ygemm('n','n',nvir,nvir,nocc,-1.0d0,bufd(nocc+1,1,tid),
      &                 nact,t1,nocc,0.0d0,bufc(nocc+1,nocc+1,tid),nact)
             do k=1,nact
               do l=1,nact
@@ -1052,13 +1052,13 @@
             enddo
           enddo
 #else
-          ! DGEMM: A * B^T
+          ! YGEMM: A * B^T
           ! alpha = 1.0d0
           ! A = t1
           ! B = habe
           ! beta = 1.0d0
           ! C = ht1
-          call dgemm('n','t',nocc,nvir,nvir,
+          call ygemm('n','t',nocc,nvir,nvir,
      &               1.0d0,t1,nocc,habe,nvir,
      &               1.0d0,ht1,nocc)
 #endif
@@ -1074,13 +1074,13 @@
             enddo
           enddo
 #else
-          ! DGEMM: A^T * B
+          ! YGEMM: A^T * B
           ! alpha = -1.0d0
           ! A = hiu
           ! B = t1
           ! beta = 1.0d0
           ! C = ht1
-          call dgemm('t','n',nocc,nvir,nocc,
+          call ygemm('t','n',nocc,nvir,nocc,
      &               -1.0d0,hiu,nocc,t1,nocc,
      &               1.0d0,ht1,nocc)
 #endif

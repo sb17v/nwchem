@@ -45,6 +45,10 @@ c
      $     ps_gpumove)) call errquit('ccsd: ccsd_pstat_init', 0,0)
       if (.not. pstat_allocate('ccsd:accwait', pstat_qstat, 0, junk,
      $     ps_accwait)) call errquit('ccsd: ccsd_pstat_init', 0,0)
+      if (.not. pstat_allocate('ccsd:nbget', pstat_qstat, 0, junk,
+     $     ps_nbget)) call errquit('ccsd: ccsd_pstat_init', 0,0)
+      if (.not. pstat_allocate('ccsd:gasync', pstat_qstat, 0, junk,
+     $     ps_gasync)) call errquit('ccsd: ccsd_pstat_init', 0,0)
       if (.not. pstat_allocate('ccsd:z2pm', pstat_qstat, 0, junk,
      $     ps_z2pm)) call errquit('ccsd: ccsd_pstat_init', 0,0)
       if (.not. pstat_allocate('ccsd:hz2pm', pstat_qstat, 0, junk,
@@ -103,6 +107,8 @@ c
          if(.not.pstat_free(ps_trpdrv))call errquit('ccsd_pstat',0,0)
          if(.not.pstat_free(ps_accwait))call errquit('ccsd_pstat',0,0)
          if(.not.pstat_free(ps_gpumove))call errquit('ccsd_pstat',0,0)
+         if(.not.pstat_free(ps_gasync))call errquit('ccsd_pstat',0,0)
+         if(.not.pstat_free(ps_nbget))call errquit('ccsd_pstat',0,0)
          if(.not.pstat_free(ps_doxxx))call errquit('ccsd_pstat',0,0)
          if(.not.pstat_free(ps_dovvv))call errquit('ccsd_pstat',0,0)
          if(.not.pstat_free(ps_doooo))call errquit('ccsd_pstat',0,0)

@@ -98,7 +98,7 @@ c$$$            If (oprint) Write (LuOut, *) GA_NodeID(), ': Omega1 (', I, ',', 
 c$$$C
             Call GA_Get(g_T2, (I-1)*NVir+1, I*NVir, (M-1)*NVir+1,
      $         M*NVir, Dbl_MB(I_Scr1), NVir)
-            Call dgemm('N', 'T', 1, NVir, NVir,
+            Call ygemm('N', 'T', 1, NVir, NVir,
      $         FP_One, Z1(M,1), LDT1, Dbl_MB(I_Scr1), NVir,
      $         FP_One, Omega1(I,1), LDO1)
 c$$$C
@@ -132,7 +132,7 @@ c$$$            If (oprint) Write (LuOut, *) GA_NodeID(), ':Omega2 (', M, ',', I
 c$$$C
             Call GA_Get(g_T2, (M-1)*NVir+1, M*NVir, (I-1)*NVir+1,
      $         I*NVir, Dbl_MB(I_Scr1), NVir)
-            Call dgemm('N', 'T', 1, NVir, NVir,
+            Call ygemm('N', 'T', 1, NVir, NVir,
      $         FP_One, Z1(M,1), LDT1, Dbl_MB(I_Scr1), NVir,
      $         FP_One, Omega2(I,1), LDO2)
 c$$$C
@@ -153,14 +153,14 @@ c$$$     $   'Summed Partial Omega2', 80, 'F20.15')
 C
 C     Add in the t1 t1 z1 terms
 C
-      Call dgemm('T', 'N', NVir, NVir, NOcc,
+      Call ygemm('T', 'N', NVir, NVir, NOcc,
      $   FP_One, Z1, LDZ1, T1, LDT1,
      $   FP_Zero, Dbl_MB(I_Scr1), NVir)
 c$$$C
 c$$$      Call DGeWr(NVir, NVir, Dbl_MB(I_Scr1), NVir, 0, 0, LuOut,
 c$$$     $   'Z(m,e) T(m,a)', 80, 'F20.15')
 C
-      Call dgemm('N', 'N', NOcc, NVir, NVir,
+      Call ygemm('N', 'N', NOcc, NVir, NVir,
      $   FP_One, T1, LDT1, Dbl_MB(I_Scr1), NVir,
      $   FP_One, Omega2, LDO2)
 c$$$C
@@ -185,7 +185,7 @@ c$$$C
      $         N*NVir, Dbl_MB(I_Scr1), NVir)
             Call GA_Get(g_Z2, (M-1)*NVir+1, M*NVir, (N-1)*NVir+1,
      $         N*NVir, Dbl_MB(I_Scr2), NVir)
-            Call dgemm('N', 'T', NVir, NVir, NVir,
+            Call ygemm('N', 'T', NVir, NVir, NVir,
      $         FP_One, Dbl_MB(I_Scr1), NVir, Dbl_MB(I_Scr2), NVir,
      $         FP_One, Omega3, LDO3)
 c$$$C

@@ -103,7 +103,7 @@ c
                scra(ad3)=-2.0d0*hia(i,a)*z1(j,b)+hia(i,b)*z1(j,a)
                enddo
                enddo
-              call dgemm('n','n',nvir,nvir,nvir,-1.0d0,scre,nvir,
+              call ygemm('n','n',nvir,nvir,nvir,-1.0d0,scre,nvir,
      &                   gabe,nvir,1.0d0,scra,nvir)
             call ga_acc(g_nhz2,ad2+1,ad2+nvir,ad1+1,ad1+nvir,
      &                  scra,nvir,1.0d00)
@@ -262,7 +262,7 @@ c
           inode=inode+1
           if (inode.eq.next)then
             call ga_get(g_nz2,1,lnov,ad1,ad1,scre,1)
-            call dgemm('n','t',nvir,nocc,nocc,1.0d00,scre,
+            call ygemm('n','t',nvir,nocc,nocc,1.0d00,scre,
      &                 nvir,giu,nocc,0.0d00,scrf,nvir)
             call ga_acc(g_nhz2,1,lnov,ad1,ad1,scrf,lnov,1.0d00)
             next=nxtask(nodes, 1)

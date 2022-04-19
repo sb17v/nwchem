@@ -85,15 +85,15 @@
                 enddo
               enddo
             enddo
-            call dgemm('t','n',nact,nbf,nbf,1.0d00,cmo(1,ncor+1),nbf,
+            call ygemm('t','n',nact,nbf,nbf,1.0d00,cmo(1,ncor+1),nbf,
      &                 bufb(1,tid),nbf,0.0d00,bufa(1,tid),nact)
-            call dgemm('n','n',nact,nact,nbf,1.0d00,bufa(1,tid),nact,
+            call ygemm('n','n',nact,nact,nbf,1.0d00,bufa(1,tid),nact,
      &                 cmo(1,ncor+1),nbf,0.0d00,bufb(1,tid),nact)
 !$omp critical
             call ga_put(g_x,1,nact*nact,ad2,ad2,bufb(1,tid),nact*nact)
             call ga_get(g_c,1,nact*nbf,ad2,ad2,bufa(1,tid),nact*nbf)
 !$omp end critical
-            call dgemm('n','n',nact,nact,nbf,1.0d00,bufa(1,tid),nact,
+            call ygemm('n','n',nact,nact,nbf,1.0d00,bufa(1,tid),nact,
      &                 cmo(1,ncor+1),nbf,0.0d00,bufb(1,tid),nact)
 !$omp critical
             call ga_put(g_c,1,nact*nact,ad2,ad2,bufb(1,tid),nact*nact)
@@ -155,13 +155,13 @@
                 enddo
               enddo
             enddo
-            call dgemm('t','n',nact,nbf,nbf,1.0d00,cmo(1,ncor+1),nbf,
+            call ygemm('t','n',nact,nbf,nbf,1.0d00,cmo(1,ncor+1),nbf,
      &                 scrb,nbf,0.0d00,scra,nact)
-            call dgemm('n','n',nact,nact,nbf,1.0d00,scra,nact,
+            call ygemm('n','n',nact,nact,nbf,1.0d00,scra,nact,
      &                 cmo(1,ncor+1),nbf,0.0d00,scrb,nact)
             call ga_put(g_x,1,nact*nact,ad2,ad2,scrb,nact*nact)
             call ga_get(g_c,1,nact*nbf,ad2,ad2,scra,nact*nbf)
-            call dgemm('n','n',nact,nact,nbf,1.0d00,scra,nact,
+            call ygemm('n','n',nact,nact,nbf,1.0d00,scra,nact,
      &                 cmo(1,ncor+1),nbf,0.0d00,scrb,nact)
             call ga_put(g_c,1,nact*nact,ad2,ad2,scrb,nact*nact)
           endif

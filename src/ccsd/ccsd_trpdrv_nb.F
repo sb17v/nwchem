@@ -617,7 +617,7 @@ c
         trp_time(25) = trp_time(25) + trp_time(tt)
       enddo
       call util_flush(6)
-   98 format('node ',i5,': dgemm    timer(',i2,') = ',1e15.5)
+   98 format('node ',i5,': ygemm    timer(',i2,') = ',1e15.5)
 c
       do tt = 22, 23
         !write(6,99) IAm,tt,trp_time(tt)
@@ -628,7 +628,7 @@ c
 c
       call ga_sync()
       if (IAm.eq.0) write(6,87)
-   87 format(2x,'node',6x,'ga_nbget',9x,'dgemm',10x,'tengy')
+   87 format(2x,'node',6x,'ga_nbget',9x,'ygemm',10x,'tengy')
       call ga_sync()
       write(6,88) IAm,trp_time(24),trp_time(25),trp_time(26)
    88 format(i7,3e15.5)

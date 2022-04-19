@@ -33,10 +33,10 @@ C
       lnov=nocc*nvir
 c
       if(iam.eq.0)then
-        call daxpy(lnov,-2.0d00,hia,1,hz1,1)
-        call dgemm('n','n',nocc,nvir,nocc,1.0d00,giu,nocc,z1,nocc,
+        call yaxpy(lnov,-2.0d00,hia,1,hz1,1)
+        call ygemm('n','n',nocc,nvir,nocc,1.0d00,giu,nocc,z1,nocc,
      &             1.0d00,hz1,nocc)
-        call dgemm('n','n',nocc,nvir,nvir,-1.0d00,z1,nocc,gabe,nvir,
+        call ygemm('n','n',nocc,nvir,nvir,-1.0d00,z1,nocc,gabe,nvir,
      &             1.0d00,hz1,nocc)
       endif
 c
@@ -235,10 +235,10 @@ c
      &                    scre,nvir)
                 call ga_get(g_tz2,ad3+1,ad3+nvir,ad4+1,ad4+nvir,
      &                    scrf,nvir)
-                call dgemm('n','n',nvir,nvir,nvir,1.0d00,
+                call ygemm('n','n',nvir,nvir,nvir,1.0d00,
      &                     scrc(nocc+1,nocc+1),nbf,scre,nvir,0.0d00,
      &                     scrd,nbf)
-                call dgemm('t','n',nvir,nvir,nvir,-1.0d00,
+                call ygemm('t','n',nvir,nvir,nvir,-1.0d00,
      &                     scrc(nocc+1,nocc+1),nbf,scrf,nvir,1.0d00,
      &                     scrd,nbf)
                 do a=1,nvir
@@ -268,13 +268,13 @@ c
      &                g_c,g_x,g_sht2,g_aitm,g_qitm,g_tz3,iprt)
 c
       if(iam.eq.0)then
-        call dgemm('n','n',nocc,nvir,nvir,1.0d00,hia,nocc,tzvv,
+        call ygemm('n','n',nocc,nvir,nvir,1.0d00,hia,nocc,tzvv,
      &                 nvir,1.0d00,hz1,nocc)
-        call dgemm('t','n',nocc,nvir,nocc,1.0d00,tzoo,nocc,hia,
+        call ygemm('t','n',nocc,nvir,nocc,1.0d00,tzoo,nocc,hia,
      &                 nocc,1.0d00,hz1,nocc)
       endif
 c
-      call dgemm('n','t',nocc,nvir,nvir,1.0d00,t1,nocc,
+      call ygemm('n','t',nocc,nvir,nvir,1.0d00,t1,nocc,
      &            tzvv,nvir,0.0d00,scrd,nbf)
       call ga_sync()
 c
@@ -329,7 +329,7 @@ c
           ad4=(j-1)*nbf
           call ga_get(g_nexch,ad4+1,ad4+nbf,ad3+1,ad3+nbf,
      &                scrf,nbf)
-          call dgemm('n','t',nocc,nvir,nvir,1.0d00,scrd(1,nocc+1),nbf,
+          call ygemm('n','t',nocc,nvir,nvir,1.0d00,scrd(1,nocc+1),nbf,
      &               scre,nvir,1.0d00,hz1,nocc)
           do a=1,nvir
           do k=1,nocc
@@ -337,7 +337,7 @@ c
             scra((a-1)*nocc+k)=scrf(ad1)+scrb(ad1)
           enddo
           enddo
-          call dgemm('n','n',nocc,nvir,nvir,1.0d00,scra,nocc,scre,
+          call ygemm('n','n',nocc,nvir,nvir,1.0d00,scra,nocc,scre,
      &               nvir,1.0d00,hz1,nocc)
         endif
       enddo
@@ -352,10 +352,10 @@ c
            if (ad2+1.ge.g_jlo.and.ad2+1.le.g_jhi)then
              ij=(i-1)*nocc+j
              call ga_get(g_aitm,1,lnoo,ij,ij,scra,lnoo)
-             call dgemm('n','n',nocc,nvir,nocc,1.0d00,scra,nocc,t1,
+             call ygemm('n','n',nocc,nvir,nocc,1.0d00,scra,nocc,t1,
      &                  nocc,0.0d00,scrd,nocc)
              call ga_get(g_nz2,ad2+1,ad2+nvir,ad1+1,ad1+nvir,scra,nvir)
-             call dgemm('n','t',nocc,nvir,nvir,-2.0d00,scrd,nocc,scra,
+             call ygemm('n','t',nocc,nvir,nvir,-2.0d00,scrd,nocc,scra,
      &                  nvir,1.0d00,hz1,nocc)
           endif
          enddo

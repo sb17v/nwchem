@@ -221,22 +221,22 @@ c      call util_blas_set_num_threads(4)
                      call ga_nbget(g_objv,1+2*lnoov+(i-1)*lnov,
      &                    2*lnoov+i*lnov,av,av,Xia,lnov,nbh_objv7)
 
-                     call dcopy(nvir,t1((i-1)*nvir+1),1,t1v2,1)
+                     call ycopy(nvir,t1((i-1)*nvir+1),1,t1v2,1)
                      if(i.eq.1) then
                         call ga_nbwait(nbh_objv1) ! Dja
                      endif
-                     call dcopy(nvir,Dja(1+(i-1)*nvir),1,dintc1,1)
+                     call ycopy(nvir,Dja(1+(i-1)*nvir),1,dintc1,1)
                      call ga_nbwait(nbh_objv5) ! Djia
-                     call dcopy(nvir,Djia,1,dintx1,1)
+                     call ycopy(nvir,Djia,1,dintx1,1)
 
                      do k=klo,min(khi,i)
 
-                        call dcopy(nvir,t1((k-1)*nvir+1),1,t1v1,1)
-                        call dcopy(nvir,Dja(1+(k-1)*nvir),1,dintc2,1)
+                        call ycopy(nvir,t1((k-1)*nvir+1),1,t1v1,1)
+                        call ycopy(nvir,Dja(1+(k-1)*nvir),1,dintc2,1)
                         if(i.eq.1) then
                            call ga_nbwait(nbh_objv4(k)) ! Djka
                         endif
-                        call dcopy(nvir,Djka(1+(k-klo)*nvir),1,dintx2,1)
+                        call ycopy(nvir,Djka(1+(k-klo)*nvir),1,dintx2,1)
                         emp4i = 0.0d0
                         emp5i = 0.0d0
                         emp4k = 0.0d0
@@ -247,7 +247,7 @@ c      call util_blas_set_num_threads(4)
                            call qenter('doxxx',0)
                         endif
 !
-!  These are the input dependencies for the DGEMM calls below.
+!  These are the input dependencies for the YGEMM calls below.
 !  We wait on all of them here because GA is not even remotely thread-safe.
 !  All of these are independent of k, so we wait on them only
 !  at the first trip of the loop.
@@ -285,80 +285,80 @@ c      call util_blas_set_num_threads(4)
 ! Performance Note:
 !
 ! By definition, the following does not scale to more than 8 threads
-! unless nested parallelism (i.e. inside of DGEMM) is used.
+! unless nested parallelism (i.e. inside of YGEMM) is used.
 ! It may be prudent to write a manually threaded wrapper for the
 ! cases where single-threaded BLAS is used.
 !
 !$omp sections
 !$omp section
 #endif
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Jia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f1n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tia,nvir,Kkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f1n,nvir)
 #if USE_OMP_SECTIONS
 !$omp section
 #endif
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Kia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f2n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xia,nvir,Kkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f2n,nvir)
 #if USE_OMP_SECTIONS
 !$omp section
 #endif
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Jia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f3n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tia,nvir,Jkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f3n,nvir)
 #if USE_OMP_SECTIONS
 !$omp section
 #endif
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Kia,nvir,Tkj(1+(k-klo)*lnvv),nvir,0.0d0,
      2                       f4n,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xia,nvir,Jkj(1+(k-klo)*lnov),nocc,1.0d0,
      2                       f4n,nvir)
 #if USE_OMP_SECTIONS
 !$omp section
 #endif
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Jka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f1t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tka(1+(k-klo)*lnov),nvir,Kij,nocc,1.0d0,
      2                       f1t,nvir)
 #if USE_OMP_SECTIONS
 !$omp section
 #endif
-                        call dgemm('n','t',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','t',nvir,nvir,nvir,1.0d0,
      1                       Kka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f2t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xka(1+(k-klo)*lnov),nvir,Kij,nocc,1.0d0,
      2                       f2t,nvir)
 #if USE_OMP_SECTIONS
 !$omp section
 #endif
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Jka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f3t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Tka(1+(k-klo)*lnov),nvir,Jij,nocc,1.0d0,
      2                       f3t,nvir)
 #if USE_OMP_SECTIONS
 !$omp section
 #endif
-                        call dgemm('n','n',nvir,nvir,nvir,1.0d0,
+                        call ygemm('n','n',nvir,nvir,nvir,1.0d0,
      1                       Kka(1+(k-klo)*lnvv),nvir,Tij,nvir,0.0d0,
      2                       f4t,nvir)
-                        call dgemm('n','n',nvir,nvir,nocc,-1.0d0,
+                        call ygemm('n','n',nvir,nvir,nocc,-1.0d0,
      1                       Xka(1+(k-klo)*lnov),nvir,Jij,nocc,1.0d0,
      2                       f4t,nvir)
 #if USE_OMP_SECTIONS
