@@ -185,14 +185,14 @@ c
                      call ga_get(g_exch,1,lnvv,start,end,Kia,lnvv)
 c     
                      do k=klo,min(khi,i)
-                        call ycopy(lnvv,zip,0,f1n,1)
-                        call ycopy(lnvv,zip,0,f1t,1)
-                        call ycopy(lnvv,zip,0,f2n,1)
-                        call ycopy(lnvv,zip,0,f2t,1)
-                        call ycopy(lnvv,zip,0,f3n,1)
-                        call ycopy(lnvv,zip,0,f3t,1)
-                        call ycopy(lnvv,zip,0,f4n,1)
-                        call ycopy(lnvv,zip,0,f4t,1)
+                        call dcopy(lnvv,zip,0,f1n,1)
+                        call dcopy(lnvv,zip,0,f1t,1)
+                        call dcopy(lnvv,zip,0,f2n,1)
+                        call dcopy(lnvv,zip,0,f2t,1)
+                        call dcopy(lnvv,zip,0,f3n,1)
+                        call dcopy(lnvv,zip,0,f3t,1)
+                        call dcopy(lnvv,zip,0,f4n,1)
+                        call dcopy(lnvv,zip,0,f4t,1)
 c     
 c     sum(d) (Jia, Kia)bd * Tkj,cd -> Fbc
 c     
@@ -292,16 +292,16 @@ c
       endif
 c
 c      f1n(b,c)=f1n(b,c)-t2(b,l,a,i)*vooo(c,k,l,j)
-      call ygemm('n','n',nvir,nvir,nocc,-one,t2c,nvir,
+      call dgemm('n','n',nvir,nvir,nocc,-one,t2c,nvir,
      &           eintx,nocc,one,f1,nvir)
 c      f2n(b,c)=f2n(b,c)-t2(a,l,b,i)*vooo(c,k,l,j)
-      call ygemm('n','n',nvir,nvir,nocc,-one,t2x,nvir,
+      call dgemm('n','n',nvir,nvir,nocc,-one,t2x,nvir,
      &           eintx,nocc,one,f2,nvir)
 c      f3n(b,c)=f3n(b,c)-t2(b,l,a,i)*vooo(c,j,l,k)
-      call ygemm('n','n',nvir,nvir,nocc,-one,t2c,nvir,
+      call dgemm('n','n',nvir,nvir,nocc,-one,t2c,nvir,
      &           eintc,nocc,one,f3,nvir)
 c      f4n(b,c)=f4n(b,c)-t2(a,l,b,i)*vooo(c,j,l,k)
-      call ygemm('n','n',nvir,nvir,nocc,-one,t2x,nvir,
+      call dgemm('n','n',nvir,nvir,nocc,-one,t2x,nvir,
      &           eintc,nocc,one,f4,nvir)
       if (occsdps) then
          call pstat_off(ps_doooo)
@@ -331,16 +331,16 @@ c      f4n(b,c)=f4n(b,c)-t2(a,l,b,i)*vooo(c,j,l,k)
       endif
 c
 c --  f1n(b,c)=f1n(b,c)+vvvo(b,d,a,i)*t2(d,j,c,k)
-      call ygemm('n','t',nvir,nvir,nvir,one,fintc,nvir,
+      call dgemm('n','t',nvir,nvir,nvir,one,fintc,nvir,
      &           t2,nvir,one,f1,nvir)
 c --  f2n(b,c)=f2n(b,c)+vvvo(a,d,b,i)*t2(d,j,c,k)
-      call ygemm('n','t',nvir,nvir,nvir,one,fintx,nvir,
+      call dgemm('n','t',nvir,nvir,nvir,one,fintx,nvir,
      &           t2,nvir,one,f2,nvir)
 c --  f3n(b,c)=f3n(b,c)+vvvo(b,d,a,i)*t2(d,k,c,j)
-      call ygemm('n','n',nvir,nvir,nvir,one,fintc,nvir,
+      call dgemm('n','n',nvir,nvir,nvir,one,fintc,nvir,
      &           t2,nvir,one,f3,nvir)
 c --  f4n(b,c)=f4n(b,c)+vvvo(a,d,b,i)*t2(d,k,c,j)
-      call ygemm('n','n',nvir,nvir,nvir,one,fintx,nvir,
+      call dgemm('n','n',nvir,nvir,nvir,one,fintx,nvir,
      &           t2,nvir,one,f4,nvir)
       if (occsdps) then
          call pstat_off(ps_dovvv)
@@ -410,7 +410,7 @@ c
      $        kk,lenk)
          startc=1
          do k = 1,lenk/lnov
-            call ycopy(nvir,kk(startc),1,Djka(iptr),1)
+            call dcopy(nvir,kk(startc),1,Djka(iptr),1)
             iptr=iptr+nvir
             startc=startc+lnov
          enddo

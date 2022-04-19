@@ -30,7 +30,7 @@ c
      &                    scra,nvir)
               call ga_get(g_nz2,ad1+1,ad1+nvir,ad2+1,ad2+nvir,
      &                    scrb,nvir)
-              call ygemm('n','t',nvir,nvir,nvir,1.0d0,scra,nvir,
+              call dgemm('n','t',nvir,nvir,nvir,1.0d0,scra,nvir,
      &                   scrb,nvir,1.0d0,tzvv,nvir)
             endif
           enddo

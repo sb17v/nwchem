@@ -239,25 +239,25 @@
                      call ga_nbget(g_objv,1+2*lnoov+(i-1)*lnov,
      &                    2*lnoov+i*lnov,av,av,Xia,lnov,nbh_objv7)
 
-                     !call ycopy(nvir,t1((i-1)*nvir+1),1,t1v2,1)
+                     !call dcopy(nvir,t1((i-1)*nvir+1),1,t1v2,1)
                      call copy_64_to_32(nvir, t1((i-1)*nvir+1),t1v2)
                      call ga_nbwait(nbh_objv1) ! Dja
-                     !call ycopy(nvir,Dja(1+(i-1)*nvir),1,dintc1,1)
+                     !call dcopy(nvir,Dja(1+(i-1)*nvir),1,dintc1,1)
                      call copy_64_to_32(nvir,Dja(1+(i-1)*nvir),dintc1)
                      call ga_nbwait(nbh_objv5) ! Djia
-                     !call ycopy(nvir,Djia,1,dintx1,1)
+                     !call dcopy(nvir,Djia,1,dintx1,1)
                      call copy_64_to_32(nvir,Djia,dintx1)
 
                      do k=klo,min(khi,i)
 
-                        !call ycopy(nvir,t1((k-1)*nvir+1),1,t1v1,1)
+                        !call dcopy(nvir,t1((k-1)*nvir+1),1,t1v1,1)
                         call copy_64_to_32(nvir,t1((k-1)*nvir+1),
      &                                          t1v1)
-                        !call ycopy(nvir,Dja(1+(k-1)*nvir),1,dintc2,1)
+                        !call dcopy(nvir,Dja(1+(k-1)*nvir),1,dintc2,1)
                         call copy_64_to_32(nvir,Dja(1+(k-1)*nvir),
      &                                          dintc2)
                         call ga_nbwait(nbh_objv4(k)) ! Djka
-                        !call ycopy(nvir,Djka(1+(k-klo)*nvir),1,dintx2,1)
+                        !call dcopy(nvir,Djka(1+(k-klo)*nvir),1,dintx2,1)
                         call copy_64_to_32(nvir,Djka(1+(k-klo)*nvir),
      &                                          dintx2)
                         if (occsdps) then
@@ -266,7 +266,7 @@
                            call qenter('doxxx',0)
                         endif
 !
-!  These are the input dependencies for the YGEMM calls below.
+!  These are the input dependencies for the DGEMM calls below.
 !  We wait on all of them here because GA is not even remotely thread-safe.
 !  All of these are independent of k, so we wait on them only
 !  at the first trip of the loop.
@@ -301,7 +301,7 @@
 ! Performance Note:
 !
 ! By definition, the following does not scale to more than 8 threads
-! unless nested parallelism (i.e. inside of YGEMM) is used.
+! unless nested parallelism (i.e. inside of DGEMM) is used.
 ! It may be prudent to write a manually threaded wrapper for the
 ! cases where single-threaded BLAS is used.
 !

@@ -43,9 +43,9 @@ c
             if (ad2+1.ge.g_jlo.and.ad2+1.le.g_jhi)then
               call ga_get(g_nz2,ad2+1,ad2+nvir,ad1+1,ad1+nvir,
      &                    scra,nvir)
-              call ygemm('n','t',nvir,nbf,nvir,1.0d00,scra,nvir,
+              call dgemm('n','t',nvir,nbf,nvir,1.0d00,scra,nvir,
      &                   cmo(1,ncor+nocc+1),nbf,0.0d00,scrb,nvir)
-              call ygemm('n','n',nbf,nbf,nvir,1.0d00,cmo(1,ncor+nocc+1),
+              call dgemm('n','n',nbf,nbf,nvir,1.0d00,cmo(1,ncor+nocc+1),
      &                   nbf,scrb,nvir,0.0d00,scra,nbf)
               ad3=0
               do ksh=1,nsh
@@ -109,9 +109,9 @@ c ------------------------------------------------------------
                   scrb(ipp)=scra(iijj)+scra(iijj)
                 enddo
                 if (x.eq.y)then
-                  call yscal(lnoo,0.25d00,scrb,1)
+                  call dscal(lnoo,0.25d00,scrb,1)
                 else
-                  call yscal(lnoo,0.5d00,scrb,1)
+                  call dscal(lnoo,0.5d00,scrb,1)
                 endif
                 call ga_put(g_sz2,1,lnoo,xy,xy,scrb,lnoo)
               endif
@@ -256,9 +256,9 @@ c - redefine g_shz2
                   enddo
                 enddo
               enddo
-              call ygemm('n','n',nbf,nbf,nbf,1.0d00,scra,nbf,
+              call dgemm('n','n',nbf,nbf,nbf,1.0d00,scra,nbf,
      &                   cmo(1,ncor+1),nbf,0.0d00,scrb,nbf)
-              call ygemm('t','n',nbf,nbf,nbf,1.0d00,cmo(1,ncor+1),nbf,
+              call dgemm('t','n',nbf,nbf,nbf,1.0d00,cmo(1,ncor+1),nbf,
      &                   scrb,nbf,0.0d00,scra,nbf)
               ad3=(i-1)*nocc+j
               call ga_put(g_shz2,1,nbf*nbf,ad3,ad3,

@@ -123,9 +123,9 @@ c - redefine g_sht2
                   enddo
                 enddo
               enddo
-              call ygemm('n','n',nbf,nact,nbf,1.0d00,scra,nbf,
+              call dgemm('n','n',nbf,nact,nbf,1.0d00,scra,nbf,
      &                   cmo(1,ncor+1),nbf,0.0d00,scrb,nbf)
-              call ygemm('t','n',nact,nact,nbf,1.0d00,cmo(1,ncor+1),nbf,
+              call dgemm('t','n',nact,nact,nbf,1.0d00,cmo(1,ncor+1),nbf,
      &                   scrb,nbf,0.0d00,scra,nact)
               ad3=(i-1)*nocc+j
               call ga_put(g_sht2,1,nact*nact,ad3,ad3,
@@ -202,9 +202,9 @@ c
                   scra(ad3)=scra(ad3)+t1(i,a)*t1(j,b)
                 enddo
               enddo
-              call ygemm('n','t',nvir,nbf,nvir,1.0d00,scra,nvir,
+              call dgemm('n','t',nvir,nbf,nvir,1.0d00,scra,nvir,
      &                   cmo(1,ncor+nocc+1),nbf,0.0d00,scrb,nvir)
-              call ygemm('n','n',nbf,nbf,nvir,1.0d00,cmo(1,ncor+nocc+1),
+              call dgemm('n','n',nbf,nbf,nvir,1.0d00,cmo(1,ncor+nocc+1),
      &                   nbf,scrb,nvir,0.0d00,scra,nbf)
               ad3=0
               do ksh=1,nsh
@@ -262,9 +262,9 @@ c ------------------------------------------------------------
                   scrb(ipp)=scra(iijj)+scra(iijj)
                 enddo
                 if (x.eq.y)then
-                  call yscal(lnoo,0.25d00,scrb,1)
+                  call dscal(lnoo,0.25d00,scrb,1)
                 else
-                  call yscal(lnoo,0.5d00,scrb,1)
+                  call dscal(lnoo,0.5d00,scrb,1)
                 endif
                 call ga_put(g_st2,1,lnoo,xy,xy,scrb,lnoo)
               endif
@@ -367,7 +367,7 @@ c ------------------------------------------------------------
 c ------------------------------------------------------------
 c create t1ao
 c ------------------------------------------------------------
-      call ygemm('n','t',nbf,nocc,nvir,1.0d00,cmo(1,ncor+nocc+1),
+      call dgemm('n','t',nbf,nocc,nvir,1.0d00,cmo(1,ncor+nocc+1),
      &           nbf,t1,nocc,0.0d00,t1ao,nbf)
 c
 c ------------------------------------------------------------
@@ -420,9 +420,9 @@ c
          llo=shinf(lsh,2)
          lhi=shinf(lsh,3)
 c
-         call ycopy(lnoo*nfj*nfl,0.0d00,0,scrb,1)
-         call ycopy(nfj*nfl*nbf*nocc,0.0d00,0,snsi,1)
-         call ycopy(nfj*nfl*nbf*nocc,0.0d00,0,sisn,1)
+         call dcopy(lnoo*nfj*nfl,0.0d00,0,scrb,1)
+         call dcopy(nfj*nfl*nbf*nocc,0.0d00,0,snsi,1)
+         call dcopy(nfj*nfl*nbf*nocc,0.0d00,0,sisn,1)
 c
 c ijk(2) contains number of ksh*(ish-block) blocks stored
 c
@@ -523,9 +523,9 @@ c
             llo=shinf(lsh,2)
             lhi=shinf(lsh,3)
 c
-            call ycopy(lnoo*nfj*nfl,0.0d00,0,scrb,1)
-            call ycopy(nfj*nfl*nbf*nocc,0.0d00,0,snsi,1)
-            call ycopy(nfj*nfl*nbf*nocc,0.0d00,0,sisn,1)
+            call dcopy(lnoo*nfj*nfl,0.0d00,0,scrb,1)
+            call dcopy(nfj*nfl*nbf*nocc,0.0d00,0,snsi,1)
+            call dcopy(nfj*nfl*nbf*nocc,0.0d00,0,sisn,1)
 c
             bnijkl=1
             kcount=2
@@ -638,11 +638,11 @@ c
                      call int_2e4c(basis, ish, jsh, basis, ksh, lsh,
      $                             mem2, scre, max2e, eri1(bnijkl) )
                    else
-                     call ycopy(lnijkl,0.0d00,0,eri1(bnijkl),1)
+                     call dcopy(lnijkl,0.0d00,0,eri1(bnijkl),1)
                    endif
                    if (schwarz2) then
                      if (jsh.eq.lsh) then
-                        call ycopy(lnijkl,eri1(bnijkl),1,eri2(bnijkl),1)
+                        call dcopy(lnijkl,eri1(bnijkl),1,eri2(bnijkl),1)
                      else
                       if(bnijkl+max2e.gt.maxints) then
                          write(6,*) ' increase stack memory'
@@ -653,7 +653,7 @@ c
      $                                mem2,scre,max2e,eri2(bnijkl))
                      endif
                    else
-                     call ycopy(lnijkl,0.0d00,0,eri2(bnijkl),1)
+                     call dcopy(lnijkl,0.0d00,0,eri2(bnijkl),1)
                    endif
                    bnijkl=bnijkl+lnijkl
                    call qexit('ints',0)

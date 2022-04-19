@@ -109,7 +109,7 @@ c
           ij=(i-1)*nocc+j
           if (ij.ge.g_ilo.and.ij.le.g_ihi)then
             call ga_get(g_sht2,1,nact*nact,ij,ij,scre,nact*nact)
-            call yscal(nact*nact,2.0d00,scre,1)
+            call dscal(nact*nact,2.0d00,scre,1)
 c
 c H2
             do k=1,nocc
@@ -120,8 +120,8 @@ c H2
         enddo
       enddo
 c
-      call ycopy(lnoo,hiu,1,giu,1)
-      call ycopy(lnvv,habe,1,gabe,1)
+      call dcopy(lnoo,hiu,1,giu,1)
+      call dcopy(lnvv,habe,1,gabe,1)
       call dfill(lnov,0.0d00,hia,1)
 c
       if (iprt.gt.5.and.iam.eq.0)print *,'forming aitm'
@@ -142,7 +142,7 @@ c A1
             if (doa(1).eq.2)then
               call ga_get(g_nexch,ad2+1,ad2+nocc,ad1+1,ad1+nocc,
      &                    scrb,nocc)
-              call yaxpy(nocc*nocc,0.5d00,scrb,1,scra,1)
+              call daxpy(nocc*nocc,0.5d00,scrb,1,scra,1)
             endif
 c---------------------------------------------------------
 c  S5, D1, D6 and D7 
@@ -165,7 +165,7 @@ c D1,D7
 c
             ad1=(i-1)*nocc+j
             call ga_get(g_c,1,nact*nact,ad1,ad1,scrb,nact*nact)
-            call ycopy(nact*nact,scrb,1,scre,1)
+            call dcopy(nact*nact,scrb,1,scre,1)
 c
 c H8
             do a=nocc+1,nact
@@ -184,7 +184,7 @@ c G4
 c
             ad1=(i-1)*nocc+j
             call ga_get(g_x,1,nact*nact,ad1,ad1,scrb,nact*nact)
-            call ycopy(nact*nact,scrb,1,scre,1)
+            call dcopy(nact*nact,scrb,1,scre,1)
 c
 c H8
             do a=nocc+1,nact
@@ -251,7 +251,7 @@ c
 c
             call ga_get(g_sht2,1,nact*nact,ij,ij,scrb,nact*nact)
             call dfill(nact*nact,0.0d00,scre,1)
-            call yaxpy(nact*nact,2.0d00,scrb,1,scre,1)
+            call daxpy(nact*nact,2.0d00,scrb,1,scre,1)
 c
 c S6
             do a=nocc+1,nact
@@ -275,10 +275,10 @@ c  B2 and B3 intermediate and their contribution to D3
 c-----------------------------------------------------------------------
             if (dob(2).eq.2)then
             ad1=nocc+1
-            call ygemm('n','n',nvir,nvir,nocc,1.0d00,scrb(ad1),
+            call dgemm('n','n',nvir,nvir,nocc,1.0d00,scrb(ad1),
      &                 nact,t1,nocc,0.0d00,scra,nvir)
             ad1=nocc*nact+1
-            call ygemm('t','n',nvir,nvir,nocc,1.0d00,t1,nocc,
+            call dgemm('t','n',nvir,nvir,nocc,1.0d00,t1,nocc,
      &                 scrb(ad1),nact,1.0d00,scra,nvir)
             ad1=(i-1)*nvir
             ad2=(j-1)*nvir
@@ -383,7 +383,7 @@ c
             if (ad2+1.ge.g_jlo.and.ad2+1.le.g_jhi)then
               call ga_get(g_nt2,ad2+1,ad2+nvir,ad1+1,ad1+nvir,
      &                    scre,nvir)
-              call ygemm('n','n',nvir,nvir,nvir,1.0d00,gabe,
+              call dgemm('n','n',nvir,nvir,nvir,1.0d00,gabe,
      &                   nvir,scre,nvir,0.0d00,scrd,nvir)
               call ga_acc(g_nht2,ad2+1,ad2+nvir,ad1+1,ad1+nvir,
      &                    scrd,nvir,1.0d00)
@@ -412,7 +412,7 @@ c
             if (mod(inode, nodes) .eq. iam) then
 #endif
             call ga_get(g_nt2,1,lnov,ad1,ad1,scre,lnov)
-            call ygemm('n','n',nvir,nocc,nocc,-1.0d00,scre,
+            call dgemm('n','n',nvir,nocc,nocc,-1.0d00,scre,
      &                 nvir,giu,nocc,0.0d00,scrf,nvir)
             call ga_acc(g_nht2,1,lnov,ad1,ad1,scrf,lnov,1.0d00)
 #ifdef NXT
@@ -448,9 +448,9 @@ c-----------------------------------------------------------------------
 c
             call ga_get(g_nexch,ad2+1,ad2+nact,ad1+1,ad1+nact,
      &                  scrd,nact)
-            call ygemm('n','n',nvir,nvir,nocc,-1.0d00,scrd(nocc+1,1),
+            call dgemm('n','n',nvir,nvir,nocc,-1.0d00,scrd(nocc+1,1),
      &                 nact,t1,nocc,0.0d00,scrc(nocc+1,nocc+1),nact)
-            call yaxpy(nact*nact,1.0d00,scrc,1,scrd,1)
+            call daxpy(nact*nact,1.0d00,scrc,1,scrd,1)
             call ga_acc(g_x,1,nact*nact,ij,ij,scrd,nact*nact,1.0d00)
           endif
         enddo
@@ -465,9 +465,9 @@ c
             ad2=(j-1)*nact
             call ga_get(g_ncoul,ad2+1,ad2+nact,ad1+1,ad1+nact,
      &                    scrd,nact)
-            call ygemm('n','n',nvir,nvir,nocc,-1.0d00,scrd(nocc+1,1),
+            call dgemm('n','n',nvir,nvir,nocc,-1.0d00,scrd(nocc+1,1),
      &                 nact,t1,nocc,0.0d00,scrc(nocc+1,nocc+1),nact)
-            call yaxpy(nact*nact,1.0d00,scrc,1,scrd,1)
+            call daxpy(nact*nact,1.0d00,scrc,1,scrd,1)
             call ga_acc(g_c,1,nact*nact,ij,ij,scrd,nact*nact,1.0d00)
 c
           endif
@@ -615,9 +615,9 @@ c
             ad2=(j-1)*nact
             call dfill(nact*nact,0.0d00,scra,1)
               call ga_get(g_x,1,nact*nact,ij,ij,scrb,nact*nact)
-              call yaxpy(nact*nact,1.0d00,scrb,1,scra,1)
+              call daxpy(nact*nact,1.0d00,scrb,1,scra,1)
               call ga_get(g_c,1,nact*nact,ij,ij,scrb,nact*nact)
-              call yaxpy(nact*nact,-0.5d00,scrb,1,scra,1)
+              call daxpy(nact*nact,-0.5d00,scrb,1,scra,1)
             ad1=0
             do a=nocc+1,nact
               do b=nocc+1,nact
@@ -777,7 +777,7 @@ c
 #include "ccsd_len.fh"
 ! term s1 n**3
       if (dos(1).ne.0)then
-       call yaxpy(nocc,habe(bv,av),t1(1,av),1,ht1(1,bv),1)
+       call daxpy(nocc,habe(bv,av),t1(1,av),1,ht1(1,bv),1)
       endif
       return
       end
@@ -785,13 +785,13 @@ c
       implicit none
       integer nocc,nvir,bv,u
       double precision t1(nocc,nvir),ht1(nocc,nvir),hiu(nocc,nvir)
-      double precision ydot
-      external ydot
+      double precision ddot
+      external ddot
 #include "ccsd_debug.fh"
 #include "ccsd_len.fh"
 ! term s2 n**3
       if (dos(2).ne.0)then
-       ht1(u,bv)=ht1(u,bv)-ydot(nocc,hiu(1,u),1,t1(1,bv),1)
+       ht1(u,bv)=ht1(u,bv)-ddot(nocc,hiu(1,u),1,t1(1,bv),1)
       endif
       return
       end

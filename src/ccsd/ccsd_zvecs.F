@@ -170,7 +170,7 @@ c
         hz1(icnt)=-hz1(icnt)/(eorb(i)-eorb(a))
        enddo
       enddo
-      call yaxpy(lnov,-one,hz1,1,z1,1)
+      call daxpy(lnov,-one,hz1,1,z1,1)
       if (nvp1.ge.ilo.and.nvp1.le.ihi)then
        call ga_put(g_z2,offt2+1,offt2+lnov,nvp1,nvp1,hz1,1)
        call ga_put(g_hz2,offt2+1,offt2+lnov,nvp1,nvp1,z1,1)
@@ -195,7 +195,7 @@ c -- parallel task --
          enddo
         enddo
 c -- compute error vector in z2 location
-        call yaxpy(lhoov,-one,scrb,1,scra,1)
+        call daxpy(lhoov,-one,scrb,1,scra,1)
         call ga_put(g_z2,offt2+1,offt2+lhoov,bv,bv,scrb,lhoov)
         call ga_put(g_hz2,offt2+1,offt2+lhoov,bv,bv,scra,lhoov)
        endif

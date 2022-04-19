@@ -63,13 +63,13 @@ C
 C
 C        Initialize the matrix with 2 on the diagonal, per the last term.
 C
-         Call ylaset('Full', NOcc, NOcc, 0.0d0, 2.0d0,
+         Call dlaset('Full', NOcc, NOcc, 0.0d0, 2.0d0,
      $      Dbl_MB(I_Scr1), NOcc)
 C
 C        [tZ](i,j) = sum(a) t(i,a) Z(j,a) (APR & TJL Eq. 56)
 C        Minus in DGEMM is due to minus in front of whole expression
 C
-         Call ygemm('N', 'T', NOcc, NOcc, NVir,
+         Call dgemm('N', 'T', NOcc, NOcc, NVir,
      $      -1.0d0, T1, LDT1, Z1, LDZ1, 1.0d0, Dbl_MB(I_Scr1), NOcc)
 C
 C        Now add in Omega4
@@ -102,7 +102,7 @@ C
 C
 C        [tZ](a,b) = sum(i) t(i,a) Z(i,b) (APR & TJL Eq. 57)
 C
-         Call ygemm('T', 'N', NVir, NVir, NOcc,
+         Call dgemm('T', 'N', NVir, NVir, NOcc,
      $      1.0d0, T1, LDT1, Z1, LDZ1, 0.0d0, Dbl_MB(I_Scr1), NVir)
 C
 C        Now add in Omega3
@@ -149,13 +149,13 @@ C
 C
 C        sum(b) t(i,b) Omega3(a,b)
 C
-         Call ygemm('N', 'T', NOcc, NVir, NVir,
+         Call dgemm('N', 'T', NOcc, NVir, NVir,
      $      -1.0d0, T1, LDT1, Omega3, LDO3,
      $      1.0d0, Dbl_MB(I_Scr1), NOcc)
 C
 C        sum(j) Omega4(i,j) t(j,a)
 C
-         Call ygemm('N', 'N', NOcc, NVir, NOcc,
+         Call dgemm('N', 'N', NOcc, NVir, NOcc,
      $      -1.0d0, Omega4, LDO4, T1, LDT1,
      $      1.0d0, Dbl_MB(I_Scr1), NOcc)
 C

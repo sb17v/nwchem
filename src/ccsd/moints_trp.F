@@ -510,18 +510,18 @@ cstaggering to avoid congestion in ga-acc
        olb=ohi-olo+1
        do ain=ga_nodeid()+1,ga_nodeid()+olb
           a=mod(ain,olb)+olo
-         call ygemm('t', 'n', nvir, ssij, nbf, 1.d0,
+         call dgemm('t', 'n', nvir, ssij, nbf, 1.d0,
      $               xc(1,vlo), nbf, ssni(1,jlo,ilo,a),
      $               nbf, 0.d0, ssv, nvir )
 ! scale=1.0 is the common case, scale=0.5 is exception on i=j
          do b=ostart,ostart+nocc-1
            call dfill(nni,0.d0,h1,1)
-! this could be YGEMV if ssv(v,j,i) is transposed to ssv2(v,i,j)
+! this could be DGEMV if ssv(v,j,i) is transposed to ssv2(v,i,j)
 ! in the current form, we can use a loop over range(i) DAXPYs
 #if USE_BLAS_NOT_LOOPS
              do j=jlo,jhi
                do i=ilo,ihi
-                  call yaxpy(nvir,scale*c(j,b),ssv(1,j,i),1,h1(1,i),1)
+                  call daxpy(nvir,scale*c(j,b),ssv(1,j,i),1,h1(1,i),1)
                enddo
              enddo
 #elif USE_NEW_LOOPS
@@ -568,12 +568,12 @@ cstaggering to avoid congestion in ga-acc
          enddo
          do b=ostart,ostart+nocc-1
            call dfill(nnj,0.d0,h2,1)
-! this is a YGEMV call of the form
+! this is a DGEMV call of the form
 ! h2(vj) += cb(i) * ssv(vj,i)
 ! where we fuse vj=j*vdim+v
 ! and set cb(:) = c(:,b)
 #if USE_BLAS_NOT_LOOPS
-! TODO: actually use YGEMV here
+! TODO: actually use DGEMV here
           do i=ilo,ihi
             do j=jlo,jhi
               do v=1,nvir
@@ -672,7 +672,7 @@ c
      $                            dbl_mb(k_local), tmp )
             if (osym) call moints_sym_zero( nbf, vlo, vhi, syms,
      $                                      a1, a2, tmp)
-            call ycopy((nvir*nvir),tmp,1,dbl_mb(k_local),1)
+            call dcopy((nvir*nvir),tmp,1,dbl_mb(k_local),1)
 #ifdef BAD_GACCESS
             call ga_put(g_exch,rlo,rhi,aa,aa,dbl_mb(k_local),ld)
             if(.not.ma_pop_stack(l_local)) call 
@@ -855,12 +855,12 @@ cstaggering
         enddo
       enddo
 
-      call ygemm('t','n',nvir,nbf,nbf,1.d0,c(1,ncor+nocc+1),nbf,tmp,nbf,
+      call dgemm('t','n',nvir,nbf,nbf,1.d0,c(1,ncor+nocc+1),nbf,tmp,nbf,
      $           0.d0,x,nvir)
-      call ygemm('n','n',nvir,nvir,nbf,1.d0,x,nvir,c(1,ncor+nocc+1),nbf,
+      call dgemm('n','n',nvir,nvir,nbf,1.d0,x,nvir,c(1,ncor+nocc+1),nbf,
      $           0.d0,tmp,nvir)
 
-      call ycopy(nvir*nvir,tmp,1,x,1)
+      call dcopy(nvir*nvir,tmp,1,x,1)
 
       return
       end

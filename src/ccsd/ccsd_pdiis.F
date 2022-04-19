@@ -12,7 +12,7 @@ c
      &                 bbkp(*),bb(*),rms
       integer nocc,nvir,idiis,ndiis,mxvec,iprt,iter,g_newt2,g_newht2
 c
-      double precision sum(2),xmax,ydot,det
+      double precision sum(2),xmax,ddot,det
       integer i,j,av,bv,jlo,jhi,ilo,ihi,idp1,ndp1,nvp1,oft2,
      &        oft2p1,it,offbb,ad1
 C
@@ -83,7 +83,7 @@ c -- compute new bb matrix elements
         ad1=(it-1)*lhoov
         call ga_get(g_newht2,ad1+1,ad1+lnov,nvp1,nvp1,ht1,lnov)
         ad1=max(idiis,it)*(max(idiis,it)-1)/2+min(idiis,it)
-        bbkp(ad1)=ydot(lnov,ht1,1,t1,1)
+        bbkp(ad1)=ddot(lnov,ht1,1,t1,1)
        enddo
       else
        call dfill(ndiis*(ndiis+1)/2,zip,bbkp,1)
@@ -96,7 +96,7 @@ c
          offbb=max(idiis,it)*(max(idiis,it)-1)/2+min(idiis,it)
          ad1=(it-1)*lhoov
          call ga_get(g_newht2,ad1+1,ad1+lhoov,av,av,scrb,lhoov)
-         bbkp(offbb)=bbkp(offbb)+ydot(av*lhoo,scra,1,scrb,1)
+         bbkp(offbb)=bbkp(offbb)+ddot(av*lhoo,scra,1,scrb,1)
         enddo
        endif
       enddo
@@ -135,7 +135,7 @@ c
 c
 C      call flinq(bb,ndp1,ndp1,1,det)
 c
-      CALL ygesv( NDP1, 1, BB, NDP1, ITMP, BB(OFFBB+1), OFFBB+1, INFO )
+      CALL dgesv( NDP1, 1, BB, NDP1, ITMP, BB(OFFBB+1), OFFBB+1, INFO )
 c
       if (iam.eq.0.and.iprt.gt.5)then
         print *,'det = ',det
@@ -150,7 +150,7 @@ c -- compute new t1 vector
        do it=1,ndiis
         ad1=(it-1)*lhoov
         call ga_get(g_newt2,ad1+1,ad1+lnov,nvp1,nvp1,ht1,lnov)
-        call yaxpy(lnov,bb(offbb+it),ht1,1,t1,1)
+        call daxpy(lnov,bb(offbb+it),ht1,1,t1,1)
        enddo
        call ga_put(g_newt2,oft2p1+1,oft2p1+lnov,nvp1,nvp1,t1,lnov)
       endif
@@ -162,7 +162,7 @@ c
         do it=1,ndiis
          ad1=(it-1)*lhoov
          call ga_get(g_newt2,ad1+1,ad1+lhoov,av,av,scrb,lhoov)
-         call yaxpy(lhoov,bb(offbb+it),scrb,1,scra,1)
+         call daxpy(lhoov,bb(offbb+it),scrb,1,scra,1)
         enddo
         call ga_put(g_newt2,oft2p1+1,oft2p1+lhoov,av,av,scra,lhoov)
        endif

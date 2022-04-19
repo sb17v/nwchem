@@ -24,16 +24,16 @@
 ! DESCRIPTION
 !     A simple convenience routine to simplify the addition of two
 !     matrices which may have different leading dimensions (which makes
-!     use of YAXPY unsafe).
+!     use of DAXPY unsafe).
 !
-!     Implemented as YAXPY calls on each column of X/Y.  Easy.
+!     Implemented as DAXPY calls on each column of X/Y.  Easy.
 !:::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 ! LOCAL VARIABLES
       Integer J, K
 !
 #if USE_BLAS_NOT_LOOPS
       Do J = 1, N
-         Call yaxpy(M, Alpha, X(1, J), 1, Y(1, J), 1)
+         Call daxpy(M, Alpha, X(1, J), 1, Y(1, J), 1)
       EndDo
 #else
       do J = 1, N
