@@ -314,13 +314,25 @@
                         call qenter('gpumove',0)
                      endif
 
-                     t1v2(:) = t1((i-1)*nvir+1:i*nvir)
                      if(i.eq.1) then
                         call ga_nbwait(nbh_objv1) ! Dja
                      endif
-                     dintc1(:) = Dja(1+(i-1)*nvir:i*nvir)
                      call ga_nbwait(nbh_objv5) ! Djia
-                     dintx1(:) = Djia(1:nvir)
+                     !t1v2(:) = t1((i-1)*nvir+1:i*nvir)
+                     !dintc1(:) = Dja(1+(i-1)*nvir:i*nvir)
+                     !dintx1(:) = Djia(1:nvir)
+                     err = cudaMemcpy(t1v2,t1((i-1)*nvir+1),nvir)
+                     if (err.ne.0) then
+                       call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                     endif
+                     err = cudaMemcpy(dintc1,Dja(1+(i-1)*nvir),nvir)
+                     if (err.ne.0) then
+                       call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                     endif
+                     err = cudaMemcpy(dintx1,Djia,nvir)
+                     if (err.ne.0) then
+                       call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                     endif
 
                      if (occsdps) then
                         call pstat_off(ps_gpumove)
@@ -344,12 +356,24 @@
                            call qenter('gpumove',0)
                         endif
 
-                        t1v1(:) = t1((k-1)*nvir+1:k*nvir)
-                        dintc2(:) = Dja(1+(k-1)*nvir:k*nvir)
                         if(i.eq.1) then
                            call ga_nbwait(nbh_objv4(k)) ! Djka
                         endif
-                        dintx2(:) = Djka(1+(k-klo)*nvir:(k-klo+1)*nvir)
+                        !t1v1(:) = t1((k-1)*nvir+1:k*nvir)
+                        !dintc2(:) = Dja(1+(k-1)*nvir:k*nvir)
+                        !dintx2(:) = Djka(1+(k-klo)*nvir:(k-klo+1)*nvir)
+                        err = cudaMemcpy(t1v1,t1((k-1)*nvir+1),nvir)
+                        if (err.ne.0) then
+                          call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                        endif
+                        err = cudaMemcpy(dintc2,Dja(1+(k-1)*nvir),nvir)
+                        if (err.ne.0) then
+                          call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                        endif
+                        err = cudaMemcpy(dintx2,Djka(1+(k-klo)*nvir),nvir)
+                        if (err.ne.0) then
+                          call errquit('cudaMemcpyAsync',err,UNKNOWN_ERR)
+                        endif
                         if (occsdps) then
                            call pstat_off(ps_gpumove)
                         else
