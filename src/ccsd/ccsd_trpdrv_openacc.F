@@ -135,7 +135,7 @@
       end do
 !
 ! device-only temp arrays
-! produced by DGEMM, consumed by TENGY
+! produced by GEMM, consumed by TENGY
 !
       allocate( f1n(1:nvir,1:nvir), f1t(1:nvir,1:nvir),
      &          f2n(1:nvir,1:nvir), f2t(1:nvir,1:nvir),
@@ -158,7 +158,7 @@
      &          t1v1(1:nvir), t1v2(1:nvir), stat=alloc_error)
       if (alloc_error.ne.0) call errquit('CXT1 temps',6,MA_ERR)
 !
-! H/D arrays, produced by GA Get, consumed by DGEMM
+! H/D arrays, produced by GA Get, consumed by GEMM
 !
       allocate( Tij(1:lnvv),      Tkj(1:kchunk*lnvv),
      &          Tia(1:lnov*nocc), Tka(1:kchunk*lnov),
@@ -305,7 +305,7 @@
                         endif
                         dintx2(:) = Djka(1+(k-klo)*nvir:(k-klo+1)*nvir)
 !
-!  These are the input dependencies for the DGEMM calls below.
+!  These are the input dependencies for the GEMM calls below.
 !  We wait on all of them here because GA is not even remotely thread-safe.
 !  All of these are independent of k, so we wait on them only
 !  at the first trip of the loop.
@@ -594,7 +594,7 @@
                           call errquit('cudaDeviceSync',err,UNKNOWN_ERR)
                         endif
 
-                        ! 8 pairs of DGEMM w/ VVV and VVO cost, 2 for FMA
+                        ! 8 pairs of GEMM w/ VVV and VVO cost, 2 for FMA
                         dgemm_flops = 8*nvir*nvir*(nocc+nvir)*2
                         agg_flops = agg_flops + dgemm_flops
 
