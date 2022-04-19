@@ -197,7 +197,17 @@
           i_progr(klo)=.true.
        enddo
       inode=-1
+      if (occsdps) then
+         call pstat_on(ps_gasync)
+      else
+         call qenter('gasync',0)
+      endif
       next=nxtask(nodes, 1)
+      if (occsdps) then
+         call pstat_off(ps_gasync)
+      else
+         call qexit('gasync',0)
+      endif
       do klo = 1, nocc, kchunk
          akold=0
          khi = min(nocc, klo+kchunk-1)
@@ -207,6 +217,11 @@
                inode=inode+1
                if (inode.eq.next)then
 
+                  if (occsdps) then
+                     call pstat_on(ps_nbget)
+                  else
+                     call qenter('nbget',0)
+                  endif
                   call ga_nbget(g_objv,1+(j-1)*lnov,j*lnov,av,av,Dja,
      &                          lnov,nbh_objv1)
                   do k = klo, khi
@@ -222,7 +237,17 @@
                   call ga_nbget(g_objo,lnovv+lnoov+(klo-1)*lnov+1,
      &                          lnovv+lnoov+khi*lnov,j,j,Kkj,
      &                          (khi-klo+1)*lnov,nbh_objo3)
+                  if (occsdps) then
+                     call pstat_off(ps_nbget)
+                  else
+                     call qexit('nbget',0)
+                  endif
                   if (akold .ne. a) then
+                     if (occsdps) then
+                        call pstat_on(ps_nbget)
+                     else
+                        call qenter('nbget',0)
+                     endif
                      akold = a
                      call ga_nbget(g_coul,1,lnvv,(a-oseg_lo)*nocc+klo,
      &                    (a-oseg_lo)*nocc+khi,Jka,lnvv,nbh_coul1)
@@ -234,6 +259,11 @@
                      call ga_nbget(g_objv,1+2*lnoov+(klo-1)*lnov,
      &                    2*lnoov+khi*lnov,av,av,Xka,(khi-klo+1)*lnov,
      &                    nbh_objv3)
+                     if (occsdps) then
+                        call pstat_off(ps_nbget)
+                     else
+                        call qexit('nbget',0)
+                     endif
                      got_ak=.true.
                   else
                      got_ak=.false.
@@ -246,6 +276,11 @@
 
                   do i=1,nocc
 
+                     if (occsdps) then
+                        call pstat_on(ps_nbget)
+                     else
+                        call qenter('nbget',0)
+                     endif
                      call ga_nbget(g_objv,1+(j-1)*nvir+(i-1)*lnov,
      &                    j*nvir+(i-1)*lnov,av,av,Djia,nvir,nbh_objv5)
                      call ga_nbget(g_objo,(i-1)*lnvv+1,i*lnvv,j,j,Tij,
@@ -262,18 +297,21 @@
      &                    lnoov+i*lnov,av,av,Tia,lnov,nbh_objv6)
                      call ga_nbget(g_objv,1+2*lnoov+(i-1)*lnov,
      &                    2*lnoov+i*lnov,av,av,Xia,lnov,nbh_objv7)
-
                      if (occsdps) then
+                        call pstat_off(ps_nbget)
                         call pstat_on(ps_accwait)
                      else
+                        call qexit('nbget',0)
                         call qenter('accwait',0)
                      endif
 !$acc wait(9)
 !$acc wait(10)
                      if (occsdps) then
                         call pstat_off(ps_accwait)
+                        call pstat_on(ps_gpumove)
                      else
                         call qexit('accwait',0)
+                        call qenter('gpumove',0)
                      endif
 
                      t1v2(:) = t1((i-1)*nvir+1:i*nvir)
@@ -283,6 +321,12 @@
                      dintc1(:) = Dja(1+(i-1)*nvir:i*nvir)
                      call ga_nbwait(nbh_objv5) ! Djia
                      dintx1(:) = Djia(1:nvir)
+
+                     if (occsdps) then
+                        call pstat_off(ps_gpumove)
+                     else
+                        call qexit('gpumove',0)
+                     endif
 
                      do k=klo,min(khi,i)
                         if (occsdps) then
@@ -294,8 +338,10 @@
 !$acc wait(10)          
                         if (occsdps) then
                            call pstat_off(ps_accwait)
+                           call pstat_on(ps_gpumove)
                         else
                            call qexit('accwait',0)
+                           call qenter('gpumove',0)
                         endif
 
                         t1v1(:) = t1((k-1)*nvir+1:k*nvir)
@@ -304,6 +350,11 @@
                            call ga_nbwait(nbh_objv4(k)) ! Djka
                         endif
                         dintx2(:) = Djka(1+(k-klo)*nvir:(k-klo+1)*nvir)
+                        if (occsdps) then
+                           call pstat_off(ps_gpumove)
+                        else
+                           call qexit('gpumove',0)
+                        endif
 !
 !  These are the input dependencies for the GEMM calls below.
 !  We wait on all of them here because GA is not even remotely thread-safe.
@@ -421,17 +472,6 @@
                         endif ! k==klo
 
                         if (occsdps) then
-                           call pstat_on(ps_doxxx)
-                        else
-                           call qenter('doxxx',0)
-                        endif
-
-                        tc0 = util_wallsec()
-
-                        nv4 = nvir ! no possibility of overflow
-                        no4 = nocc
-
-                        if (occsdps) then
                            call pstat_on(ps_accwait)
                         else
                            call qenter('accwait',0)
@@ -440,9 +480,16 @@
 !$acc wait(10)          
                         if (occsdps) then
                            call pstat_off(ps_accwait)
+                           call pstat_on(ps_doxxx)
                         else
                            call qexit('accwait',0)
+                           call qenter('doxxx',0)
                         endif
+
+                        tc0 = util_wallsec()
+
+                        nv4 = nvir ! no possibility of overflow
+                        no4 = nocc
 
                         err = cublasDgemm_v2(handle(1),
      &                        cu_op_n,cu_op_t,
@@ -710,7 +757,17 @@
                      write(6,1234)me,a,j,emp4,emp5
  1234                format(' me aijk',3i5,2e15.5)
                   end if
+                  if (occsdps) then
+                     call pstat_on(ps_gasync)
+                  else
+                     call qenter('gasync',0)
+                  endif
                   next=nxtask(nodes, 1)
+                  if (occsdps) then
+                     call pstat_off(ps_gasync)
+                  else
+                     call qexit('gasync',0)
+                  endif
             if(me.eq.0) then
                pct_progr=(a-(ncor+nocc)+((klo-1)/kchunk)*nvir)*n_progr/
      &                   ((nocc/kchunk)*nvir)+1
@@ -732,10 +789,20 @@
             end do
          end do
       end do
+      if (occsdps) then
+         call pstat_on(ps_gasync)
+      else
+         call qenter('gasync',0)
+      endif
       call ga_sync()
       next=nxtask(-nodes, 1)
-      tt1=util_wallsec()
       call ga_dgop(msg_cc_diis1,agg_flops,1, '+')
+      if (occsdps) then
+         call pstat_off(ps_gasync)
+      else
+         call qexit('gasync',0)
+      endif
+      tt1=util_wallsec()
       if(me.eq.0) then
          write(6,4322) ' ccsd(t): 100% done, Aggregate Gflops=',
      &        1e-9*agg_flops/(tt1-tt0),' in ',(tt1-tt0),' secs'
