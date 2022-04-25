@@ -50,14 +50,14 @@ c
       if(some) write(luout,9999)
 c
       if (doS) then
-        call dcopy(nint*3*2,zero,0,sder,1)
+        sder(1:nint*3*2) = zero
         call hnd_sd_ij2(xyzi,expi,coefi,i_nprim,i_ngen, Li,
      1    xyzj,expj,coefj, j_nprim, j_ngen, Lj, sder, sder(nint*3+1),
      2    scr, scr, scr, nder,nint,scr,lscr)
       endif
 c
       if (doV) then
-        call dcopy(nint*3*nat,zero,0,vder,1)
+        vder(1:nint*3*nat) = zero
         do i=1,nat
           call hnd_hlf_ij2(xyzi,expi,coefi,i_nprim,i_ngen,Li,
      1      xyzj,expj,coefj,j_nprim,j_ngen,Lj,i,vder((i-1)*3*nint+1),
@@ -66,7 +66,7 @@ c
       endif
 
       if (doT.or.doV) then
-        if (doT) call dcopy(nint*3*2,zero,0,tder,1)
+        if (doT) tder(1:nint*3*2) = zero
         if (doV) then
            call hnd_tvd_ij2(xyzi,expi,coefi,i_nprim,i_ngen,Li,
      1       xyzj,expj,coefj,j_nprim,j_ngen,Lj,xyz,tder,tder(nint*3+1),
