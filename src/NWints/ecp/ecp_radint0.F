@@ -66,7 +66,7 @@ C $Id$
       fac = zero
       ind_c = 0
       n_ab = n_prim_a*n_prim_b
-      call dcopy(n_ab,zero,0,temp,1)
+      temp(1:n_ab) = zero
       do p = p_min,p_max
 *
 *     Calculate prefactor
