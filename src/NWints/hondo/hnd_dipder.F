@@ -38,7 +38,7 @@ c
 c
 c Zero out the integral 
 c
-      call dcopy(nint*18,zero,0,buf,1)
+      buf(1:nint*18) = zero
 c
 c Use scratch for temps in integral calculation
 c Scratch needs are 6*(Li+2)*(Lj+2)+12*(Li+1)*(Lj+1)
