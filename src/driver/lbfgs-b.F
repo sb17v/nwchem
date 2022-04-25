@@ -598,8 +598,8 @@ c        is to resume.
          if (task(1:4) .eq. 'STOP') then
             if (task(7:9) .eq. 'CPU') then
 c                                          restore the previous iterate.
-               call dcopy(n,t,1,x,1)
-               call dcopy(n,r,1,g,1)
+               x(1:n) = t(1:n)
+               g(1:n) = r(1:n)
                f = fold
             endif
             goto 999
@@ -636,7 +636,7 @@ c ----------------- the beginning of the loop --------------------------
 c
       if (.not. cnstnd .and. col .gt. 0) then 
 c                                            skip the search for GCP.
-         call dcopy(n,x,1,z,1)
+         z(1:n) = x(1:n)
          wrk = updatd
          nint = 0
          goto 333
@@ -768,8 +768,8 @@ c      if (info .ne. 0 .or. iback .ge. 20) then
 c      changing from a hardwired number to input parameter(MV)
       if (info .ne. 0 .or. iback .ge. nfmax) then
 c          restore the previous iterate.
-         call dcopy(n,t,1,x,1)
-         call dcopy(n,r,1,g,1)
+         x(1:n) = t(1:n)
+         g(1:n) = r(1:n)
          f = fold
          if (col .eq. 0) then
 c             abnormal termination.
@@ -1399,7 +1399,7 @@ c       the derivative f1 and the vector p = W'd (for theta = 1).
  
       if (sbgnrm .le. zero) then
          if (iprint .ge. 0) write (6,*) 'Subgnorm = 0.  GCP = X.'
-         call dcopy(n,x,1,xcp,1)
+         xcp(1:n) = x(1:n)
          return
       endif 
       bnded = .true.
@@ -1495,7 +1495,7 @@ c                   complete the initialization of p for theta not= one.
  
 c     Initialize GCP xcp = x.
 
-      call dcopy(n,x,1,xcp,1)
+      xcp(1:n) = x(1:n)
 
       if (nbreak .eq. 0 .and. nfree .eq. n + 1) then
 c                  is a zero vector, return with the initial xcp as GCP.
@@ -2509,8 +2509,8 @@ c     Determine the maximum step length.
          stp = one
       endif 
 
-      call dcopy(n,x,1,t,1)
-      call dcopy(n,g,1,r,1)
+      t(1:n) = x(1:n)
+      r(1:n) = g(1:n)
       fold = f
       ifun = 0
       iback = 0
@@ -2536,7 +2536,7 @@ c                               Line search is impossible.
          nfgv = nfgv + 1
          iback = ifun - 1 
          if (stp .eq. one) then
-            call dcopy(n,z,1,x,1)
+            x(1:n) = z(1:n)
          else
             do 41 i = 1, n
                x(i) = stp*d(i) + t(i)
