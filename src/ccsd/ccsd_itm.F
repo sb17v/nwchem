@@ -120,8 +120,8 @@ c H2
         enddo
       enddo
 c
-      call dcopy(lnoo,hiu,1,giu,1)
-      call dcopy(lnvv,habe,1,gabe,1)
+      giu(1:lnoo) = hiu(1:lnoo)
+      gabe(1:lnvv) = habe(1:lnvv)
       call dfill(lnov,0.0d00,hia,1)
 c
       if (iprt.gt.5.and.iam.eq.0)print *,'forming aitm'
@@ -165,7 +165,7 @@ c D1,D7
 c
             ad1=(i-1)*nocc+j
             call ga_get(g_c,1,nact*nact,ad1,ad1,scrb,nact*nact)
-            call dcopy(nact*nact,scrb,1,scre,1)
+            scre(1:nact*nact) = scrb(1:nact*nact)
 c
 c H8
             do a=nocc+1,nact
@@ -184,7 +184,7 @@ c G4
 c
             ad1=(i-1)*nocc+j
             call ga_get(g_x,1,nact*nact,ad1,ad1,scrb,nact*nact)
-            call dcopy(nact*nact,scrb,1,scre,1)
+            scre(1:nact*nact) = scrb(1:nact*nact)
 c
 c H8
             do a=nocc+1,nact
