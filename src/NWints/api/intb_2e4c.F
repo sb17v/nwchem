@@ -161,7 +161,7 @@ c
 c     
       intb_2e4c = .true.
 c     
-      call dcopy(3,0.0d00,0,roff,1)
+      roff(1:3) = 0.0d00
       call texas_hf2_m(
      $     brain, icl(num_q_start), jcl(num_q_start),
      $     ketin, kcl(num_q_start), lcl(num_q_start), 
