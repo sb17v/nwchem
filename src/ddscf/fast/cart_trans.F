@@ -135,7 +135,7 @@ c
       if (l2 .gt. 0) then
          call cart_poly_translate(l2,num1,work,ndens,a-x2,b-y2,c-z2)
       else
-         call dcopy(loff(l1+1)*loff(l2+1),work,1,ndens,1)
+         ndens(1:loff(l1+1)*loff(l2+1)) = work(1:loff(l1+1)*loff(l2+1))
       endif
 c
       end
