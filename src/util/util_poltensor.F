@@ -13,7 +13,7 @@ c
       double precision alphad(3,3)
       double precision au3_2_angs3
 c     diagonalize
-      call dcopy(9,alpha,1,alphad,1)
+      alphad = alpha
       call hnd_diag(alphad,alpha_ev,3,.false.,.false.) 
 c
       alpha_iso = (alpha_ev(1)+alpha_ev(2)+alpha_ev(3))/3.0d0 ! isotropic part
