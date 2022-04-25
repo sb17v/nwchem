@@ -192,15 +192,15 @@ c * (s|s), (s|x), (s|y), (s|z)
           nintx   = (Li+1)*(Li+2)/2*i_ngen  ! size of X
           nint_xsp = nintx * 4              ! size of X * size of sp
           if (doS) then
-            call dcopy(nint_xsp,S,1,scr,1)
+            scr(1:nint_xsp) = S(1:nint_xsp)
             call int_sp1b(S,scr,scr(nintx+1),nintx,1)
           endif
           if (doT) then
-            call dcopy(nint_xsp,T,1,scr,1)
+            scr(1:nint_xsp) = T(1:nint_xsp)
             call int_sp1b(T,scr,scr(nintx+1),nintx,1)
           endif
           if (doV) then
-            call dcopy(nint_xsp,V,1,scr,1)
+            scr(1:nint_xsp) = V(1:nint_xsp)
             call int_sp1b(V,scr,scr(nintx+1),nintx,1)
           endif
         endif
@@ -314,7 +314,7 @@ cc Original call to spin independent ECP
 cc AJL/End
 c
 *... sum ecp into V block
-        call daxpy(nintV, 1.0d00, scr,1,V,1)
+        V(1:nintV) = V(1:nintV) + scr(1:nintV)
       endif
 *
       end
