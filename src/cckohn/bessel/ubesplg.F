@@ -167,7 +167,7 @@ c            endif
          yp2=(der(np)-der(np-1))/rd
          call cckohn_spline(r,der,np,yp1,yp2,scr,csl(1,l))
  33   continue
-      call dcopy(np,r,1,xr,1)
+      xr(1:np) = r(1:np)
 c      write(*,*)"r"
 c      write(*,"(6f12.5)")(r(i),i=1,np)
 c      write(*,*)"xr"
