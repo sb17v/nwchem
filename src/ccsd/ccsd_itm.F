@@ -120,8 +120,8 @@ c H2
         enddo
       enddo
 c
-      giu(1:lnoo) = hiu(1:lnoo)
-      gabe(1:lnvv) = habe(1:lnvv)
+      giu  = hiu
+      gabe = habe
       call dfill(lnov,0.0d00,hia,1)
 c
       if (iprt.gt.5.and.iam.eq.0)print *,'forming aitm'
