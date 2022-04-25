@@ -125,9 +125,9 @@ C $Id$
 *   Zero out arrays for accumulation
 *
       n_abm = n_ab*(mt_min+mt_mid+mt_max)
-      call dcopy(n_abm,zero,0,Q,1)
+      Q(1:n_abm) = zero
       n_abm = (l_a+1)*(l_b+1)*n_ab*n_cont_c
-      call dcopy(n_abm,zero,0,Qab,1)
+      Qab(1:n_abm) = zero
 *
 *   Set up initial values for K = 0 and 1
 *
