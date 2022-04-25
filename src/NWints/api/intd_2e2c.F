@@ -182,7 +182,7 @@ c
         if(nint.ne.0) then
            nint= int_nbf_x(itype)*int_nbf_x(jtype)
            if(lscr.lt.nint) call errquit(' lscr small ',0,0)
-           call dcopy((nint*12),eri,1,scr,1)
+           scr(1:(nint*12)) = eri(1:(nint*12))
            call trspmo_block(scr,12,  eri,nint)
            any_spherical=.false.
 c     skip for sp
