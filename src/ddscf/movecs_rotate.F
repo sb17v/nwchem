@@ -219,7 +219,7 @@ c
 c
 c     diagonalize the quadratic form matrix
 c
-      call dcopy(16,c,1,v,1)
+      v(1:16) = c(1:16)
       call util_jacobi (4,v,4,d)
 c
         q(1) = v(1,4)
