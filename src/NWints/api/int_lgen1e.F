@@ -80,7 +80,7 @@ c
      & call errquit('int_lgen1e: scratch array too small. need:',l1e,
      &        INT_ERR)
       
-      call dcopy(l1e,Gen1e,1,scr,1)
+      scr(1:l1e) = Gen1e(1:l1e)
 c
       numgen = 0
       icount = 0
