@@ -241,7 +241,7 @@ c
       if(op_type.eq.'improper rotation'.or.op_type.eq.'mirror'.or.
      +     op_type.eq.'inversion')then 
          call dgemm('n','n',3,3,3,1.0d0,imatrix,3,hh,3,0.0d0,hmatrix,3)
-         call dcopy(9,hmatrix,1,hh,1)
+         hh(1:9) = hmatrix(1:9)
          call sym_op_type(hh, op_type, order, power, direction)
          if(op_type.ne.'rotation'.and.op_type.ne.'identity')
      +        call errquit('sym_get_spin_op: error in imatrix',0,
