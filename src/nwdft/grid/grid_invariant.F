@@ -104,7 +104,7 @@ c
          matalr(1,3)=-sqrt(6d0)/6d0
          matalr(2,3)=-sqrt(2d0)/2d0
          matalr(3,3)= sqrt(3d0)/3d0
-         call dcopy(9,qrot,1,c,1)
+         c(1:9) = qrot(1:9)
          call dgemm('N','N',3,3,3,1d0,matalr,3,c,3,
      ,        0d0,qrot,3)
       endif
@@ -232,7 +232,7 @@ c
 c
 c     diagonalize M
 c
-      call dcopy(9,qrot,1,qin,1)
+      qin(1:9) = qrot(1:9)
       call dcopy(3,0d0,0,eigs, 1)
       call util_jacobinosort(3, qrot,3, eigs)
       if(ga_nodeid().eq.0.and.oprint) then
