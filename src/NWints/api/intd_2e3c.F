@@ -216,7 +216,7 @@ c
            nint_ck= int_nbf_x(itype)*int_nbf_x(jtype)*
      k          int_nbf_x(ktype) 
            if(lscr.lt.nint_ck) call errquit(' lscr small ',0,0)
-           call dcopy((nint_ck*12),eri,1,scr,1)
+           scr(1:(nint_ck*12)) = eri(1:(nint_ck*12))
            call trspmo_block(scr,12,  eri,nint_ck)
            call intd_sum(eri,nint_ck,idatom,iatom,iatom,jatom,katom)
            any_spherical=.false.
