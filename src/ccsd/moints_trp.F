@@ -860,7 +860,7 @@ cstaggering
       call dgemm('n','n',nvir,nvir,nbf,1.d0,x,nvir,c(1,ncor+nocc+1),nbf,
      $           0.d0,tmp,nvir)
 
-      call dcopy(nvir*nvir,tmp,1,x,1)
+      x(1:nvir*nvir) = tmp(1:nvir*nvir)
 
       return
       end
