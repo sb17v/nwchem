@@ -173,10 +173,10 @@ c
      &       INT_ERR)
       endif
 c
-      if (doS) call dcopy(lstv,zero,0,s,1)
-      if (doT) call dcopy(lstv,zero,0,ti,1)
+      if (doS) s(1:lstv) = zero
+      if (doT) ti(1:lstv) = zero
 c
-c      if (doV) call dcopy(lstv,zero,0,vi,1)
+c      if (doV) vi(1:lstv) = zero
 c
 c     do not fill vi with zero's since the contributions are summed over 
 c     all basis pairs

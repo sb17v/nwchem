@@ -185,14 +185,14 @@ c
                      call ga_get(g_exch,1,lnvv,start,end,Kia,lnvv)
 c     
                      do k=klo,min(khi,i)
-                        call dcopy(lnvv,zip,0,f1n,1)
-                        call dcopy(lnvv,zip,0,f1t,1)
-                        call dcopy(lnvv,zip,0,f2n,1)
-                        call dcopy(lnvv,zip,0,f2t,1)
-                        call dcopy(lnvv,zip,0,f3n,1)
-                        call dcopy(lnvv,zip,0,f3t,1)
-                        call dcopy(lnvv,zip,0,f4n,1)
-                        call dcopy(lnvv,zip,0,f4t,1)
+                        f1n(1:lnvv) = zip
+                        f1t(1:lnvv) = zip
+                        f2n(1:lnvv) = zip
+                        f2t(1:lnvv) = zip
+                        f3n(1:lnvv) = zip
+                        f3t(1:lnvv) = zip
+                        f4n(1:lnvv) = zip
+                        f4t(1:lnvv) = zip
 c     
 c     sum(d) (Jia, Kia)bd * Tkj,cd -> Fbc
 c     
