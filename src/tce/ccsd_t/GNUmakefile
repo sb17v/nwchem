@@ -17,6 +17,12 @@ ifdef USE_OFFLOAD
   OBJ_OPTIMIZE += offl_ccsd_t_singles_l.o offl_ccsd_t_singles_l_1.o
 endif
 
+ifdef USE_CUTENSOR
+  OBJ_OPTIMIZE += ccsd_t_cutensor.o
+  FOPTIONS += -Mextend
+  FOPTIONS += -cuda -acc
+endif
+
 LIB_INCLUDES = -I../include
 
 LIBRARY = libtce.a
