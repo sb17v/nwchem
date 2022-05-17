@@ -304,7 +304,7 @@
       integer, intent(in) :: k_list(7,*),k_range(*),k_offset(*)
       double precision, intent(inout), managed :: a_singles(:)
       double precision, intent(inout), managed :: a_doubles(:)
-      double precision, intent(in) :: t1_local(:)
+      double precision, intent(in), managed :: t1_local(:)
       logical, intent(in) :: restricted
       integer, intent(in) :: k_evl_sorted
       integer, intent(in) :: k_t1_offset
@@ -338,11 +338,11 @@
      &        * range_h1 * range_h2 * range_h3
       a_singles = 0.0d0
       a_doubles = 0.0d0
-      call ccsd_t_singles_cutensor(a_singles,
-     &                 t1_local,d_v2,k_t1_offset,k_v2_offset,
-     &                 t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b)
       call ccsd_t_doubles_cutensor(a_doubles,
      &                 d_t2,d_v2,k_t2_offset,k_v2_offset,
+     &                 t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b)
+      call ccsd_t_singles_cutensor(a_singles,
+     &                 t1_local,d_v2,k_t1_offset,k_v2_offset,
      &                 t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b)
       call ccsd_t_dot_cutensor(a_singles,a_doubles,restricted,
      &                 t_h1b,t_h2b,t_h3b,t_p4b,t_p5b,t_p6b,
@@ -567,8 +567,8 @@
 #include "sym.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout) :: a_t3(:)
-      double precision, intent(in) :: f_t1(:)
+      double precision, intent(inout), managed :: a_t3(:)
+      double precision, intent(in), managed :: f_t1(:)
       integer, intent(in) :: k_t1_offset
       integer, intent(in) :: d_v2,k_v2_offset
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
@@ -823,7 +823,7 @@
       integer :: d_v2, k_v2_offset
       double precision, allocatable, managed :: d_t2sub(:)
       double precision, allocatable, managed :: d_v2sub(:)
-      double precision, allocatable, managed :: d_scratch(:)
+      double precision, allocatable :: d_scratch(:)
       integer :: alloc_error
       integer :: range_p4,range_h1
       integer :: maxp,maxh
@@ -885,7 +885,7 @@
       double precision, intent(inout), managed :: triplesx(:)
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       double precision, intent(in), managed :: t2sub(:),v2sub(:)
-      double precision, intent(in), managed :: scratch(:)
+      double precision, intent(in) :: scratch(:)
       integer :: h1b, h2b, h3b, p4b, p5b, p6b, h7b,p7b
       integer :: p5b_2,p7b_1,h2b_1,p7b_2
       integer :: p4b_1, p5b_1, h1b_1, h7b_1
@@ -1498,4 +1498,4 @@
       end do ! ia6 loop
       end
 
-      end module
+      end module tce_ccsd_t_cutensor

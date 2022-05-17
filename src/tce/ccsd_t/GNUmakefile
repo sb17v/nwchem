@@ -20,7 +20,7 @@ endif
 ifdef USE_CUTENSOR
   OBJ_OPTIMIZE += ccsd_t_cutensor.o
   FOPTIONS += -Mextend
-  FOPTIONS += -cuda -acc
+  FOPTIONS += -cuda -acc -gpu=managed
 endif
 
 LIB_INCLUDES = -I../include
