@@ -3080,7 +3080,6 @@ ifneq ($(TARGET),LINUX)
            FOPTIONS  += -cudalib=cutensor -cuda
            LDOPTIONS += -cudalib=cutensor -cuda
         endif
-      endif
 
         # Jeff: FreeBSD does not link libm automatically with flang
         ifeq ($(USE_FLANG),1)
