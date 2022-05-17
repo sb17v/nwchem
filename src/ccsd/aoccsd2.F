@@ -982,7 +982,7 @@ c
      $        dbl_mb(k_trp_Djka), dbl_mb(k_trp_Djia))
 c
          else if (use_trpdrv_openacc) then
-#if defined(USE_OPENACC)
+#if defined(USE_OPENACC_TRPDRV)
          if (iam.eq.0.and.oprint) then
             write(luout,1808) nvpass,util_wallsec()
             call util_flush(luout)
