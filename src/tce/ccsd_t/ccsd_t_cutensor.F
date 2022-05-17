@@ -1129,7 +1129,7 @@
       workspaceSize = 0
       cut_status = cutensorContractionGetWorkspace(cut_handle,
      &                                dX, cut_find,
-     &                                CUTENSOR_WORKSPACE_RECOMMENDED,
+     &                                CUTENSOR_WORKSPACE_MAX,!RECOMMENDED,
      &                                workspaceSize)
       if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
         call errquit('cutensorContractionGetWorkspace D1_1',

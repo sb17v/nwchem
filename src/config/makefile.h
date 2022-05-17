@@ -3431,7 +3431,7 @@ endif
 
 ifdef NWCHEM_LINK_CUDA
     ifeq ($(_FC),pgf90)
-       CORE_LIBS += -acc -cuda -cudalib=cublas,cutensor
+       CORE_LIBS += -acc -cuda -cudalib=cublas,cutensor -gpu=managed
     endif
     ifeq ($(_FC),gfortran)
        CORE_LIBS +=  -fopenacc -lcublas
