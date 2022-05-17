@@ -2,6 +2,7 @@
 !
 ! $Id$
 ! 
+      use tce_ccsd_t_cutensor
       implicit none
 #include "mafdecls.fh"
 #include "tcgmsg.fh"
@@ -537,6 +538,8 @@ c
       logical converged
       double precision pt3_1   ! [T] energy
       double precision pt3_2   ! (T)-[T] energy
+      double precision pt3_1_cut   ! [T] energy
+      double precision pt3_2_cut   ! (T)-[T] energy
 ! LR-CCSD(T) method
       double precision pt3_3,pt3_4,pt3_5,pt3_6
 ! --------------------------------------------
@@ -3366,16 +3369,25 @@ c
      1                    d_v2,k_v2_offset,pt3_1,pt3_2,size_t1,icuda)
               end if 
 #else
-              if (nodezero) write(LuOut,*) 'Using plain CCSD(T) code'
-              if (nodezero) call util_flush(LuOut)
               if(.not.slice) then
-              call ccsd_t(d_t1,k_t1_offset,d_t2,k_t2_offset,
-     1                    d_v2,k_v2_offset,pt3_1,pt3_2,size_t1)
+               if (nodezero) then
+                 write(LuOut,'(a23)') 'Using plain CCSD(T) CUT'
+               endif
+               call ccsd_t_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
+     1                     d_v2,k_v2_offset,pt3_1_cut,pt3_2_cut,size_t1)
+               if (nodezero) then
+                 write(LuOut,'(a24)') 'Using plain CCSD(T) code'
+               endif
+               call ccsd_t(d_t1,k_t1_offset,d_t2,k_t2_offset,
+     1                     d_v2,k_v2_offset,pt3_1,pt3_2,size_t1)
               else
-              if (nodezero) write(LuOut,*) 'Using sliced CCSD(T) code'
-              call ccsd_t_6dts(d_t1,k_t1_offset,d_t2,k_t2_offset,
-     1                    d_v2,k_v2_offset,pt3_1,pt3_2,size_t1,xmem)
+               if (nodezero) then
+                 write(LuOut,'(a25)') 'Using sliced CCSD(T) code'
+               endif
+               call ccsd_t_6dts(d_t1,k_t1_offset,d_t2,k_t2_offset,
+     1                     d_v2,k_v2_offset,pt3_1,pt3_2,size_t1,xmem)
               end if
+              if (nodezero) call util_flush(LuOut)
 #endif
 #ifdef USE_PSTAT
 c     
@@ -3396,10 +3408,12 @@ c
             write(LuOut,*)
             if (restart_ccsd_t.eq.0) then
               write(LuOut,9075) "CCSD[T]",pt3_1
+              write(LuOut,9075) "CUTE[T]",pt3_1_cut
               write(LuOut,9070) "CCSD[T]",corr+pt3_1
               write(LuOut,9080) "CCSD[T]",ref+corr+pt3_1
             endif
             write(LuOut,9075) "CCSD(T)",pt3_2
+            write(LuOut,9075) "CUTE(T)",pt3_2_cut
             write(LuOut,9070) "CCSD(T)",corr+pt3_2
             write(LuOut,9080) "CCSD(T)",ref+corr+pt3_2
             write(LuOut,9020) cpu, wall
