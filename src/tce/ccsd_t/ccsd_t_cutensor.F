@@ -1,10 +1,29 @@
       module tce_ccsd_t_cutensor
 
+      use cutensorex
+      implicit none
+
+      type(cutensorHandle) :: cut_handle 
+      type(cutensorContractionFind) :: cut_find
+      type(cudaDataType), parameter :: cut_double = 
+     &                                 cudaDataType(CUDA_R_64F)
+      type(cutensorComputeType), parameter :: cut_compF64 = 
+     &                                        CUTENSOR_R_MIN_64F
+      integer(kind=cuda_stream_kind) :: stream
+
+      ! because 2/4/6 are default integers, we need fixed-width versions
+      integer(4), parameter :: two = 2
+      integer(4), parameter :: four = 4
+      integer(4), parameter :: six = 6
+
       contains
 
       subroutine ccsd_t_cutensor(d_t1,k_t1_offset,d_t2,k_t2_offset,
      &                           d_v2,k_v2_offset,energy1,energy2,
      &                           size_t1)
+      use cudafor
+      use cutensorex
+      use openacc
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
@@ -40,8 +59,28 @@
       integer :: pct_progr
       integer, parameter :: n_progr=20
       logical :: i_progr(n_progr)
+      integer(4) :: cuda_err
+      type(cutensorStatus) :: cut_status
       integer :: nxtask0
       external nxtask0
+
+      cuda_err = cudaStreamCreate(stream)
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamCreate',cuda_err,UNKNOWN_ERR)
+      endif
+      ! init the library
+      cut_status = cutensorInit(cut_handle)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInit',int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      ! init the find algorithm to default
+      cut_status = cutensorInitContractionFind(cut_handle,cut_find,
+     &                                         CUTENSOR_ALGO_DEFAULT)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionFind',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
 ! - T1/X1 LOCALIZATION ----------
       allocate(t1_local(1:size_t1), stat=alloc_error)
       if (alloc_error.ne.0) then
@@ -183,6 +222,11 @@
      &               alloc_error, MA_ERR)
       endif
 ! ---------------------------
+      cuda_err = cudaStreamDestroy(stream)
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamDestroy',cuda_err,UNKNOWN_ERR)
+      endif
       end
 
       subroutine ccsd_t_dot_cutensor(a_singles, a_doubles,
@@ -373,17 +417,11 @@
       task_thresh=tot_task
       m=0
       do t_p4b = noab+1,noab+nvab
-       range_p4 = krange(t_p4b)
        do t_p5b = t_p4b,noab+nvab
-        range_p5 = krange(t_p5b)
         do t_p6b = t_p5b,noab+nvab
-         range_p6 = krange(t_p6b)
          do t_h1b = 1,noab
-          range_h1 = krange(t_h1b)
           do t_h2b = t_h1b,noab
-           range_h2 = krange(t_h2b)
            do t_h3b = t_h2b,noab
-            range_h3 = krange(t_h3b)
             if (kspin(t_p4b)+kspin(t_p5b)+kspin(t_p6b).eq.
      &          kspin(t_h1b)+kspin(t_h2b)+kspin(t_h3b)) then
             if ((.not.restricted).or.
@@ -392,6 +430,12 @@
             if (ieor(ksym(t_p4b),ieor(ksym(t_p5b),ieor(ksym(t_p6b),
      &          ieor(ksym(t_h1b),ieor(ksym(t_h2b),ksym(t_h3b)
      &              ))))).eq.0) then
+            range_p4 = krange(t_p4b)
+            range_p5 = krange(t_p5b)
+            range_p6 = krange(t_p6b)
+            range_h1 = krange(t_h1b)
+            range_h2 = krange(t_h2b)
+            range_h3 = krange(t_h3b)
             m=m+1
             kaux(1,m)=t_p4b
             kaux(2,m)=t_p5b
@@ -400,7 +444,7 @@
             kaux(5,m)=t_h2b
             kaux(6,m)=t_h3b
             kaux(7,m)=range_p4*range_p5*range_p6
-     &                      *range_h1*range_h2*range_h3
+     &               *range_h1*range_h2*range_h3
             endif
             endif
             endif
@@ -531,12 +575,11 @@
       integer :: h1b, h2b, h3b, p4b, p5b, p6b
       integer :: k_c_sort, l_c_sort
       integer :: h1b_1, h2b_2, h3b_2, p4b_1, p5b_2, p6b_2
-      integer :: dima, dimb, dimc, dima_sort, dimb_sort
+      integer :: dima, dimb, dima_sort, dimb_sort
       integer :: k_a_sort, l_a_sort, k_b_sort, l_b_sort
       integer :: k_a, l_a, k_b, l_b
       integer :: a3(9,6)
       integer :: ia6,ja6
-      logical, parameter :: skipped = .false.
 
       a3(1,1)=t_p4b
       a3(1,2)=t_p5b
@@ -627,7 +670,6 @@
         h2b=a3(ia6,5)
         h3b=a3(ia6,6)
         if((p5b.le.p6b).and.(h2b.le.h3b).and.(p4b.ne.0)) then
-        if (.not.skipped) then
         if ((.not.restricted).or.
      &       (int_mb(k_spin+p4b-1)+int_mb(k_spin+p5b-1)+
      &        int_mb(k_spin+p6b-1)+int_mb(k_spin+h1b-1)+
@@ -640,12 +682,8 @@
      &      ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
      &      ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) 
      &     .eq.ieor(irrep_v,irrep_t)) then
-        dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) * 
-     &         int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1) * 
-     &         int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
         if (int_mb(k_spin+p4b-1).eq.int_mb(k_spin+h1b-1)) then
-        if (ieor(int_mb(k_sym+p4b-1),int_mb(k_sym+h1b-1))
-     &                 .eq.irrep_t) then
+        if (ieor(int_mb(k_sym+p4b-1),int_mb(k_sym+h1b-1)).eq.irrep_t) then
         CALL TCE_RESTRICTED_2(p4b,h1b,p4b_1,h1b_1)
         CALL TCE_RESTRICTED_4(p5b,p6b,h2b,h3b,p5b_2,p6b_2,h2b_2,h3b_2)
         dima_sort = int_mb(k_range+p4b-1) * int_mb(k_range+h1b-1)
@@ -680,72 +718,72 @@
      &                        (p5b_2-1)))),h3b_2,h2b_2,p6b_2,p5b_2)
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b .eq. h3b)) then
+        call cutensor_t_s1_1(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b .eq. h3b)) then
+        call cutensor_t_s1_2(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p4b).and.(t_p5b.eq.p5b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
-        call sd_t_s1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b .eq. h1b)) then
+        call cutensor_t_s1_3(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b .eq. h3b)) then
+        call cutensor_t_s1_4(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b .eq. h3b)) then
+        call cutensor_t_s1_5(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p4b).and.(t_p6b.eq.p6b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
-        call sd_t_s1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b .eq. h1b)) then
+        call cutensor_t_s1_6(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
-     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h1b).and.(t_h2b.eq.h2b).and.(t_h3b .eq. h3b)) then
+        call cutensor_t_s1_7(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b.eq.h3b)) then
-        call sd_t_s1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h1b).and.(t_h3b .eq. h3b)) then
+        call cutensor_t_s1_8(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
         
         end if
         if ((t_p4b.eq.p5b).and.(t_p5b.eq.p6b).and.(t_p6b.eq.p4b)
-     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b.eq.h1b)) then
-        call sd_t_s1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
+     &  .and.(t_h1b.eq.h2b).and.(t_h2b.eq.h3b).and.(t_h3b .eq. h1b)) then
+        call cutensor_t_s1_9(int_mb(k_range+h3b-1),int_mb(k_range+h2b-1),
      &                 int_mb(k_range+h1b-1),int_mb(k_range+p6b-1),
      &                 int_mb(k_range+p5b-1),int_mb(k_range+p4b-1),
      &                 a_t3,dbl_mb(k_a_sort),dbl_mb(k_b_sort))
@@ -764,8 +802,6 @@
         end if
         end if
         end if
-!       
-        end if
       end do
       end
       
@@ -781,13 +817,13 @@
 #include "util.fh"
 #include "errquit.fh"
 #include "tce.fh"
-      double precision, intent(inout) :: f_t3(:)
+      double precision, intent(inout), managed :: f_t3(:)
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
       integer :: d_t2, k_t2_offset
       integer :: d_v2, k_v2_offset
-      double precision, allocatable :: d_t2sub(:)
-      double precision, allocatable :: d_v2sub(:)
-      double precision, allocatable :: d_scratch(:)
+      double precision, allocatable, managed :: d_t2sub(:)
+      double precision, allocatable, managed :: d_v2sub(:)
+      double precision, allocatable, managed :: d_scratch(:)
       integer :: alloc_error
       integer :: range_p4,range_h1
       integer :: maxp,maxh
@@ -834,6 +870,9 @@
      &                                      t_h1b,t_h2b,t_h3b,
      &                                      v2sub,t2sub,scratch)
 !     i0 ( p4 p5 p6 h1 h2 h3 )_vt + = -1 * P( 9 ) * Sum ( h7 ) * t ( p4 p5 h1 h7 )_t * v ( h7 p6 h2 h3 )_v
+      use iso_c_binding
+      use cudafor
+      use cutensorex
       implicit none
 #include "global.fh"
 #include "mafdecls.fh"
@@ -843,14 +882,15 @@
 #include "util.fh"
       integer, intent(in) :: d_a, k_a_offset
       integer, intent(in) :: d_b, k_b_offset
-      double precision, intent(inout) :: triplesx(:)
+      double precision, intent(inout), managed :: triplesx(:)
       integer, intent(in) :: t_p4b, t_p5b, t_p6b, t_h1b, t_h2b, t_h3b
-      double precision, intent(in) :: t2sub(:),v2sub(:),scratch(:)
+      double precision, intent(in), managed :: t2sub(:),v2sub(:)
+      double precision, intent(in), managed :: scratch(:)
       integer :: h1b, h2b, h3b, p4b, p5b, p6b, h7b,p7b
       integer :: p5b_2,p7b_1,h2b_1,p7b_2
       integer :: p4b_1, p5b_1, h1b_1, h7b_1
       integer :: p6b_2, h7b_2, h2b_2, h3b_2
-      integer :: dima, dimb, dimc, dima_sort, dimb_sort
+      integer :: dima, dimb, dima_sort, dimb_sort
       integer :: k_c_sort, l_c_sort
       integer :: k_a, l_a
       integer :: k_b, l_b
@@ -865,6 +905,28 @@
       integer :: n_h7b
       integer :: n_p7b
       integer :: h7b_in,p7b_in
+
+      type(cutensorStatus) :: cut_status
+      type(cutensorDescriptor) :: dT2, dV2, dT3
+      type(cutensorContractionDescriptor) :: dX
+      type(cutensorContractionPlan) :: pX
+      double precision :: alpha
+      double precision, parameter :: beta = 1.0d0
+
+      integer(8), dimension(4) :: eT2 ! extent
+      integer(8), dimension(4) :: sT2 ! stride
+      integer(4), dimension(4) :: mT2 ! modes
+      integer(8), dimension(4) :: eV2 ! extent
+      integer(8), dimension(4) :: sV2 ! stride
+      integer(4), dimension(4) :: mV2 ! modes
+      integer(8), dimension(6) :: eT3
+      integer(4), dimension(6) :: mT3
+      integer(4) :: aT2, aV2, aT3
+
+      integer :: alloc_error
+      integer(4) :: cuda_err
+      integer(8) :: workspaceSize
+      type(c_devptr) :: workspace
 
       a3(1,1)=t_p4b
       a3(1,2)=t_p5b
@@ -967,9 +1029,6 @@
      &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
      &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1))))))
      &    .eq. ieor(irrep_v,irrep_t))) then
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1) 
-     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
-     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
       range_h3b = int_mb(k_range+h3b-1)
       range_h2b = int_mb(k_range+h2b-1)
       range_h1b = int_mb(k_range+h1b-1)
@@ -990,6 +1049,10 @@
 
       if(n_h7b.gt.0) then
 
+      ! all d1 contractions use
+      ! t2sub(h7d,p4d,p5d,h1d)
+      ! v2sub(h3d,h2d,p6d,h7d)
+
          do h7b_in=ga_nodeid()+1,ga_nodeid()+noab
             h7b=mod(h7b_in,noab)+1
             if(tce_hashnsort(.false., d_a, d_b,
@@ -997,18 +1060,143 @@
      &                       p4b,p5b,h1b,h7b,p6b,h2b,h3b,
      &                       t2sub,v2sub)) then
                 range_h7b = int_mb(k_range+h7b-1)
+
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
-     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
-                    call cutensor_t_d1_1(range_h3b,range_h2b,
-     &                                   range_h1b,range_p6b,
-     &                                   range_p5b,range_p4b,
-     &                                   range_h7b,
-     &                                   triplesx,t2sub,v2sub)
+     &              (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) then
+
+      ! t2sub(h7d,p4d,p5d,h1d)
+      eT2 = [range_h7b,range_p4b,range_p5b,range_h1b]
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dT2,
+     &                               four,eT2,c_null_ptr,
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor T2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                        t2sub, dT2, aT2)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement T2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      ! v2sub(h3d,h2d,p6d,h7d)
+      eV2 = [range_h3b,range_h2b,range_p6b,range_h7b] ! 3267
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dV2,
+     &                               four,eV2,c_null_ptr,
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor V2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                        v2sub, dV2, aV2)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement V2',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      ! no stride here
+      eT3 = [range_h3b,range_h2b,range_h1b,range_p6b,range_p5b,range_p4b] ! 321654
+      cut_status = cutensorInitTensorDescriptor(cut_handle,dT3,
+     &                               six,eT3,c_null_ptr,
+     &                               cut_double,
+     &                               CUTENSOR_OP_IDENTITY)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitTensorDescriptor T3',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cut_status = cutensorGetAlignmentRequirement(cut_handle, 
+     &                                 triplesx, dT3, aT3)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorGetAlignmentRequirement T3',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+
+      mT2 = [7,4,5,1]
+      mV2 = [3,2,6,7]
+      mT3 = [3,2,1,6,5,4]
+      cut_status = cutensorInitContractionDescriptor(cut_handle,dX,
+     &                         dT2,mT2,aT2, dV2,mV2,aV2,
+     &                         dT3,mT3,aT3, dT3,mT3,aT3, cut_compF64)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionDescriptor D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      workspaceSize = 0
+      cut_status = cutensorContractionGetWorkspace(cut_handle,
+     &                                dX, cut_find,
+     &                                CUTENSOR_WORKSPACE_RECOMMENDED,
+     &                                workspaceSize)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorContractionGetWorkspace D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+#if ASYNC
+      alloc_error = cudaMallocAsync(workspace, workspaceSize, stream)
+      if (alloc_error.ne.0) then
+        call errquit('cudaMallocAsync D1_1',alloc_error,MA_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#else
+      alloc_error = cudaMalloc(workspace, workspaceSize)
+      if (alloc_error.ne.0) then
+        call errquit('cudaMalloc D1_1',alloc_error,MA_ERR)
+      endif
+#endif
+      cut_status = cutensorInitContractionPlan(cut_handle, pX, dX,
+     &                         cut_find, workspaceSize)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorInitContractionPlan D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      alpha = -1.0d0
+      cut_status = cutensorContraction(cut_handle, pX,
+     &                     alpha, t2sub, v2sub,
+     &                     beta, triplesx, triplesx,
+     &                     workspace, workspaceSize, stream)
+      if (cut_status .ne. CUTENSOR_STATUS_SUCCESS) then
+        call errquit('cutensorContraction D1_1',
+     &               int(cut_status%stat),UNKNOWN_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#if ASYNC
+      alloc_error = cudaFreeAsync(workspace, stream)
+      if (alloc_error.ne.0) then
+        call errquit('cudaFreeAsync workspace D1_1',
+     &               alloc_error,MA_ERR)
+      endif
+      cuda_err = cudaStreamSynchronize( stream )
+      if (cuda_err.ne.0) then
+        write(6,*) cudaGetErrorString(cuda_err)
+        call errquit('cudaStreamSynchronize',cuda_err,UNKNOWN_ERR)
+      endif
+#else
+      alloc_error = cudaFree(workspace)
+      if (alloc_error.ne.0) then
+        call errquit('cudaFree workspace D1_1',alloc_error,MA_ERR)
+      endif
+#endif
+!                    call cutensor_t_d1_1(range_h3b,range_h2b,
+!     &                                   range_h1b,range_p6b,
+!     &                                   range_p5b,range_p4b,
+!     &                                   range_h7b,
+!     &                                   triplesx,t2sub,v2sub)
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h1b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_2(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1017,7 +1205,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and.
      &              (t_p6b .eq. p6b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+     &              (t_h2b .eq. h3b) .and. (t_h3b .eq. h1b)) then
                     call cutensor_t_d1_3(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1026,7 +1214,7 @@
                 end if
                 if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h1b) .and. 
-     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_4(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1035,7 +1223,7 @@
                 end if
                 if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and.
-     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h1b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_5(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1044,7 +1232,7 @@
                 end if
                 if ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+     &              (t_h2b .eq. h3b) .and. (t_h3b .eq. h1b)) then
                     call cutensor_t_d1_6(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1053,7 +1241,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h1b) .and. 
-     &              (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h2b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_7(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1062,7 +1250,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and.
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and.
-     &              (t_h2b .eq. h1b) .and. (t_h3b.eq.h3b)) then
+     &              (t_h2b .eq. h1b) .and. (t_h3b .eq. h3b)) then
                     call cutensor_t_d1_8(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1071,7 +1259,7 @@
                 end if
                 if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. 
      &              (t_p6b .eq. p5b) .and. (t_h1b .eq. h2b) .and. 
-     &              (t_h2b .eq. h3b) .and. (t_h3b.eq.h1b)) then
+     &              (t_h2b .eq. h3b) .and. (t_h3b .eq. h1b)) then
                     call cutensor_t_d1_9(range_h3b,range_h2b,
      &                                   range_h1b,range_p6b,
      &                                   range_p5b,range_p4b,
@@ -1184,9 +1372,6 @@
      &    ieor(int_mb(k_sym+p6b-1),ieor(int_mb(k_sym+h1b-1),
      &    ieor(int_mb(k_sym+h2b-1),int_mb(k_sym+h3b-1)))))) 
      &    .eq. ieor(irrep_v,irrep_t))) then
-      dimc = int_mb(k_range+p4b-1) * int_mb(k_range+p5b-1)
-     &     * int_mb(k_range+p6b-1) * int_mb(k_range+h1b-1)
-     &     * int_mb(k_range+h2b-1) * int_mb(k_range+h3b-1)
       range_h3b = int_mb(k_range+h3b-1)
       range_h2b = int_mb(k_range+h2b-1)
       range_h1b = int_mb(k_range+h1b-1)
@@ -1209,6 +1394,10 @@
 
       if(n_p7b.ne.0) then
 
+      ! all d2 contractions use
+      ! t2sub(p7d,p4d,h1d,h2d)
+      ! v2sub(p7d,h3d,p6d,p5d)
+
       do p7b_in= ga_nodeid()+1,nvab+ga_nodeid()
          p7b=mod(p7b_in,nvab)+noab+1
          if(tce_hashnsort_2(.false., d_a, d_b,
@@ -1216,7 +1405,6 @@
      &                      p4b,p7b,h1b,h2b,p5b,p6b,h3b,
      &                      t2sub,v2sub)) then
             range_p7b = int_mb(k_range+p7b-1)
-            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
             if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
@@ -1226,7 +1414,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and.
      &          (t_h2b .eq. h1b) .and. (t_h3b .eq. h2b)) then
@@ -1236,17 +1423,15 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
-     &          (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
+     &          (t_h2b .eq. h3b) .and. (t_h3b .eq. h2b)) then
                 call cutensor_t_d2_3(range_h3b,range_h2b,
      &                               range_h1b,range_p6b,
      &                               range_p5b,range_p4b,
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
@@ -1256,7 +1441,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h3b) .and.
      &          (t_h2b .eq. h1b) .and. (t_h3b .eq .h2b)) then
@@ -1267,7 +1451,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. 
      &          (t_p6b .eq. p6b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h3b) .and. (t_h3b .eq .h2b)) then
@@ -1277,7 +1460,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b.eq.h3b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
      &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h2b) .and. (t_h3b .eq .h3b)) then
@@ -1287,7 +1469,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub)
             end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
      &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h3b) .and.
      &          (t_h2b .eq. h1b) .and. (t_h3b .eq .h2b)) then
@@ -1297,7 +1478,6 @@
      &                               range_p7b,
      &                               triplesx,t2sub,v2sub,scratch)
                      end if
-            !if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b.eq.h2b)) then
             if ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. 
      &          (t_p6b .eq. p4b) .and. (t_h1b .eq. h1b) .and.
      &          (t_h2b .eq. h3b) .and. (t_h3b .eq .h2b)) then
@@ -1317,13 +1497,237 @@
       end do ! ia6 loop
       end
 
+      subroutine cutensor_t_s1_1(h3d,h2d,h1d,p6d,p5d,p4d,triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h2d,h1d,p6d,p5d,p4d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p4=1,p4d
+      do p5=1,p5d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h2,h1,p6,p5,p4)=triplesx(h3,h2,h1,p6,p5,p4)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_2(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p6d,p5d,p4d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p4=1,p4d
+      do p5=1,p5d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d ! interchanging h1 and h2 was a huge win with Cray+OpenMP
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p6,p5,p4)=triplesx(h3,h1,h2,p6,p5,p4)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_3(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p6d,p5d,p4d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p4=1,p4d
+      do p5=1,p5d
+      do p6=1,p6d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p6,p5,p4)=triplesx(h1,h3,h2,p6,p5,p4)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_4(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h2d,h1d,p6d,p4d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p4=1,p4d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h2,h1,p6,p4,p5)=triplesx(h3,h2,h1,p6,p4,p5)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_5(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p6d,p4d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p4=1,p4d
+      do p6=1,p6d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p6,p4,p5)=triplesx(h3,h1,h2,p6,p4,p5)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_6(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p6d,p4d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p4=1,p4d
+      do p6=1,p6d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p6,p4,p5)=triplesx(h1,h3,h2,p6,p4,p5)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_7(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h2d,h1d,p4d,p6d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p6=1,p6d
+      do p4=1,p4d
+      do h1=1,h1d
+      do h2=1,h2d
+      do h3=1,h3d
+       triplesx(h3,h2,h1,p4,p6,p5)=triplesx(h3,h2,h1,p4,p6,p5)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_8(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h3d,h1d,h2d,p4d,p6d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p6=1,p6d
+      do p4=1,p4d
+      do h2=1,h2d
+      do h1=1,h1d
+      do h3=1,h3d
+       triplesx(h3,h1,h2,p4,p6,p5)=triplesx(h3,h1,h2,p4,p6,p5)
+     &   - t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
+      subroutine cutensor_t_s1_9(h3d,h2d,h1d,p6d,p5d,p4d,
+     &                     triplesx,t1sub,v2sub)
+      IMPLICIT NONE
+      integer h3d,h2d,h1d,p6d,p5d,p4d
+      integer h3,h2,h1,p6,p5,p4
+      double precision triplesx(h1d,h3d,h2d,p4d,p6d,p5d)
+      double precision t1sub(p4d,h1d)
+      double precision v2sub(h3d,h2d,p6d,p5d)
+!$acc parallel loop collapse(4)
+      do p5=1,p5d
+      do p6=1,p6d
+      do p4=1,p4d
+      do h2=1,h2d
+      do h3=1,h3d
+      do h1=1,h1d
+       triplesx(h1,h3,h2,p4,p6,p5)=triplesx(h1,h3,h2,p4,p6,p5)
+     &   + t1sub(p4,h1)*v2sub(h3,h2,p6,p5)
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      enddo
+      end
+!
       subroutine cutensor_t_d1_1(h3d,h2d,h1d,p6d,p5d,p4d,h7d,
      &               triplesx,t2sub,v2sub)
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d*h2d,h1d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
 !$acc parallel loop collapse(4)
       do p4=1,p4d
@@ -1347,10 +1751,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d,h1d,h2d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch,h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1377,11 +1781,11 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h1d,h3d*h2d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
-!      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
-      double precision :: scratch(h7d,h3d*h2d,p6d)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d,h2d,p6d,h7d)
+!      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, intent(in), managed :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
       call cute_transpt2_7326(v2sub,scratch,h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1406,9 +1810,9 @@
       implicit none
 
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d*h2d,h1d,p5d,p4d,p6d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p5d,p4d,p6d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
 !$acc parallel loop collapse(4)
       do p6=1,p6d
@@ -1433,10 +1837,10 @@
       implicit none
 
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d,h1d,h2d,p5d,p4d,p6d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d,h2d,p6d,h7d)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p5d,p4d,p6d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d,h2d,p6d,h7d)
+      double precision, intent(in), managed :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1464,10 +1868,10 @@
       implicit none
 
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h1d,h3d*h2d,p5d,p4d,p6d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d*h2d,p6d)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p5d,p4d,p6d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1491,9 +1895,9 @@
      &               triplesx,t2sub,v2sub)
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d*h2d,h1d,p5d,p6d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(h3d*h2d,p6d,h7d)
+      double precision, managed :: triplesx(h3d*h2d,h1d,p5d,p6d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(h3d*h2d,p6d,h7d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h2h3
 !$acc parallel loop collapse(4)
       do p4=1,p4d
@@ -1517,10 +1921,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h3d,h1d,h2d,p5d,p6d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d,h2d,p6d)
+      double precision, managed :: triplesx(h3d,h1d,h2d,p5d,p6d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d,h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1547,10 +1951,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,h7d
-      double precision :: triplesx(h1d,h3d*h2d,p5d,p6d,p4d)
-      double precision, intent(in) :: t2sub(h7d,p4d,p5d,h1d)
-      double precision, intent(in) :: v2sub(*)
-      double precision :: scratch(h7d,h3d*h2d,p6d)
+      double precision, managed :: triplesx(h1d,h3d*h2d,p5d,p6d,p4d)
+      double precision, intent(in), managed :: t2sub(h7d,p4d,p5d,h1d)
+      double precision, intent(in), managed :: v2sub(*)
+      double precision, intent(in), managed :: scratch(h7d,h3d*h2d,p6d)
       integer :: h3,h2,h1,p6,p5,p4,h7,h3h2
       call cute_transpt2_7326( v2sub,scratch, h3d,h2d,p6d,h7d)
 !$acc parallel loop collapse(4)
@@ -1575,10 +1979,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h3d,h2d,h1d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
 !$acc parallel loop collapse(4)
@@ -1605,10 +2009,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d*h1d,h3d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(h2d*h1d,p4d,p7d)
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
 !$acc parallel loop collapse(4)
@@ -1633,10 +2037,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d,h3d,h1d,p6d,p5d,p4d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p6d,p5d,p4d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
@@ -1663,10 +2067,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h3d,h2d,h1d,p6d,p4d,p5d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p6d,p4d,p5d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d, h1d, h2d, p7d)
 !$acc parallel loop collapse(4)
@@ -1693,10 +2097,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d*h1d,h3d,p6d,p4d,p5d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p6d,p4d,p5d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(h2d*h1d,p4d,p7d)
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
 !$acc parallel loop collapse(4)
@@ -1721,10 +2125,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d,h3d,h1d,p6d,p4d,p5d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p6d,p4d,p5d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
@@ -1751,10 +2155,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h3d,h2d,h1d,p4d,p6d,p5d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h3d,h2d,h1d,p4d,p6d,p5d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124( t2sub,scratch, p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
@@ -1782,10 +2186,10 @@
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
       integer :: h3,h2,h1,p6,p5,p4,p7,h2h1
-      double precision :: triplesx(h2d*h1d,h3d,p4d,p6d,p5d)
-      double precision :: scratch(h2d*h1d,p4d,p7d)
-      double precision, intent(in) :: t2sub(*)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, managed :: triplesx(h2d*h1d,h3d,p4d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(h2d*h1d,p4d,p7d)
+      double precision, intent(in), managed :: t2sub(*)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
       call cute_transpt2( t2sub,scratch, h2d,h1d,p4d,p7d)
 !$acc parallel loop collapse(4)
       do p5=1,p5d
@@ -1809,10 +2213,10 @@
       use cute_transpt
       implicit none
       integer, intent(in) :: h3d,h2d,h1d,p6d,p5d,p4d,p7d
-      double precision :: triplesx(h2d,h3d,h1d,p4d,p6d,p5d)
-      double precision, intent(in) :: t2sub(p7d,p4d,h1d,h2d)
-      double precision, intent(in) :: v2sub(p7d,h3d,p6d,p5d)
-      double precision :: scratch(p7d,h2d,h1d,p4d)
+      double precision, managed :: triplesx(h2d,h3d,h1d,p4d,p6d,p5d)
+      double precision, intent(in), managed :: t2sub(p7d,p4d,h1d,h2d)
+      double precision, intent(in), managed :: v2sub(p7d,h3d,p6d,p5d)
+      double precision, intent(in), managed :: scratch(p7d,h2d,h1d,p4d)
       integer :: h3,h2,h1,p6,p5,p4,p7
       call cute_transpt2_7124(t2sub,scratch,p4d,h1d,h2d,p7d)
 !$acc parallel loop collapse(4)
