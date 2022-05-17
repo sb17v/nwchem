@@ -170,7 +170,9 @@ ifdef USE_PSTAT
       LIB_DEFINES += -DUSE_PSTAT
 endif
 
-
+ifdef USE_CUTENSOR
+    LIB_INCLUDES += -I./ccsd_t
+endif
 
 #LIB_DEFINES += -DDEBUG_PRINT
 
