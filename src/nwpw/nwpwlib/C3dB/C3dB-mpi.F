@@ -24,6 +24,7 @@
 *       this transpose uses more buffer space       *
 *       then transpose2                             *
 *****************************************************
+      use mpi
       implicit none
       integer nb
       complex*16  A(*)
@@ -31,7 +32,7 @@
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -219,6 +220,7 @@ c     integer i2_start(NFFT3+1)
 *       this transpose uses more buffer space       *
 *       then transpose2                             *
 *****************************************************
+      use mpi
       implicit none
       integer nb
       real*8 A(*)
@@ -226,7 +228,7 @@ c     integer i2_start(NFFT3+1)
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -420,6 +422,7 @@ c     integer i2_start(NFFT3+1)
 *       this transpose uses more buffer space       *
 *       then transpose2                             *
 *****************************************************
+      use mpi
       implicit none
       integer nb,op
       complex*16  A(*)
@@ -428,7 +431,7 @@ c     integer i2_start(NFFT3+1)
 #include "bafdecls.fh"
 #include "errquit.fh"
 #include "C3dB.fh"
-#include "mpif.h"
+!#include "mpif.h"
 
 #ifdef MPI4
 #include "stupid_mpi4.fh"
@@ -613,6 +616,7 @@ c     integer i2_start(NFFT3+1)
 *       this transpose uses more buffer space       *
 *       then transpose2                             *
 *****************************************************
+      use mpi
       implicit none
       integer nb,op
       real*8  A(*)
@@ -620,7 +624,7 @@ c     integer i2_start(NFFT3+1)
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -793,6 +797,7 @@ c     integer status(MPI_STATUS_SIZE,512),request(512),reqcnt
 *     ***********************************
 
       subroutine C3dB_SumAll(sum)
+      use mpi
 c     implicit none
       real*8  sum
 
@@ -800,7 +805,7 @@ c     implicit none
 #ifdef MPI4
 #include "stupid_mpi4.fh"
 #else
-#include "mpif.h"
+!#include "mpif.h"
 #endif
 
       integer msglen,mpierr,np
@@ -836,13 +841,14 @@ c     implicit none
 *     *                                 *
 *     ***********************************
       subroutine C3dB_MaxAll(sum)
+      use mpi
 c     implicit none
       real*8  sum
 
 #ifdef MPI4
 #include "stupid_mpi4.fh"
 #else
-#include "mpif.h"
+!#include "mpif.h"
 #endif
 
       integer msglen,mpierr,np
@@ -883,13 +889,14 @@ c     implicit none
 *     ***********************************
 
       subroutine C3dB_ISumAll(sum)
+      use mpi
 c     implicit none
       integer sum
 
 #ifdef MPI4
 #include "stupid_mpi4.fh"
 #else
-#include "mpif.h"
+!#include "mpif.h"
 #endif
 
       integer msglen,mpierr,np
@@ -934,6 +941,7 @@ c     implicit none
 *     ***********************************
 
       subroutine C3dB_Vector_SumAll(n,sum)
+      use mpi
 c     implicit none
       integer n
       real*8  sum(*)
@@ -944,7 +952,7 @@ c     implicit none
 #ifdef MPI4
 #include "stupid_mpi4.fh"
 #else
-#include "mpif.h"
+!#include "mpif.h"
 #endif
 
       logical value
@@ -1001,6 +1009,7 @@ c     implicit none
 
 *** shared memory: sum
       subroutine C3dB_Vector_ISumAll(n,sum)
+      use mpi
 c     implicit none
       integer n
       integer  sum(*)
@@ -1011,7 +1020,7 @@ c     implicit none
 #ifdef MPI4
 #include "stupid_mpi4.fh"
 #else
-#include "mpif.h"
+!#include "mpif.h"
 #endif
 
       logical value
@@ -1095,6 +1104,7 @@ c     implicit none
 *       this transpose uses more buffer space       *
 *       then transpose2                             *
 *****************************************************
+      use mpi
       implicit none
       integer nbb
       complex*16  A(*)
@@ -1102,7 +1112,7 @@ c     implicit none
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -1268,6 +1278,7 @@ c     integer status(MPI_STATUS_SIZE,512),request(512),reqcnt
 *       this transpose uses more buffer space       *
 *       then transpose2                             *
 *****************************************************
+      use mpi
       implicit none
       integer nbb
       complex*16  A(*)
@@ -1275,7 +1286,7 @@ c     integer status(MPI_STATUS_SIZE,512),request(512),reqcnt
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -1440,6 +1451,7 @@ c     **** external functions ****
 *       this transpose uses more buffer space       *
 *       then transpose2                             *
 *****************************************************
+      use mpi
       implicit none
       integer nbb,op
       complex*16  A(*)
@@ -1447,7 +1459,7 @@ c     **** external functions ****
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -1612,6 +1624,7 @@ c     **** external functions ****
 *     ************************************
 
       subroutine c_Balance_c_balance_start(nb,A,request,reqcnt,msgtype)
+      use mpi
       implicit none
       integer nb
       complex*16 A(*)
@@ -1619,7 +1632,7 @@ c     **** external functions ****
       integer msgtype
 
 #include "bafdecls.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "balance_common.fh"
 
 #ifdef MPI4
@@ -1744,6 +1757,7 @@ c            recieve data....
 
       subroutine c_Balance_c_unbalance_start(nb,A,request,reqcnt,
      >                                       msgtype)
+      use mpi
       implicit none
       integer nb
       complex*16 A(*)
@@ -1751,7 +1765,7 @@ c            recieve data....
       integer    msgtype
 
 #include "bafdecls.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "balance_common.fh"
 
 #ifdef MPI4
@@ -1886,6 +1900,7 @@ c            send data....
 
       subroutine C3dB_c_ptranspose1_jk_start(nbb,A,tmp1,tmp2,
      >                                       request,reqcnt,msgtype)
+      use mpi
       implicit none
       integer nbb
       complex*16  A(*)
@@ -1895,7 +1910,7 @@ c            send data....
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -2097,6 +2112,7 @@ c         msgtype   = 1
 
       subroutine C3dB_c_ptranspose2_jk_start(nbb,A,tmp1,tmp2,
      >                                       request,reqcnt,msgtype)
+      use mpi
       implicit none
       integer nbb
       complex*16  A(*)
@@ -2106,7 +2122,7 @@ c         msgtype   = 1
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -2304,6 +2320,7 @@ c         msgtype   = 1
       subroutine C3dB_c_ptranspose_ijk_start(nbb,op,A,tmp1,tmp2,
      >                                       request,reqcnt,msgtype)
 
+      use mpi
       implicit none
       integer nbb,op
       complex*16  A(*)
@@ -2313,7 +2330,7 @@ c         msgtype   = 1
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -2514,6 +2531,7 @@ c         msgtype   = 1
 *     ***********************************
 
       subroutine C3dB_c_read_pio(nb,iunit,A,tmp,jcol,kcol)
+      use mpi
       implicit none 
       integer nb
       integer iunit
@@ -2523,7 +2541,7 @@ c         msgtype   = 1
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -2789,6 +2807,7 @@ c                  call SND(9+MSGDBL,tmp,mdtob(2*msglen),p_to,1)
 
 
       subroutine C3dB_r_read_pio(nb,iunit,A,tmp,jcol,kcol,dotrans)
+      use mpi
       implicit none 
       integer nb
       integer iunit
@@ -2799,7 +2818,7 @@ c                  call SND(9+MSGDBL,tmp,mdtob(2*msglen),p_to,1)
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -3072,6 +3091,7 @@ c      integer mpierr,mstatus(MPI_STATUS_SIZE)
 *     ***********************************
 
       subroutine C3dB_c_read(nb,iunit,A,tmp,jcol,kcol)
+      use mpi
       implicit none 
       integer nb
       integer iunit
@@ -3081,7 +3101,7 @@ c      integer mpierr,mstatus(MPI_STATUS_SIZE)
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -3334,6 +3354,7 @@ c      call ga_sync()
       end
 
       subroutine C3dB_r_read(nb,iunit,A,tmp,jcol,kcol,dotrans)
+      use mpi
       implicit none 
       integer nb
       integer iunit
@@ -3344,7 +3365,7 @@ c      call ga_sync()
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -3600,6 +3621,7 @@ c      call ga_sync()
 *     *					*
 *     ***********************************
       subroutine C3dB_c_write_pio(nb,iunit,A,tmp,jcol,kcol)
+      use mpi
       implicit none 
       integer nb
       integer iunit
@@ -3609,7 +3631,7 @@ c      call ga_sync()
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -3912,6 +3934,7 @@ c      call ga_sync()
 *     ***********************************
 
       subroutine C3dB_c_write(nb,iunit,A,tmp,jcol,kcol)
+      use mpi
       implicit none 
       integer nb
       integer iunit
@@ -3921,7 +3944,7 @@ c      call ga_sync()
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
@@ -4212,6 +4235,7 @@ c      call ga_sync()
       end
 
       subroutine C3dB_r_write(nb,iunit,A,tmp,jcol,kcol)
+      use mpi
       implicit none 
       integer nb
       integer iunit
@@ -4221,7 +4245,7 @@ c      call ga_sync()
 
 #include "bafdecls.fh"
 #include "errquit.fh"
-#include "mpif.h"
+!#include "mpif.h"
 #include "C3dB.fh"
 
 #ifdef MPI4
