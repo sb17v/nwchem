@@ -44,18 +44,25 @@
 
 *     **** external functions ***
       real*8   lattice_omega
-      integer  ion_nion,control_it_out
+      integer  ion_nion,control_it_out,control_code
       external lattice_omega
-      external ion_nion,control_it_out
+      external ion_nion,control_it_out,control_code
 
 
       call Parallel_taskid(taskid)
 
-      if (.not.btdb_cget(rtdb,'cpmd:ion_motion_filename',1,filename))
-     > call util_file_prefix('ion_motion',filename)
+      if ((control_code().eq.1).or.(control_code().eq.13)) then
+         if (.not.btdb_cget(rtdb,'cpsd:ion_motion_filename',1,filename))
+     >      call util_file_prefix('ion_motion',filename)
+      else
+         if (.not.btdb_cget(rtdb,'cpmd:ion_motion_filename',1,filename))
+     >      call util_file_prefix('ion_motion',filename)
+      end if
+
       call util_file_name_noprefix(filename,.false.,
      >                             .false.,
-     >                    full_filename)
+     >                              full_filename)
+      
 
 *     **** produce MOTION FILE ****
       if (taskid.eq.MASTER) then
@@ -90,7 +97,7 @@
              read(19,*,ERR=30,END=30) ch_tmp
            end do
  30        continue
-#if defined(FUJITSU_SOLARIS) || defined(PSCALE) || defined(__crayx1)||defined(GCC46)
+#if defined(FUJITSU) || defined(PSCALE) || defined(__crayx1)||defined(GCC46)
            backspace 19
 #endif
 

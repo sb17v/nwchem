@@ -3,9 +3,9 @@
 *
 
 *     ***************************
-*     *				*
-*     *		ion_end 	*
-*     *				*
+*     *                         *
+*     *        ion_end          *
+*     *                         *
 *     ***************************
       subroutine ion_end()
       implicit none
@@ -16,7 +16,7 @@
 
       logical value
 
-      if (.not.periodic) call nwpw_cdft_end()
+      call nwpw_cdft_end()
       if (.not.periodic) call nwpw_born_end()
       if (.not.periodic) call nwpw_cosmo_end()
       call FMM_end()
@@ -54,9 +54,9 @@
       end
 
 *     ***************************
-*     *				*
-*     *		ion_write	*
-*     *				*
+*     *                         *
+*     *        ion_write        *
+*     *                         *
 *     ***************************
       subroutine ion_write(rtdb)
       implicit none
@@ -164,9 +164,9 @@
       end
 
 *     ***************************
-*     *				*
-*     *		ion_destroy 	*
-*     *				*
+*     *                         *
+*     *        ion_destroy      *
+*     *                         *
 *     ***************************
       subroutine ion_destroy()
       implicit none
@@ -187,9 +187,9 @@
     
 
 *     ***************************
-*     *				*
-*     *		ion_init	*
-*     *				*
+*     *                         *
+*     *        ion_init         *
+*     *                         *
 *     ***************************
 *
 *        This routine reads in the ion data structure from the
@@ -485,12 +485,12 @@ c         eki1=0.5d0*eki1
          end if
       end if
 
-*     ***** try to initialize Born and COSMO and CDFT if aperiodic *****
+*     ***** try to initialize CDFT, and also try to initialize Born and COSMO if aperiodic *****
+      call nwpw_cdft_init(rtdb)
       nion_q = 0
       cosmo1_on = .false.
       call nwpw_cosmo_off()
       if  (.not.periodic) then
-         call nwpw_cdft_init(rtdb)
          call nwpw_born_init(rtdb)
          call nwpw_cosmo_init(rtdb,geom)
          cosmo1_on = nwpw_cosmo1_on()
@@ -689,7 +689,7 @@ c         eki1=0.5d0*eki1
       if (.not. beom_cent_tag(geom,i,t))
      >        call errquit(' ion_aname  failed ',i, GEOM_ERR)
 
-      if (.not. beom_tag_to_element(t,symbol,name,q))
+      if (.not. beom_tag_to_element(t,symbol,name,q, 2, 16))
      >        call errquit(' ion_aname  failed ',i, GEOM_ERR)
 
       if (ccode.eq.12) then
@@ -1991,9 +1991,9 @@ c      end if
 
 
 *     ***************************
-*     *				*
-*     *		ion_vion	*
-*     *				*
+*     *                         *
+*     *          ion_vion       *
+*     *                         *
 *     ***************************
 
       double precision function ion_vion(i,j)
