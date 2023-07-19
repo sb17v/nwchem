@@ -46,8 +46,6 @@ c
       integer,external :: ga_nnodes
 #ifdef USE_OPENMP
       integer,external :: omp_get_max_threads
-      iMaxThreads = omp_get_max_threads()
-      call util_blas_set_num_threads(iMaxThreads)
 #endif
 
       timer = util_wallsec()
@@ -163,6 +161,11 @@ c
      $              dbl_mb(k_vecs+(isp-1)*nbf_ao*nmo),nbf_ao)
       enddo
 c
+#ifdef USE_OPENMP
+      iMaxThreads = omp_get_max_threads()
+      call util_blas_set_num_threads(iMaxThreads)
+#endif
+
       do ish=1,nshells_ao
         ok = bas_cn2bfr(ao_bas_han,ish,ifirst,ilast)
         ni = ilast - ifirst + 1
@@ -466,7 +469,7 @@ c      if (.not.ga_create(mt_dbl,nri,npairs,erilabel,nri,0,eri))
         if (llpair.gt.ulpair) goto 101
         do ibatch=1,nbatch
           myllpair = (ibatch-1)*mynpairs + llpair
-          myulpair = min(myllpair + mynpairs,ulpair)
+          myulpair = min(myllpair + mynpairs - 1,ulpair)
           do ipair=myllpair,myulpair
             imo = gw_get_pair(int_mb(k_tmp),ipair,1,npairs)
             jmo = gw_get_pair(int_mb(k_tmp),ipair,2,npairs)

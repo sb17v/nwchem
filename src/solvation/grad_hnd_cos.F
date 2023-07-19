@@ -123,6 +123,7 @@ C-------------------------local variables--------------------------
       integer jefc
       integer nefc_at_k
       integer nao2
+      integer fjat
 
       double precision locder(3,3), q1
       double precision dE, qfac, fact, dx, dy, dz, rr
@@ -182,7 +183,7 @@ c
 c
       if (.not.ma_push_get(MT_DBL,nat,"rad",l_rad,k_rad))
      $  call errquit("grad_hnd_cos: could not allocate rad",nat,MA_ERR)
-      call cosmo_def_radii(rtdb,geom,nat,dbl_mb(k_rad))
+      call cosmo_def_radii(rtdb,geom,nat,dbl_mb(k_rad),.false.)
       status = rtdb_get(rtdb,'cosmo:radius',mt_dbl,nat,
      $                  dbl_mb(k_rad))
       do iat1=0,nat-1
@@ -239,7 +240,8 @@ c
 c
       call hf_print_set(1)
 
-      t0 = util_wallsec()
+c      t0 = util_wallsec()
+
       ijatom = -1
       next = nxtask(nproc,task_size)
       do 90, iat1 = 1, nat
@@ -258,16 +260,12 @@ c
             est_int = schwarz_atom(iat1,iat2)
             if (est_int*qmax.lt.1d-14) goto 1010
 
-            ateq = iat1.eq.iat2
-            est_int = schwarz_atom(iat1,iat2)
-            if (est_int*qmax.lt.1d-14) goto 1010
-
-            if (oskel) then
-               if (.not. sym_atom_pair(geom, iat1, iat2, qfac))
-     $              goto 1010
-            else
+c            if (oskel) then
+c               if (.not. sym_atom_pair(geom, iat1, iat2, qfac))
+c     $              goto 1010
+c            else
                qfac = 1.0d0
-            endif
+c            endif
             qfac = -qfac
 
             status = bas_ce2cnr(basis,iat1,iac1f,iac1l)
@@ -377,9 +375,9 @@ c
  90   continue
       next = nxtask(-nproc,task_size)
 
-      if (ga_nodeid().eq.0) then
-        write(*,'("cosmo b grad: ",F8.3)') util_wallsec()-t0
-      endif
+c      if (ga_nodeid().eq.0) then
+c        write(*,'("cosmo b grad: ",F8.3)') util_wallsec()-t0
+c      endif
 c
       if (ga_nodeid().eq.0) then
 c

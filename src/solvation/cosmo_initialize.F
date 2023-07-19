@@ -74,8 +74,8 @@ c
       character*(rtdb_max_file) geom_geom  ! The "geometry" value
       character*(rtdb_max_file) cosmo_geom ! The geometry for which the COSMO
                                            ! parameters were set
-      logical util_io_unit
-      external util_io_unit
+      logical util_io_unit,solv_data
+      external util_io_unit,solv_data
 c
       double precision zero, one, pt5, radtol, def
       integer          mxpass
@@ -87,8 +87,10 @@ c
 c
       me=ga_nodeid()
 c
-      odbug=.false.
+      odbug=.true.
       osome=oprint
+      call util_print_push
+      call util_print_rtdb_load(rtdb, 'cosmo')
 c
       if(odbug.and.me.eq.0) then
          write(Luout,*) 'in cosmo_initialize ...'
@@ -216,7 +218,7 @@ c
       if(.not.ma_push_get(mt_dbl,nat,'cosmo rads',l_rad,k_rad))
      & call errquit('cosmo_init malloc k_rad failed',911,MA_ERR)
 c
-      call cosmo_def_radii(rtdb,geom,nat,dbl_mb(k_rad))
+      call cosmo_def_radii(rtdb,geom,nat,dbl_mb(k_rad),.true.)
 c
       if(.not.ma_push_get(mt_dbl,nat*3,'coord',l_coscoor,k_coscoor))
      & call errquit('cosmo_init malloc k_coscoor failed',911,MA_ERR)
@@ -335,23 +337,35 @@ c     get sola,solb,solc,solg,solh,soln parameters, only used if cosmo_smd is tr
 c     get dielecinf, only used if cosmo_vem is true
 c     get dielec, always used 
 c
-      if(odbug.and.me.eq.0) 
-     &     write(luout,*) "calling solv_data"
-      call solv_data(solvname_short,solvname_long, !short and long solvent names
-     &          dielec,dielecinf, ! slow and fast components
-     &          sola,solb,solc,solg,solh,soln,icds) 
 c
 c     if set by the user
 c
       status = rtdb_get(rtdb,'cosmo:dielec',mt_dbl,1,dielec)
-      status = rtdb_get(rtdb,'cosmo:dielecinf',mt_dbl,1,dielecinf)
-      status = rtdb_get(rtdb,'cosmo:sola',mt_dbl,1,sola)
-      status = rtdb_get(rtdb,'cosmo:solb',mt_dbl,1,solb)
-      status = rtdb_get(rtdb,'cosmo:solc',mt_dbl,1,solc)
-      status = rtdb_get(rtdb,'cosmo:solg',mt_dbl,1,solg)
-      status = rtdb_get(rtdb,'cosmo:solh',mt_dbl,1,solh)
-      status = rtdb_get(rtdb,'cosmo:soln',mt_dbl,1,soln)
-      status = rtdb_get(rtdb,'cosmo:icds',mt_int,1,icds)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:dielecinf',mt_dbl,1,dielecinf)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:sola',mt_dbl,1,sola)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:solb',mt_dbl,1,solb)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:solc',mt_dbl,1,solc)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:solg',mt_dbl,1,solg)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:solh',mt_dbl,1,solh)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:soln',mt_dbl,1,soln)
+      status = status.and.
+     S     rtdb_get(rtdb,'cosmo:icds',mt_int,1,icds)
+      if(.not.status) then
+      if(odbug.and.me.eq.0) 
+     &     write(luout,*) "calling solv_data"
+      if(.not.solv_data(solvname_short,solvname_long, !short and long solvent names
+     &     dielec,dielecinf,    ! slow and fast components
+     &          sola,solb,solc,solg,solh,soln,icds)) then
+      call errquit('solv_data failure',0,0)
+      endif
+      endif
 c
 c     set sola,solb,solc,solg,solh,soln,icds parameters (either from
 c     solv_data or user-defined)
@@ -415,10 +429,15 @@ c       write(luout,'(A)') " after solv_data"
           if (soln.lt.zero) call errquit
      $ ('cosmo_initialize: illegal/undefined value for soln',0,0)
          else
+            if (solvname_short.ne.'h2o'.and.solvname_long.ne.'water') 
+     T           then
+               icds = 2
+            else
           write(luout,'(A,I1)')   " icds:          ",icds
           call errquit
      $ ('cosmo_initialize: illegal value for icds',0,0)
          endif
+        endif
         endif
       endif
 c 
@@ -426,7 +445,7 @@ c     set cosmo radii to smd radii if do_cosmo_smd is true; if the radii
 c     are provided by the user then we will use those
 c
       if (do_cosmo_smd) then
-       call cosmo_def_radii(rtdb,geom,nat,dbl_mb(k_rad))
+       call cosmo_def_radii(rtdb,geom,nat,dbl_mb(k_rad),.true.)
       endif
 c
       if (.not.
@@ -568,7 +587,7 @@ c
 c
 c     ----- create boundary elements of cavity -----
 c
-      call hnd_cosset(rtdb,nat,dbl_mb(k_coscoor),dbl_mb(k_rad))
+      call hnd_cosset(rtdb,nat,dbl_mb(k_coscoor),dbl_mb(k_rad),geom)
 c
       if(.not.rtdb_get(rtdb,'cosmo:nefc',mt_int,1     ,nefc))
      $   call errquit('cosmo_initialize: rtdb get failed for nefc',911,

@@ -7,6 +7,9 @@
 #
 #  SIMINT_MAXAM=5 ./build_simint.sh
 #
+mysimpwd=`pwd`
+source ../../../libext/libext_utils/cmake.sh
+cd $mysimpwd
 if  [ -z "$(command -v python3)" ]; then
     echo python3 not installed
     echo please install python3
@@ -23,12 +26,19 @@ if  [ -z "$(command -v patch)" ]; then
     exit 1
 fi
 UNAME_S=$(uname -s)
+if [ ! -z "${CONDA_TOOLCHAIN_HOST}" ]; then
+    arch=$(echo $CONDA_TOOLCHAIN_HOST | cut -d - -f 1)
+else
+    arch=$(uname -m)
+fi
 if [[ ${UNAME_S} == Linux ]]; then
     CPU_FLAGS=$(cat /proc/cpuinfo | grep flags |tail -n 1)
     CPU_FLAGS_2=$(cat /proc/cpuinfo | grep flags |tail -n 1)
 elif [[ ${UNAME_S} == Darwin ]]; then
     CPU_FLAGS=$(sysctl -n machdep.cpu.features)
-    CPU_FLAGS_2=$(sysctl -n machdep.cpu.leaf7_features)
+    if [[ "$arch" == "x86_64" ]]; then
+	CPU_FLAGS_2=$(sysctl -n machdep.cpu.leaf7_features)
+    fi
 else
     echo Operating system not supported yet
     exit 1
@@ -37,6 +47,7 @@ fi
    GOTAVX=$(echo ${CPU_FLAGS}   | tr  'A-Z' 'a-z'| awk ' /avx/    {print "Y"}')
   GOTAVX2=$(echo ${CPU_FLAGS_2} | tr  'A-Z' 'a-z'| awk ' /avx2/   {print "Y"}')
 GOTAVX512=$(echo ${CPU_FLAGS}   | tr  'A-Z' 'a-z'| awk ' /avx512f/{print "Y"}')
+   GOTSVE=$(echo ${CPU_FLAGS}   | tr  'A-Z' 'a-z'| awk ' /sve/{print "Y"}')
 if [[ -n "${SIMINT_VECTOR}" ]]; then
       VEC=${SIMINT_VECTOR}
 elif [[ "${GOTAVX512}" == "Y" ]]; then
@@ -47,6 +58,8 @@ elif [[ "${GOTAVX}" == "Y" ]]; then
     VEC=avx
 elif [[ "${GOTSSE2}" == "Y" ]]; then
     VEC=sse
+elif [[ "${GOTSVE}" == "Y" ]]; then
+    VEC=sve
 else
     VEC=scalar
 fi
@@ -55,6 +68,7 @@ if [[ "${VEC}" == "avx512" ]]; then
 if [[   -z "${CC}" ]]; then
     CC=cc
 fi
+echo CC is $CC
 GCC_EXTRA=$(echo $CC | cut -c 1-3)
 if [ "$GCC_EXTRA" == gcc ]; then
 let GCCVERSIONGT5=$(expr `${CC} -dumpversion | cut -f1 -d.` \> 5)
@@ -76,21 +90,52 @@ fi
 #PERMUTE_SLOW=1
 PERMUTE_SLOW=${SIMINT_MAXAM}
 GITHUB_USERID=edoapra
+#GITHUB_USERID=simint-chem
 #rm -rf simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIVE}* *-chem-simint-generator-?????? simint-chem-simint-generator.tar.gz simint_lib
 rm -rf simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIVE}* *-chem-simint-generator-?????? simint_lib
 
 GITHUB_URL=https://github.com/${GITHUB_USERID}/simint-generator/tarball/master
-#GITHUB_URL=https://github.com/simint-chem/simint-generator/tarball/master
 TAR_NAME=simint-chem-simint-generator.tar.gz
 if [ -f  ${TAR_NAME} ]; then
     echo "using existing"  ${TAR_NAME}
 else
-if  [ ! -z "$(command -v curl)" ] ; then
-    curl -L "${GITHUB_URL}" -o "${TAR_NAME}"
-else
-    wget -O "${TAR_NAME}" "${GITHUB_URL}"
+    if  [ ! -z "$(command -v curl)" ] ; then
+	curl -L "${GITHUB_URL}" -o "${TAR_NAME}"
+    else
+	wget -O "${TAR_NAME}" "${GITHUB_URL}"
+    fi
 fi
+if [[ -z "${CMAKE}" ]]; then
+    #look for cmake
+    if [[ -z "$(command -v cmake)" ]]; then
+	cmake_instdir=../../../libext/libext_utils
+	get_cmake_release $cmake_instdir
+	status=$?
+	if [ $status -ne 0 ]; then
+	    echo cmake required to build simint
+	    echo Please install cmake
+	    echo define the CMAKE env. variable
+	    exit 1
+	fi
+    else
+	CMAKE=cmake
+    fi
 fi
+CMAKE_VER_MAJ=$(${CMAKE} --version|cut -d " " -f 3|head -1|cut -d. -f1)
+CMAKE_VER_MIN=$(${CMAKE} --version|cut -d " " -f 3|head -1|cut -d. -f2)
+echo CMAKE_VER is ${CMAKE_VER_MAJ} ${CMAKE_VER_MIN}
+if ((CMAKE_VER_MAJ < 3)) || (((CMAKE_VER_MAJ > 2) && (CMAKE_VER_MIN < 21))); then
+    cmake_instdir=../../../libext/libext_utils/
+    get_cmake_release $cmake_instdir
+    status=$?
+    if [ $status -ne 0 ]; then
+	echo cmake 3.21 required to build simint
+	echo Please install cmake
+	echo define the CMAKE env. variable
+	exit 1
+    fi
+fi
+cd $mysimpwd
 tar xzf simint-chem-simint-generator.tar.gz
 cd *-simint-generator-???????
 pwd
@@ -102,37 +147,24 @@ if [[  -z "${NWCHEM_TOP}" ]]; then
     NWCHEM_TOP=$(dirname "$dir1")
 fi
 mkdir -p build; cd build
-if [[ -z "${MYCMAKE}" ]]; then
-    #look for cmake
-    if [[ -z "$(command -v cmake)" ]]; then
-	source ${NWCHEM_TOP}/src/libext/libext_utils/cmake.sh
-	cmake_instdir=${NWCHEM_TOP}/src/libext/libext_utils
-	get_cmake_release $cmake_instdir
-	status=$?
-	if [ $status -ne 0 ]; then
-	echo cmake required to build Simint
-	echo Please install cmake
-	echo define the CMAKE env. variable
-	exit 1
-	fi
-	MYCMAKE=$CMAKE
-    else
-	MYCMAKE=cmake
-    fi
-fi
-CMAKE_VER=$(${MYCMAKE} --version|cut -d " " -f 3|head -1|cut -d. -f1)
-echo CMAKE_VER is ${CMAKE_VER}
-echo dirname is `pwd`
-if [[ ${CMAKE_VER} -lt 3 ]]; then
-    echo CMake 3.0.2 or higher is required
-    echo Please install CMake 3
-    echo define the MYCMAKE env. variable
-    exit 1
-fi
 if [[ -z "${SIMINT_BUILD_TYPE}" ]]; then
     SIMINT_BUILD_TYPE=Release
 fi
-$MYCMAKE  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}"  ../
+if [[ -z "${CXX}" ]]; then
+    #look for c++
+    if  [ -z "$(command -v c++)" ]; then
+        echo c++ not installed
+        echo please install a C++ compiler and
+        echo define the CXX env. variable
+	exit 1
+    else
+	CXX=c++
+    fi
+fi    
+if [[ -z "${CXX_FOR_BUILD}" ]]; then
+    CXX_FOR_BUILD=${CXX}
+fi
+echo CXX_FOR_BUILD $CXX_FOR_BUILD && $CMAKE CXX=$CXX_FOR_BUILD -DCMAKE_CXX_COMPILER=$CXX_FOR_BUILD  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}"  ../
 make -j2
 cd ..
 #./create.py -g build/generator/ostei -l 6 -p 4 -d 1 simint.l6_p4_d1
@@ -161,17 +193,6 @@ fi
 cd ../simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}
 mkdir -p build
 cd build
-if [[ -z "${CXX}" ]]; then
-    #look for c++
-    if  [ -z "$(command -v c++)" ]; then
-        echo c++ not installed
-        echo please install a C++ compiler and
-        echo define the CXX env. variable
-	exit 1
-    else
-	CXX=c++
-    fi
-fi    
 if [[ -z "${FC}" ]]; then
     #look for gfortran
     if  [ -z "$(command -v gfortran)" ]; then
@@ -184,13 +205,16 @@ if [[ -z "${FC}" ]]; then
     fi
 fi    
 FC_EXTRA=$(${NWCHEM_TOP}/src/config/strip_compiler.sh ${FC})
+echo FC_EXTRA $FC_EXTRA
 if [[ ${FC_EXTRA} == gfortran  || ${FC_EXTRA} == flang || ${FC_EXTRA} == armflang || (${FC} == ftn && ${PE_ENV} == GNU) || (${FC} == ftn && ${PE_ENV} == AOCC) ]] ; then
     Fortran_FLAGS="-fdefault-integer-8 -cpp"
+    if [[ ${FC_EXTRA} == gfortran  || (${FC} == ftn && ${PE_ENV} == GNU)]]; then
     GNUMAJOR=$(${FC} -dM -E - < /dev/null 2> /dev/null | grep __GNUC__ |cut -c18-)
     echo GNUMAJOR is $GNUMAJOR
     if [ $GNUMAJOR -ge 8 ]; then
     Fortran_FLAGS+=" -std=legacy "
     fi
+fi
 elif  [ ${FC} == xlf ] || [ ${FC} == xlf_r ] || [ ${FC} == xlf90 ]|| [ ${FC} == xlf90_r ]; then
     Fortran_FLAGS=" -qintsize=8 -qextname -qpreprocess"
 elif  [[ ${FC} == ifort || (${FC} == ftn && ${PE_ENV} == INTEL) ]]; then
@@ -204,9 +228,14 @@ elif  [[ ${FC_EXTRA} == nvfortran || ${FC} == pgf90 || (${FC} == ftn && ${PE_ENV
     if  [[ ${PE_ENV} == NVIDIA ]]; then
 	unset CPATH
     fi
+elif  [ ${FC} == frt ] || [ ${FC} == frtpx ] ; then
+    Fortran_FLAGS=" -fs -CcdLL8 -CcdII8 -cpp "
+    CC=/opt/FJSVxos/devkit/aarch64/bin/aarch64-linux-gnu-gcc
+    CXX=/opt/FJSVxos/devkit/aarch64/bin/aarch64-linux-gnu-g++
 fi
+if [[ ! -z ${FFLAGS_FORGA} ]]; then Fortran_FLAGS+=" ${FFLAGS_FORGA}" ; fi
 echo Fortran_FLAGS equal "$Fortran_FLAGS"
-FC="${FC}" CC="${CC}" CXX="${CXX}" $MYCMAKE \
+FC="${FC}" CC="${CC}" CXX="${CXX}" $CMAKE \
  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}" -DSIMINT_VECTOR=${VEC}  \
  -DCMAKE_INSTALL_LIBDIR=lib -DENABLE_FORTRAN=ON -DSIMINT_MAXAM=${SIMINT_MAXAM} -DSIMINT_MAXDER=${DERIV} \
  -DENABLE_TESTS=OFF     -DSIMINT_STANDALONE=OFF   \
@@ -221,6 +250,9 @@ cd ../..
 echo ln -sf  simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install simint_install
 ln -sf  simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install simint_install
 cd simint_install/lib
+if [[ "$arch" == "x86_64" ]]; then
+    strip --strip-debug libsimint.a
+fi
 ln -sf libsimint.a libnwc_simint.a
 export SIMINT_HOME=${SRC_HOME}/simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install
 echo 'SIMINT library built with maximum angular momentum='${SIMINT_MAXAM}

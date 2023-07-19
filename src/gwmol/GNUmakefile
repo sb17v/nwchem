@@ -1,6 +1,6 @@
 OBJ = gwmol.o ga_chol_inv_seq.o gw_input.o \
       gw_defaults.o gw_init.o gw_finalize.o gw_memory.o \
-      gw_vxc.o mycpu.o gw_donewton.o \
+      gw_vxc.o gw_donewton.o \
       gw_cdgw.o gw_cdgw_buildin.o gw_cdgw_newton.o gw_cdgw_graph.o \
       gw_analytic.o gw_analytic_newton.o gw_analytic_graph.o
 
@@ -16,12 +16,14 @@ OBJ_OPTIMIZE = gw_ri_init.o gw_invdiag.o gw_tools.o \
 	       gw_analytic_addrpa.o gw_analytic_ovscale.o \
                gw_analytic_rpa.o gw_analytic_scalxpy.o \
                gw_analytic_sigmac_graph.o \
-	       gw_minres.o cs_minres_qlp.o \
+	       gw_minres.o  \
 	       gw_cdgw_buildrn_graph.o gw_cdgw_buildiw.o \
 	       gw_cdgw_buildin_graph.o gw_cdgw_buildpi.o \
 	       gw_cdgw_buildrn_minres.o
 
-
+ifdef GWCMPLX
+OBJ_OPTIMIZE += cs_minres_qlp.o
+endif
 LIBRARY = libgwmol.a
 
 HEADERS = ../nwdft/include/cdft.fh ../nwdft/grid/cgridfile.fh 
@@ -30,6 +32,7 @@ LIB_DEFINES =
 LIB_INCLUDES = -I./
 
 include ../config/makefile.h
+
 
 ifeq ($(_USE_SCALAPACK),Y)
 _USE_ELPA = $(shell ${GA_PATH}/bin/ga-config  --use_elpa| awk ' /1/ {print "Y"}')

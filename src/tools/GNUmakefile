@@ -318,14 +318,17 @@ endif # SOCKETS
 ifdef USE_MPI
 
     MPI_COMBINED =
-    ifneq ($(MPI_INCLUDE),)
-        MPI_COMBINED += $(patsubst -I-I%,-I%,-I${MPI_INCLUDE})
+    ifneq ($(NWMPI_INCLUDE),)
+        MPI_COMBINED += $(patsubst -I-I%,-I%,-I${NWMPI_INCLUDE})
     endif
-    ifneq ($(MPI_LIB),)
-        MPI_COMBINED += $(patsubst -L-L%,-L%,-L${MPI_LIB})
+    ifneq ($(NWMPI_LIB),)
+        MPI_COMBINED += $(patsubst -L-L%,-L%,-L${NWMPI_LIB})
     endif
-    ifneq ($(LIBMPI),)
-        MPI_COMBINED += $(LIBMPI)
+    ifneq ($(NWLIBMPI),)
+        MPI_COMBINED += $(NWLIBMPI)
+        ifeq ($(ARMCI_NETWORK),ARMCI)
+           MPI_COMBINED += -lpthread
+        endif
     endif
     ifneq ($(MPI_LOC),)
         MPI_COMBINED += $(MPI_LOC)
@@ -521,10 +524,11 @@ ifdef USE_KNL
     ifeq ($(_CC),icc)
     CFLAGS_FORGA+="-no-vec"
     endif
-    ifeq ($(FC),ftn)
-    MAYBE_HOST=--host=x86_64-pc-linux-gnu 
-    endif
 endif
+ifeq ($(FC),frtpx)
+    MAYBE_HOST=--host=aarch64-pc-linux-gnu
+endif
+
 ifdef USE_OFFLOAD
     MAYBE_OFFLOAD= INTEL_64ALIGN=1
 endif
@@ -614,7 +618,7 @@ ifdef USE_GAGITHUB
 	GET_TOOLS=./get-tools-github
   ifdef USE_GA_RELEASE
     ifndef GA_RELEASE_NO
-      GA_RELEASE_NO=5.8.1
+      GA_RELEASE_NO=5.8.2
     endif
     GA_DIR=ga-$(GA_RELEASE_NO)
   else
@@ -647,11 +651,12 @@ ifndef ARMCI_NETWORK
     ARMCI_NETWORK=MPI-TS
     MAYBE_ARMCI = --with-mpi-ts
 endif
-# CUDA UM support
-ifdef NWCHEM_LINK_CUDA
-    MAYBE_ARMCI +=  --enable-cuda-mem
-endif
-#
+
+# CUDA UM support - disabled now that trpdrv_openacc does not need it
+#ifdef NWCHEM_LINK_CUDA
+#    MAYBE_ARMCI +=  --enable-cuda-mem
+#endif
+
 # Apparently weak bindings do not work with CYGWIN64 at the moment. There seems
 # to be an issue with the COFF object format that gets in the way (with ELF
 # this is apparently not a problem). Some details can be found at
@@ -671,6 +676,12 @@ ifeq ($(FC),$(findstring $(FC),scorep scorep-wrapper scorep-gfortran scorep-mpif
 #fix for configure or cmake
      MAYBE_HOST += SCOREP_WRAPPER=OFF
 endif
+ifneq ($(V),1)
+     MAYBE_HOST += -q --enable-silent-rules
+     ifneq ($(GOTFREEBSD),1)
+        MAKE= make V=0
+     endif
+endif
 BUILDDIR = build
 INSTALLDIR = install
 CONFIGURE_PATH = ../$(GA_DIR)/configure
@@ -686,7 +697,7 @@ else
 STAMP_DIR = $(subst $(SPACE),-,$(strip $(GA_DIR))).DIR.stamp
 endif
 
-$(INSTALLDIR)/lib/libga.a: $(BUILDDIR)/.libs/libga.a cleanlibga
+$(INSTALLDIR)/lib/libga.a: $(BUILDDIR)/.libs/libga.a
 	@echo ''
 	@echo '*** Installing Parallel Tools ****'
 	@echo ''
@@ -704,7 +715,7 @@ $(BUILDDIR)/.libs/libga.a:  $(BUILDDIR)/Makefile $(BUILDDIR)/armci/Makefile
 
 configure_ga: $(BUILDDIR)/Makefile
 
-$(BUILDDIR)/Makefile: $(GA_DIR)/Makefile.in $(BUILDDIR)/config.status cleanmac
+$(BUILDDIR)/Makefile: $(GA_DIR)/Makefile.in $(BUILDDIR)/config.status
 	cd $(BUILDDIR) && $(SHELL) ./config.status
 
 $(BUILDDIR)/armci/Makefile: $(GA_DIR)/armci/Makefile.in $(BUILDDIR)/armci/config.status
@@ -716,6 +727,9 @@ $(BUILDDIR)/config.status: $(GA_DIR)/configure $(STAMP_FC) $(STAMP_CC) $(STAMP_D
 	@echo '*** Configuring Parallel Tools ****'
 	@echo ''
 	@(test -d $(BUILDDIR)) || mkdir $(BUILDDIR);
+	@echo ' '
+	@if [ "$V" != "1" ]; then echo '*** autoconf output redirected to config.log ****' ; echo '*** type make V=1 to get verbose output ***'; fi
+	@echo ' '
 	@(cd $(BUILDDIR) && echo $(CONFIGURE_PATH) $(CONFIGURE_ARGS) && $(CONFIGURE_PATH) $(CONFIGURE_ARGS)) || exit 1
 $(GA_DIR)/Makefile.in:
 	@echo "No Global Arrays found: Attempting running ./get-tools"
@@ -751,16 +765,12 @@ clean:
 realclean:
 	@rm -rf $(BUILDDIR) $(INSTALLDIR)
 # remove all files that are not .o objects (eg lib*.a) from libga.a
-cleanlibga: $(BUILDDIR)/.libs/libga.a
+cleanlibga:
 	mkdir -p ob
 	cd ob && ar -x ../build/.libs/libga.a && rm -f ../build/.libs/libga.a && ar crv ../build/.libs/libga.a *.o && mkdir -p ../install/lib && cp ../build/.libs/libga.a ../install/lib
 	cd ..
 	rm -rf ob
-	cp build/.libs/libga.a install/lib
 
-cleanmac: $(BUILDDIR)/config.status
-	sed -e '/FLIBS/,/CommandLine/ s/lpthread.*/lpthread"/' -e '/FLIBS/,/osx/ s/.*osx.*//' $(BUILDDIR)/config.status > config.bak
-	mv config.bak $(BUILDDIR)/config.status
 
 #
 # Common targets shared between GNUmakefile's and automake Makefiles
