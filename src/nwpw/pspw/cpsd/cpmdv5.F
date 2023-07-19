@@ -69,7 +69,7 @@ cccc#include "frac_occ.fh"
     
 
 *     ***** energy variables ****
-      real*8  E(50),eke,eave,evar,cv,have,hvar,qave,qvar
+      real*8  E(60),eke,eave,evar,cv,have,hvar,qave,qvar,Egas
 
 *     real*8  eig(2*nemax)
 *     real*8  hml(2*nemax*nemax)
@@ -204,6 +204,15 @@ cccc#include "frac_occ.fh"
       logical  psp_pawexist,ion_makehmass2,control_has_ngrid_small
       external psp_pawexist,ion_makehmass2,control_has_ngrid_small
 
+      logical  nwpw_born_on
+      external nwpw_born_on
+      real*8   nwpw_born_screen
+      external nwpw_born_screen
+      logical  pspw_V_APC_on
+      external pspw_V_APC_on
+      real*8   control_gas_energy
+      external control_gas_energy
+
       character*50 control_cell_name
       external     control_cell_name
       integer  Parallel_maxthreads
@@ -218,7 +227,7 @@ cccc#include "frac_occ.fh"
       pi = 4.0d0*datan(1.0d0)
 
       call nwpw_timing_init()
-      call dcopy(50,0.0d0,0,E,1)
+      call dcopy(60,0.0d0,0,E,1)
 
 
 *     **** get parallel variables ****
@@ -391,6 +400,7 @@ cccc#include "frac_occ.fh"
       if (control_version().eq.3) call ewald_init()
       
 *     **** initialize QM/MM ****
+      call pspw_init_APC(rtdb)
       call pspw_qmmm_init(rtdb)
       call pspw_charge_init(rtdb)
       call pspw_Efield_init(rtdb,ispin,ne)
@@ -782,7 +792,7 @@ c           write(luout,1151) (psp_rc(i,ia),i=0,psp_lmax(ia))
            icount_shift = icount_shift + 1
            end do
   100      continue
-#if defined(FUJITSU_SOLARIS) || defined(PSCALE) || defined(__crayx1) || defined(GCC46)
+#if defined(FUJITSU) || defined(PSCALE) || defined(__crayx1) || defined(GCC46)
            backspace 31
 #endif
          else
@@ -1214,6 +1224,9 @@ c         end if
      >                        (E(1)+E(36)+E(45))/ion_nion()
          end if
 
+*       **** write APC potential and charges ***
+        if (pspw_V_APC_on()) call pspw_shortprint_APC(luout)
+
          write(luout,1430) E(2),E(2)/ion_nion()
          write(luout,1440) E(5),E(5)/n2(ispin)
          write(luout,1450) E(6),E(6)/n2(ispin)
@@ -1233,6 +1246,9 @@ c         end if
          end if
          if (tamd_found()) then
            write(luout,1461) E(34),E(34)/ion_nion()
+         end if
+         if (pspw_V_APC_on()) then
+           write(luout,1505) E(52),E(52)/ion_nion()
          end if
          write(luout,1470) E(8),E(8)/ion_nion()
          write(luout,1471) E(3),E(3)/n2(ispin)
@@ -1346,7 +1362,23 @@ c         end if
          end if
 
          end if
+      end if
 
+*     **** write out extended Born solvation energies ****
+      if (nwpw_born_on()) then
+         Egas = control_gas_energy()
+         if (taskid.eq.MASTER) then
+            write(luout,1740)
+            write(luout,1741) nwpw_born_screen()
+            write(luout,1745) E(52),E(52)*27.2116d0*23.06d0
+            if (dabs(Egas).gt.1.0d-6)
+     >            write(luout,1746) E(2)-Egas,
+     >                             (E(2)-Egas)*27.2116d0*23.06d0
+            call nwpw_born_print(luout,Egas,E(2))
+         end if
+      end if
+
+      if (taskid.eq.MASTER) then
 *        *** Extra energy output added for QA test ****
          write(luout,1600) E(2)
       end if
@@ -1387,6 +1419,7 @@ c         end if
       call nwpw_meta_gga_end()
       call pspw_end_SIC()
       call pspw_end_HFX()
+      call pspw_end_APC()
       call pspw_qmmm_end()
       call meta_finalize(rtdb)
       call tamd_finalize(rtdb)
@@ -1595,10 +1628,10 @@ c     >        ' set nwpw:makehmass2 .false.')
  1330 FORMAT(/' comparison between hamiltonian and lambda matrix')
  1331 FORMAT(/' Elements of Hamiltonian matrix (up/restricted)')
  1332 FORMAT(/' Elements of Hamiltonian matrix (down)')
- 1340 FORMAT(I3,2I3,' H=',E16.7,', L=',E16.7,', H-L=',E16.7)
- 1341 FORMAT(I3,2I3,' H=',E16.6)
+ 1340 FORMAT(I5,2I5,' H=',E16.7,', L=',E16.7,', H-L=',E16.7)
+ 1341 FORMAT(I5,2I5,' H=',E16.6)
  1350 FORMAT(/' orthonormality')
- 1360 FORMAT(I3,2I3,E18.7)
+ 1360 FORMAT(I5,2I5,E18.7)
  1370 FORMAT(I3)
  1380 FORMAT(' ''',a,'''',I4)
  1390 FORMAT(I3)
@@ -1636,6 +1669,7 @@ c     >        ' set nwpw:makehmass2 .false.')
      >        ' (',E15.5,'/electron)')
  
  1500 FORMAT(/' orbital energies:')
+ 1505 FORMAT( ' APC energy          :',E19.10,' (',E15.5,'/ion)')
  1510 FORMAT(2(E18.7,' (',F8.3,'eV)'))
  1511 FORMAT(2(E18.7,' (',F8.3,'eV) occ=',F6.3))
  1600 FORMAT(/' Total PSPW energy   :',E19.10)
@@ -1652,6 +1686,14 @@ c     >        ' set nwpw:makehmass2 .false.')
  1707 FORMAT( ' QM/MM coupling param.  :',E19.10)
 
  1720 FORMAT(/' Dispersion energy   :',E19.10)
+
+
+ 1740 FORMAT(/' extended Born solvation energies:')
+ 1741 FORMAT(5x,' screen=(epsilon-1)/(epsilon):',F11.6)
+ 1745 FORMAT(5x,' solvation energy (w/o QM polarization) :',E19.10,
+     >   ' (',F8.3,' kcal/mol)')
+ 1746 FORMAT(5x,' solvation energy (w/  QM polarization) :',E19.10,
+     >   ' (',F8.3,' kcal/mol)')
 
  1800 FORMAT(/' Charge Field Energies')
  1801 FORMAT( ' ---------------------')

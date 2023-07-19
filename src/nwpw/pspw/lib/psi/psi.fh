@@ -4,7 +4,7 @@
 
 *     ***** psi common block ****
       integer ispin,ne(2),neq(2),nfft3d,npack1,npack0
-      logical occupation_on,pawexist
+      logical occupation_on,pawexist,paw_gram_schmidt
       integer ne_excited(2),neq_excited(2)
       integer rho0(2)
       integer psi1_excited(2)
@@ -26,11 +26,17 @@
      >                     ne,neq,ispin,nfft3d,npack1,npack0,
      >                     occupation_on,pawexist
 
-      common / psi_paw_block / spsi1,spsi2
+      common / psi_paw_block / spsi1,spsi2,paw_gram_schmidt
 
       common / epsi_block / psi1_excited,psi2_excited,
      >                      hml_excited,eig_excited,
      >                      ne_excited,neq_excited
+
+      integer psi1_pertab(2),psi2_pertab(2)
+      integer hml_pertab(2), eig_pertab(2)
+      common / qpsi_block / psi1_pertab,psi2_pertab,
+     >                      hml_pertab,eig_pertab
+
 
 *     **** psi smearing block ****
       integer smearoccupation,smeartype
