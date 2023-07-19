@@ -25,13 +25,19 @@
 *     **** external functions ****
       logical  control_Fei
       external control_Fei
+      integer  control_code
+      external control_code
 
 
       if (control_Fei()) then
 
-        if (.not.btdb_cget(rtdb,'cpmd:fei_filename',1,filename))
+      if ((control_code().eq.1).or.(control_code().eq.13)) then
+           if (.not.btdb_cget(rtdb,'cpsd:fei_filename',1,filename))
      >     call util_file_prefix('fei',filename)
-
+        else
+           if (.not.btdb_cget(rtdb,'cpmd:fei_filename',1,filename))
+     >     call util_file_prefix('fei',filename)
+        end if
         call util_file_name_noprefix(filename,.false.,
      >                             .false.,
      >                             full_filename)
@@ -77,7 +83,7 @@
                end do
             end do
   30        continue
-#if defined(FUJITSU_SOLARIS) || defined(PSCALE) || defined(__crayx1) || defined(GCC46)
+#if defined(FUJITSU) || defined(PSCALE) || defined(__crayx1) || defined(GCC46)
            backspace 35
 #endif
          else
