@@ -71,7 +71,7 @@ function get_mpi_include ()
    fi
    outlist=""
    for word in ${inlist} ; do
-      len=`echo "${word}" | grep -o "^\-I" | wc -c`
+      len=`echo "${word}" | grep -o "^-I" 2>/dev/null | wc -c`
       if [ ${len} -ge 3 ] ; then
         outlist="${outlist} ${word}"
       fi
@@ -112,7 +112,7 @@ function get_mpi_link ()
    fi
    outlist=""
    for word in ${inlist} ; do
-      len=`echo "${word}" | grep -o "^\-L" | wc -c`
+      len=`echo "${word}" | grep -o "^-L" | wc -c`
       if [ ${len} -ge 3 ] ; then
         outlist="${outlist} ${word}"
       fi
@@ -153,11 +153,15 @@ function get_mpi_lib ()
    fi
    outlist=""
    for word in ${inlist} ; do
-      len=`echo "${word}" | grep -o "^\-l" | wc -c`
+      len=`echo "${word}" | grep -o "^-l" | wc -c`
       if [ ${len} -ge 3 ] ; then
         outlist="${outlist} ${word}"
       fi
    done
+   # homebrew hwloc
+   if pkg-config --exists hwloc; then
+       outlist="${outlist} $(pkg-config --libs-only-L hwloc 2> /dev/null) -lhwloc"
+   fi
    echo ${outlist}
 }
 function get_mpi_fortran ()

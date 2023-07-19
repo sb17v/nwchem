@@ -11,10 +11,13 @@ c     input:   rtdb    - nwchem run time database
 c              basis   - basis set handle
 c              geom    - geometry handle
 c              loctype - localization type
-c                        1: Pipek-Mezey
+c                        1: Pipek-Mezey (PM)
 c                        2: Boys
+c                        3: IAO-IBO
+c     
 c
 c     driver witten by by J. Autschbach, jochena@buffalo.edu
+c     localization routines are in src/ddscf/localize.F
 
 c     ==================================================================
 
@@ -32,10 +35,9 @@ c     ==================================================================
 #include "prop.fh"
 #include "bgj.fh"
 #include "util.fh"
-
+#include "nwc_const.fh"
 
 c     subroutine arguments:
-
       integer rtdb    ! [input] rtdb handle
       integer basis   ! [input] basis handle
       integer geom    ! [input] geometry handle
@@ -43,20 +45,26 @@ c     subroutine arguments:
 
 c     local GA handles:
       integer g_uc(4), g_smat, g_sc, g_tran
-      integer g_movecs(2), g_cmo(2), g_temp
+      integer g_movecs(2), g_cmo(2), g_temp, g_tmp1, g_tmp2
 
 c     MA variables:
       integer l_c, k_c, l_sc, k_sc, l_eval, k_eval, l_occ, k_occ
       integer l_dip(3), k_dip(3)
+      integer l_pop, k_pop, l_list, k_list
 
 c     other local variables:
 
-      integer nclosed(2), nopen(2), nvirt(2), ndens, nbf, nmo, nloc, i
+      integer loc_opt
 
+      integer nclosed(2), nopen(2), nvirt(2), ncore, nocc, nvir,
+     &  ndens, nbf, nmo, nloc, i, natoms
+
+      integer info, dbg, ispin
+      
       integer alo(3), ahi(3), blo(3), bhi(3), clo(3), chi(3)
       integer dlo(3), dhi(3)
 
-      double precision atn, tol2e, val, rtmp, sumd2, dx, dy, dz
+      double precision atn, tol2e, val, rtmp, sumd2, dx, dy, dz, rtemp
       character*3 scftyp
 
       logical     oskel, status
@@ -76,47 +84,88 @@ c     other local variables:
       logical file_write_ga
       external file_write_ga
 
-      logical debug
+      logical debug, master
       logical oprint
 
       integer ga_create_atom_blocked
       external ga_create_atom_blocked
 
+      logical int_normalize
+      external int_normalize
+
+      character*(19) pname
+      character*(3) ltyp
+
 c     ==================================================================
 
-      debug = .true. .and. ga_nodeid().eq.0 ! .true. during development
+      pname = 'localization_driver'
 
-      if (debug) write(luout,*) 'hello from localization_driver'
+      dbg = 0
+      master =  ga_nodeid().eq.0
+      debug = (dbg>0) .and. master ! .true. during development
 
-      if (loctype.lt.1 .or. loctype.gt.2)
+      if (debug) write(luout,*) 'entering '//pname
+
+      if (loctype.lt.1 .or. loctype.gt.3)
      &   call errquit('loc_driver: loctype out of range',0, RTDB_ERR)
 
       oprint = util_print('information', print_low)
-      oprint = oprint .and. (ga_nodeid().eq.0)
+      oprint = oprint .and. ga_nodeid().eq.0
       
 c     ----------------------
 c     start-up: print header
 c     ----------------------
       
       if (oprint) then
-        write (LuOut,*) 'Entering MO Localization driver routine'
-      endif
-      
-      if (oprint) then
-        write (luout,9000)
+        write (luout,9000) ! general header
         if (loctype.eq.1) then
           call util_print_centered(luout,
-     &       'Pipek-Mezey orbital localization', 32, .true.)
+     &       'Pipek-Mezey localization', 25, .true.)
         elseif (loctype.eq.2) then
           call util_print_centered(luout,
-     &       'Boys orbital localization', 25, .true.)
+     &      'Boys localization', 25, .true.)
+        elseif (loctype.eq.3) then
+          call util_print_centered(luout,
+     &      'IAO-IBO localization', 25, .true.)
         else
           write (luout,*) 'loctype =',loctype
           write (luout,*) 'LocType value not supported. Exiting.'
           return
         end if
       end if
-      
+
+c     retrieve localization option from rtdb if it exists
+
+      if (.not. rtdb_get(rtdb, 'prop:loc_opt', mt_int, 1,
+     &                               loc_opt  ))
+     &  loc_opt = 0
+
+c     option is currently only implemented for IBOs:
+
+      if (loc_opt.gt.0 .and. (loctype.ne.3)) then
+        if (oprint) write(luout,'(/1x,a/1x,a)')
+     &    'localization option not implemented for chosen loc. type',
+     &    'setting option to 0 ...'
+        loc_opt = 0
+      end if
+
+      if (oprint) then
+        if (loc_opt .eq.0) then
+          call util_print_centered(luout,
+     &      '(occupied orbitals)', 25, .false.)
+        else if (loc_opt.eq.1) then
+          call util_print_centered(luout,
+     &      '(virtual orbitals)', 25, .false.)
+        else if (loc_opt.eq.2) then
+          call util_print_centered(luout,
+     &      '(occ and virt orbitals)', 25, .false.)
+        else
+          call errquit(pname//': localization option out of range',
+     &      loc_opt, INPUT_ERR)
+        end if
+      end if
+
+
 
 c     -------------------------------------------------------
 c     assemble some data:
@@ -137,11 +186,25 @@ c     allocate dbl_mb(leval) = orbital energies:
      &                      nvirt,scftyp,g_movecs,dbl_mb(k_occ),
      &                      dbl_mb(k_eval),nmo)
 
-      if (oprint .and. debug)
+      if (debug)
      &   write (luout,*) 'loc driver: nclosed,nopen,nvirt',nclosed(1),
-     &   nopen(1), nvirt(1)
+     &  nopen(1), nvirt(1)
+
+      natoms = 0
+
+      if (.not. geom_ncent(geom, natoms)) call errquit
+     &  (pname//': geom',0, GEOM_ERR)
+
+      if (natoms.lt.1) call errquit
+     &  (pname//': could not get natoms from rtdb', 911, UNKNOWN_ERR)
+
+      if (natoms.gt.nw_max_atom) call errquit
+     &  (pname//': nw_max_atom too small ', 911, UNKNOWN_ERR)
+
+c     Skip localization if we have an open-shell system
+c     (to be extended eventually, localizing alpha and
+c     beta spin orbitals separately):
       
-c     Exit gracefully if we have an open-shell system:
       if (scftyp.eq.'UHF') then
         if (oprint) write(luout,9020)
         goto 7000
@@ -154,7 +217,8 @@ c     perform some sanity checks for the orbital occupations:
       
 c     for RHF system there should be no open shell orbitals
       if (nopen(1).ne.0) call
-     &   errquit('loc_driver: nopen.ne.0',0, CALC_ERR)
+     &  errquit('loc_driver: nopen.ne.0',0, CALC_ERR)
+      
 c     in this case, nclosed and nvirt should add up to nmo
       if ((nclosed(1)+nvirt(1)).ne.nmo) call
      &   errquit('loc_driver: wrong no. of orbitals',0, CALC_ERR)
@@ -165,9 +229,15 @@ c     dynamically but for now let's make sure we don't get out of
 c     bounds:
 
       if (nmo.gt.maxnloc) call
-     &   errquit('loc_driver: maxnloc too small',0, BASIS_ERR)
+     &  errquit('loc_driver: maxnloc too small',0, BASIS_ERR)
 
-      
+c     for the time being, we set these variables here:
+
+      ispin = 1
+      nocc = nclosed(1)
+      nvir = nvirt(ispin)
+
+
 c     --------------------------------------------
 c     setup complete. Now proceed to the localization
 c     --------------------------------------------
@@ -177,6 +247,8 @@ c     Integral initialization
 c     
       call int_init(rtdb,1,basis)
       call schwarz_init(geom,basis)
+
+c     =================================================================
 
       if (loctype.eq.1) then
 
@@ -207,15 +279,18 @@ c        allocate some memory used in the localization routine:
 
 c        localize core and occupied orbitals
 
-         do i = 1, nclosed(1)
+         ispin = 1
+
+         do i = 1, nclosed(ispin)
             iloc(i) = i
          end do
-         nloc = nclosed(1)
+         nloc = nclosed(ispin)
+         
 c        jochen: comment:
-c        the localization routines were already available
+c        the PM localization routine was already available
 c        in nwchem
          call localizePM(basis, dbl_mb(k_c), dbl_mb(k_sc), 
-     $        nloc, iloc, nbf, nmo, g_movecs, g_sc)
+     &        nloc, iloc, nbf, nmo, g_movecs, g_sc)
 
 
 c        clean up some temp arrays
@@ -264,16 +339,15 @@ c        loc transform is in g_smat. Write to file
 
 c        smat not needed anymore
          if (.not. ga_destroy(g_smat)) call errquit(
-     &      'loc_driver: error destroying g_smat',0, GA_ERR)
+     &     'loc_driver: error destroying g_smat',0, GA_ERR)
+
+c     =================================================================
 
       else if (loctype.eq.2) then
 
 c       =================
 c       Boys localization
 c       =================
-
-c        write (luout,*) 'Boys not yet implemented. Will do nothing :-)'
-c        continue ! nothing to do right now
 
         do i = 1,4
           if (.not. ga_create(MT_DBL, nbf, nbf, 'uc',
@@ -377,7 +451,7 @@ c         end if
          end do
 
 c        jochen: comment:
-c        the localization routines were already available
+c        the Boys localization routine was already available
 c        in nwchem
          call localizeFB(basis, dbl_mb(k_c), dbl_mb(k_sc), 
      $        nloc, iloc, nbf, nmo, g_movecs, g_uc)
@@ -440,9 +514,78 @@ c        clean up  temp arrays:
 
 c        smat not needed anymore
          if (.not. ga_destroy(g_smat)) call errquit(
-     &      'loc_driver: error destroying g_smat',0, GA_ERR)
+     &     'loc_driver: error destroying g_smat',0, GA_ERR)
 
-      end if                    ! loctype
+
+c      ===============================================================
+
+       else if (loctype.eq.3) then
+
+c        ===================================================
+c        IAO-IBO localization (occupied or virtual orbitals)
+c        ===================================================
+
+
+         ispin = 1
+         nocc = nclosed(ispin)
+         nvir = nvirt(ispin)
+
+c        allocate MA array for pairs of MOs. The actual dimensions
+c        needed are less or equal to 2*nbf
+
+         if (.not. ma_push_get(mt_dbl, 2*nbf, 'c mo', l_c, k_c))
+     &     call errquit(pname//': ma for c', 0, MA_ERR)
+
+         if (.not. ma_push_get(mt_dbl, natoms, 'pop', l_pop, k_pop))
+     &     call errquit(pname//': loc:pop', 0, MA_ERR)
+
+         if (.not. ma_push_get(mt_int, natoms, 'list', l_list, k_list))
+     &     call errquit(pname//': loc:list', 0, MA_ERR)
+
+         if (loc_opt.eq.0) then
+           ltyp = 'occ'
+           call ibo_localization(rtdb, geom, ltyp, basis,
+     &       g_movecs(ispin),nocc,nvir, nmo, nbf, natoms,
+     &       dbl_mb(k_eval+(ispin-1)*nbf),
+     &       dbl_mb(k_occ+(ispin-1)*nbf),
+     &       dbl_mb(k_c),
+     &       dbl_mb(k_pop), int_mb(k_list))
+
+         else if (loc_opt.eq.1) then
+           ltyp = 'vir'
+           call ibo_localization(rtdb, geom, ltyp, basis,
+     &       g_movecs(ispin),nocc,nvir, nmo, nbf, natoms,
+     &       dbl_mb(k_eval+(ispin-1)*nbf),
+     &       dbl_mb(k_occ+(ispin-1)*nbf),
+     &       dbl_mb(k_c),
+     &       dbl_mb(k_pop), int_mb(k_list))
+
+         else if(loc_opt.eq.2) then
+           ltyp = 'occ'
+           call ibo_localization(rtdb, geom, ltyp, basis,
+     &       g_movecs(ispin),nocc,nvir, nmo, nbf, natoms,
+     &       dbl_mb(k_eval+(ispin-1)*nbf),
+     &       dbl_mb(k_occ+(ispin-1)*nbf),
+     &       dbl_mb(k_c),
+     &       dbl_mb(k_pop), int_mb(k_list))
+
+           ltyp = 'vir'
+           call ibo_localization(rtdb, geom, ltyp, basis,
+     &       g_movecs(ispin),nocc,nvir, nmo, nbf, natoms,
+     &       dbl_mb(k_eval+(ispin-1)*nbf),
+     &       dbl_mb(k_occ+(ispin-1)*nbf),
+     &       dbl_mb(k_c),
+     &       dbl_mb(k_pop), int_mb(k_list))
+
+         else
+           call errquit(pname//': loc_opt out of range',loc_opt,
+     &       UNKNOWN_ERR)
+
+         end if ! loc_opt
+
+       end if ! loctype
+
+c      ================================================================
 
 c     -----------------------------------
 c     localization done. Store MO vectors
@@ -485,8 +628,9 @@ c     ==================================================================
 
 
  9000 format(//80(1h-)//,
-     &   10x,20(1h*),/,10x,'*** LOCALIZATION ***',/,10x,20(1h*)/)
+     &  10x,28(1h*),/,10x,'*** ORBITAL LOCALIZATION ***',/,
+     &  10x,28(1h*)/)
 
- 9020 format(/,10x,'Open shell calculations not yet implemented',
+ 9020 format(/,10x,'Spin-unrestricted calculations not yet implemented',
      &      ' for the Localization module. Exiting')
       end
