@@ -24,12 +24,12 @@ cd $TRAVIS_BUILD_DIR/src
 export MPICH_FC=$FC
 if [[ "$arch" == "aarch64" ]]; then 
     if [[ "$FC" == "flang" ]]  ; then
-	export BUILD_MPICH=1
         FOPT="-O2  -ffast-math"
     elif [[ "$(basename -- $FC | cut -d \- -f 1)" == "nvfortran" ]] ; then
 	export USE_FPICF=1
-#	export MPICH_FC=nvfortran
+	export MPICH_FC=nvfortran
 	env|egrep FC
+	nvfortran -V
     else
 #should be gfortran	
 	if [[ "$NWCHEM_MODULES" == "tce" ]]; then 
@@ -43,8 +43,7 @@ else
 	FOPT=-O2
     if [[ -z "$BUILD_OPENBLAS" ]] ; then
 	if [[ "$os" == "Darwin" ]]; then
-	    export BUILD_MPICH=1
- 	    export BLASOPT="-L$MKLROOT  -Wl,-rpath,${MKLROOT}/lib -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core  -lpthread -lm -ldl"
+ 	    export BLASOPT="-L$MKLROOT  -Wl,-rpath,${MKLROOT}/lib -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core  -lpthread -lm -ldl  -L`gfortran -print-file-name=libquadmath.0.dylib|sed -e s'/libquadmath.0.dylib//'` "
 	else
 	    export USE_FPICF=Y
             export BLASOPT="-L$MKLROOT/lib/intel64 -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core  -lpthread -lm -ldl"
@@ -58,13 +57,13 @@ else
     fi
 	export I_MPI_F90="$FC"
     elif [[ "$FC" == "flang" ]] || [[ "$(basename -- $FC | cut -d \- -f 1)" == "nvfortran" ]] ; then
-	export BUILD_MPICH=1
         if [[ "$FC" == "flang" ]]; then
 	    FOPT="-O2  -ffast-math"
 	fi
         if [[ "$FC" == "nvfortran" ]]; then
 	    export USE_FPICF=1
-#	    FOPT="-O2 -tp haswell"
+            export MPICH_FC=nvfortran
+	    nvfortran -V
 	fi
     fi
 fi
@@ -81,15 +80,27 @@ if [[ "$ARMCI_NETWORK" == "ARMCI" ]]; then
     cd ..
 fi    
 
+if [[ "$FC" == "gfortran" ]]; then
+   if [[ "$($FC -dM -E - < /dev/null 2> /dev/null | grep __GNUC__ |cut -c 18-)" -lt 9 ]]; then
+#disable xtb  if gfortran version < 9
+     unset USE_TBLITE
+     export NWCHEM_MODULES=$(echo $NWCHEM_MODULES |sed  's/xtb//')
+   fi
+fi
+
+
 #compilation
  if [[ "$os" == "Darwin" ]]; then 
-   if [[ "$NWCHEM_MODULES" == "tce" ]]; then
-     FOPT="-O1 -fno-aggressive-loop-optimizations"
-   fi
+#   if [[ "$NWCHEM_MODULES" == "tce" ]]; then
+#     FOPT="-O1 -fno-aggressive-loop-optimizations"
+#   fi
    if [[ ! -z "$USE_SIMINT" ]] ; then 
-       FOPT="-O0 -fno-aggressive-loop-optimizations"
        SIMINT_BUILD_TYPE=Debug
-       export PATH="/usr/local/bin:$PATH"
+       if [[ "$arch" != "x86_64" ]]; then
+	   SIMINT_VECTOR=scalar
+       fi
+       echo SIMINT_VECTOR is $SIMINT_VECTOR
+#       export PATH="/usr/local/bin:$PATH"
 #       export LDFLAGS="-L/usr/local/opt/python@3.7/lib:$LDFLAGS"
    fi
    if [[ -z "$TRAVIS_HOME" ]]; then
@@ -99,8 +110,8 @@ fi
        make nwchem_config
        cd libext   && make V=-1  && cd ..
        cd tools    && make V=-1  && cd ..
-       nohup make USE_INTERNALBLAS=y deps_stamp  >& deps.log &
-       sleep 120s
+       make USE_INTERNALBLAS=y deps_stamp  >& deps.log
+       grep -i hess deps.log
        echo tail deps.log '@@@'
        tail -10  deps.log
        echo done tail deps.log '@@@'
@@ -131,20 +142,10 @@ if [[ -z "$TRAVIS_HOME" ]]; then
     make nwchem_config
     cd libext   && make V=-1  && cd ..
     cd tools    && make V=-1  && cd ..
-    nohup make USE_INTERNALBLAS=y deps_stamp  >& deps.log &
-    cd hessian
-    nohup make USE_INTERNALBLAS=y dependencies include_stamp >& ../deps2.log &
-    cd ../nwdft/xc
-    nohup make USE_INTERNALBLAS=y dependencies include_stamp >& ../../deps3.log &
-    cd ../..
-    sleep 360s
+    make USE_INTERNALBLAS=y deps_stamp  >& deps.log
     echo tail deps.log '11@@@'
     tail -10  deps.log
     echo done tail deps.log '11@@@'
-    echo tail deps2.log '11@@@'
-    tail deps2.log || true
-    echo tail deps3.log '11@@@'
-    tail deps3.log || true
     export QUICK_BUILD=1
     if [[ -z "$FOPT" ]]; then
 	make V=0   -j3

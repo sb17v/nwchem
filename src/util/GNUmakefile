@@ -118,6 +118,7 @@ ifeq ($(NWCHEM_TARGET),$(findstring $(NWCHEM_TARGET),LINUX64 CATAMOUNT))
   endif
   ifeq ($(GOTMINGW64),1)
     EXTRA_OBJ += util_mingw.o
+    LIB_DEFINES += -DWIN32 -D__MINGW32__
   endif
   ifeq ($(_CPU),x86_64)
   ifneq ($(GOTMINGW64),1)
@@ -148,10 +149,7 @@ endif
 ifneq ($(OLD_GA),)
   EXTRA_OBJ += ga_zgop.o
 endif
-#LIB_DEFINES += -I$(MPI_INCLUDE)
-ifneq ($(MPI_INCLUDE),)
-   LIB_INCLUDES += $(patsubst -I-I%,-I%,-I$(MPI_INCLUDE))
-endif
+
 
 ifdef USE_VTUNE
   EXTRA_OBJ += vtune_bind.o vtune.o
@@ -234,7 +232,7 @@ endif
               ga_conjg.o nwmolden.o ao_1prdm_read.o ao_1prdm_write.o\
               util_strips.o util_poltensor.o  util_mygop.o util_isnan.o \
               util_blasthreads.o util_gpu_affinity.o util_scalapack.o \
-              util_norm2.o util_dpofa.o util_dgedi.o \
+              util_norm2.o util_dpofa.o util_dgedi.o util_checkmpirun.o\
               $(EXTRA_OBJ)
 ifndef USE_MLIB
               OBJ_OPTIMIZE += icopy.o dsum.o dgefa.o zsum.o
@@ -320,11 +318,26 @@ ifdef USE_OPENACC_TRPDRV
   FOPTIONS += -cuda -DUSE_CUDA_AFFINITY
 endif
 
+ifdef TCE_OPENACC
+  ifeq ($(_FC),pgf90)
+    FOPTIONS += -cuda -acc
+    LIB_DEFINES += -DUSE_CUDA_AFFINITY
+  endif
+  ifeq ($(_FC),gfortran)
+    FOPTIONS += -fopenacc
+    LIB_DEFINES += -DUSE_OPENACC_AFFINITY
+  endif
+endif
+
 ifdef USE_FORTRAN2003
   LIB_DEFINES += -DUSE_FORTRAN2003
 endif
 ifdef USE_NONBLOCKING_BCAST
   LIB_DEFINES += -DUSE_IBCAST
+endif
+
+ifdef USE_NO_WALLTIME
+ LIB_DEFINES += -DNO_WALLTIME
 endif
 
 include ../config/makelib.h
