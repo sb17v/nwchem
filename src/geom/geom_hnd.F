@@ -4777,10 +4777,11 @@ C
       R1=R12+TEMP
       R2=R12-TEMP
       DIF=  ABS(A2-R1)-  ABS(A2-R2)
-      IF(DIF.LT.ZERO) GO TO 420
-      SHIFT=R2
-      GO TO 310
-  420 SHIFT=R1
+      IF(DIF.ge.ZERO) then
+         SHIFT=R2
+      else
+         SHIFT=R1
+      endif
       GO TO 310
   430 EIG(1)=GAMMA(1)+SUM
       DO 440 J=1,N
@@ -4879,10 +4880,10 @@ c
          return
       endif
 c     
-      if (.not. ma_push_get(mt_int, nat*nat,'check all',l_m, k_m))
+      if (.not. ma_push_get(mt_int, nat*nat,'check all0',l_m, k_m))
      $     call errquit('geom_check_all_connected: ma?',nat*nat,
      &       MA_ERR)
-      if (.not. ma_push_get(mt_int, nat,'check all',l_clus, k_clus))
+      if (.not. ma_push_get(mt_int, nat,'check all1',l_clus, k_clus))
      $     call errquit('geom_check_all_connected: ma?',nat,
      &       MA_ERR)
 c     
@@ -4996,7 +4997,7 @@ c
                if (numijxtra .eq. mxbond) then
                   numijxtra = 0
                   okay = .false.
-                  return
+                  goto 10000
                endif
                if (oprint) write(LuOut,44) iclus, jclus, 
      &                     imin, jmin, rmin

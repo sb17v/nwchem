@@ -30,7 +30,7 @@ c
 c  $Id$
 c
 c  ======================================================================================================
-C> \mainpage Northwest Computational Chemistry Package (NWChem) 7.0.1
+C> \mainpage Northwest Computational Chemistry Package (NWChem) 7.2.0
 C>
 C> NWChem is an open-source computational chemistry package distributed under the terms of
 C> the Educational Community License (ECL) 2.0
@@ -51,7 +51,7 @@ C> either express or implied. See the License for the specific language governin
 C> permissions and limitations under the License.
 C>
 C> Further information, including user documentation and forums, may be found at
-C> <a href="http://www.nwchem-sw.org/">http://www.nwchem-sw.org/</a>. Alternatively,
+C> <a href="https://nwchemgit.github.io">https:/nwchemgit.github.io</a>. Alternatively,
 C> the paper
 C>
 C> * M. Valiev, E.J. Bylaska, N. Govind, K. Kowalski, T.P. Straatsma, H.J.J. Van Dam,
@@ -61,7 +61,7 @@ C>   <I>Computer Physics Communications</I>, <b>181</b>, 1477–1489, DOI: <a hr
 C>
 C> provides details on the codes capabilities.
 C>
-C> Copyright (c) 1994-2020 Pacific Northwest National Laboratory, Battelle Memorial Institute
+C> Copyright (c) 1994-2022 Pacific Northwest National Laboratory, Battelle Memorial Institute
 C>
 C> Environmental Molecular Sciences Laboratory (EMSL)<br>
 C> Pacific Northwest National Laboratory<br>
@@ -86,10 +86,14 @@ c
       integer omp_get_max_threads
       external omp_get_max_threads
 #endif
+      logical do_printaff,do_checkmpi
+      integer linux_printaff
+      integer mpirun_code
 c
 c     Create parallel processes and initialize IPC layer
 c
       call pbeginf()
+
 c
 c     MXINIT is needed by PeIGS and PFFT to initialize
 c     the communication fabric they use.
@@ -118,7 +122,7 @@ c
 10001    continue
 c
       else
-#if !(defined(KSR) || defined(IBM) || defined(FUJITSU_SOLARIS) ||defined(FUJITSU_VPP) ||defined(FUJITSU_VPP64))
+#if !(defined(KSR) || defined(IBM) || defined(FUJITSU_SOLARIS) )
          close(LuIn)
 #endif
       endif
@@ -136,6 +140,8 @@ c
 c     Initialize local memory allocator & global array tools
 C
       call ga_initialize_ltd(ma_sizeof(mt_dbl,global,mt_byte))
+      ! this must happen after GA and before MA!
+      call util_setup_gpu_affinity()
       if ( ga_uses_ma() ) then
         if (.not.ma_init(mt_dbl, stack, heap+global))
      &      call errquit('nwchem.F: ma_init failed (ga_uses_ma=T)',911,
@@ -161,6 +167,7 @@ C
 !     testing that does not enable OpenMP.
 !
  99   format(2x,'NWChem w/ OpenMP: maximum threads = ',i4)
+      do_printaff=.false.
 #if defined(USE_OPENMP)
       !$omp parallel
       !$omp master
@@ -168,6 +175,7 @@ C
       !$omp end master
       !$omp end parallel
 #endif
+c
 c     set no. threads for threaded BLAS to 1
       call util_blas_set_num_threads(1)
 !
@@ -311,6 +319,24 @@ c
 #ifdef CATAMOUNT
          call util_allocga()
 #endif
+      if (.not.rtdb_get(rtdb,'check_mpirun',mt_log,1,do_checkmpi))
+     &     do_checkmpi = .false.
+      if(do_checkmpi) then
+         mpirun_code=0
+         call util_checkmpirun(mpirun_code)
+         if(mpirun_code.eq.0) call errquit('mpirun incompatible ',
+     *        0      ,UERR)
+      endif
+      if (.not.rtdb_get(rtdb,'do_printaff',mt_log,1,do_printaff))
+     &     do_printaff = .false.
+      if(do_printaff) then
+         if(ga_nodeid().eq.0)
+     W        write(luout,*) '%%%%%% CPU Affinity %%%%%%%'
+         call util_flush(luout)
+         call ga_sync()
+         if(linux_printaff().ne.0) call errquit(
+     A   ' call to linux_printaff failed ',0,CAPMIS_ERR)
+      endif
          call task(rtdb)
          goto 10                !    end while
       endif
@@ -347,7 +373,7 @@ c
       if (ga_nodeid() .eq. 0) then
          if (util_print('ga summary', print_default))
      $        call ga_summarize(0)
-         if (util_print('ga stats', print_default)) then
+         if (util_print('ga stats', print_high)) then
             call ga_print_stats()
             write(LuOut,*)
          endif
@@ -444,7 +470,7 @@ c
       write(LuOut,*)
       write(LuOut,*)
       call util_print_centered(LuOut,
-     $     'Northwest Computational Chemistry Package (NWChem) 7.0.1',
+     $     'Northwest Computational Chemistry Package (NWChem) 7.2.0',
      $     40, .true.)
       write(LuOut,*)
       write(LuOut,*)
@@ -457,7 +483,7 @@ c
       call util_print_centered(LuOut,'Richland, WA 99352',
      $     40, .false.)
       write(LuOut,*)
-      call util_print_centered(LuOut,'Copyright (c) 1994-2020',
+      call util_print_centered(LuOut,'Copyright (c) 1994-2022',
      $     40, .false.)
       call util_print_centered(LuOut,
      $     'Pacific Northwest National Laboratory',
@@ -540,7 +566,7 @@ C
 C  Print version information to ecce.out file
 C
       compiled(inp_strlen(compiled)+1:inp_strlen(compiled)+25) = 
-     $         ' Version 7.0.1'
+     $         ' Version 7.2.0'
       call ecce_print_version(compiled(1:inp_strlen(compiled)))
 C
       If ( Inp_StrLen(BatchID) .gt. 0) then

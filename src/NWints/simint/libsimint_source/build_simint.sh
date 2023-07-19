@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # script to download simint-generator, create the simint library, compile it
 # and link it in NWChem
 # FC=compilername can be used to set compiler, e.g.
@@ -7,6 +7,9 @@
 #
 #  SIMINT_MAXAM=5 ./build_simint.sh
 #
+mysimpwd=`pwd`
+source ../../../libext/libext_utils/cmake.sh
+cd $mysimpwd
 if  [ -z "$(command -v python3)" ]; then
     echo python3 not installed
     echo please install python3
@@ -23,12 +26,19 @@ if  [ -z "$(command -v patch)" ]; then
     exit 1
 fi
 UNAME_S=$(uname -s)
+if [ ! -z "${CONDA_TOOLCHAIN_HOST}" ]; then
+    arch=$(echo $CONDA_TOOLCHAIN_HOST | cut -d - -f 1)
+else
+    arch=$(uname -m)
+fi
 if [[ ${UNAME_S} == Linux ]]; then
     CPU_FLAGS=$(cat /proc/cpuinfo | grep flags |tail -n 1)
     CPU_FLAGS_2=$(cat /proc/cpuinfo | grep flags |tail -n 1)
 elif [[ ${UNAME_S} == Darwin ]]; then
     CPU_FLAGS=$(sysctl -n machdep.cpu.features)
-    CPU_FLAGS_2=$(sysctl -n machdep.cpu.leaf7_features)
+    if [[ "$arch" == "x86_64" ]]; then
+	CPU_FLAGS_2=$(sysctl -n machdep.cpu.leaf7_features)
+    fi
 else
     echo Operating system not supported yet
     exit 1
@@ -37,16 +47,19 @@ fi
    GOTAVX=$(echo ${CPU_FLAGS}   | tr  'A-Z' 'a-z'| awk ' /avx/    {print "Y"}')
   GOTAVX2=$(echo ${CPU_FLAGS_2} | tr  'A-Z' 'a-z'| awk ' /avx2/   {print "Y"}')
 GOTAVX512=$(echo ${CPU_FLAGS}   | tr  'A-Z' 'a-z'| awk ' /avx512f/{print "Y"}')
+   GOTSVE=$(echo ${CPU_FLAGS}   | tr  'A-Z' 'a-z'| awk ' /sve/{print "Y"}')
 if [[ -n "${SIMINT_VECTOR}" ]]; then
       VEC=${SIMINT_VECTOR}
 elif [[ "${GOTAVX512}" == "Y" ]]; then
-    VEC=avx512
+    VEC=commonavx512
 elif [[ "${GOTAVX2}" == "Y" ]]; then
     VEC=avx2
 elif [[ "${GOTAVX}" == "Y" ]]; then
     VEC=avx
 elif [[ "${GOTSSE2}" == "Y" ]]; then
     VEC=sse
+elif [[ "${GOTSVE}" == "Y" ]]; then
+    VEC=sve
 else
     VEC=scalar
 fi
@@ -55,7 +68,11 @@ if [[ "${VEC}" == "avx512" ]]; then
 if [[   -z "${CC}" ]]; then
     CC=cc
 fi
+echo CC is $CC
+GCC_EXTRA=$(echo $CC | cut -c 1-3)
+if [ "$GCC_EXTRA" == gcc ]; then
 let GCCVERSIONGT5=$(expr `${CC} -dumpversion | cut -f1 -d.` \> 5)
+#echo exit code "$?"
     if [[ ${GCCVERSIONGT5} != 1 ]]; then
 	echo
 	echo you have gcc version $(${CC} -dumpversion | cut -f1 -d.)
@@ -63,6 +80,7 @@ let GCCVERSIONGT5=$(expr `${CC} -dumpversion | cut -f1 -d.` \> 5)
 	echo
 	exit 1
     fi
+fi
 fi
 SRC_HOME=`pwd`
 DERIV=1
@@ -72,101 +90,66 @@ fi
 #PERMUTE_SLOW=1
 PERMUTE_SLOW=${SIMINT_MAXAM}
 GITHUB_USERID=edoapra
-rm -rf simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIVE}* *-chem-simint-generator-?????? simint-chem-simint-generator.tar.gz simint_lib
+#GITHUB_USERID=simint-chem
+#rm -rf simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIVE}* *-chem-simint-generator-?????? simint-chem-simint-generator.tar.gz simint_lib
+rm -rf simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIVE}* *-chem-simint-generator-?????? simint_lib
 
 GITHUB_URL=https://github.com/${GITHUB_USERID}/simint-generator/tarball/master
-#GITHUB_URL=https://github.com/simint-chem/simint-generator/tarball/master
 TAR_NAME=simint-chem-simint-generator.tar.gz
-if  [ ! -z "$(command -v curl)" ] ; then
-    curl -L "${GITHUB_URL}" -o "${TAR_NAME}"
+if [ -f  ${TAR_NAME} ]; then
+    echo "using existing"  ${TAR_NAME}
 else
-    wget -O "${TAR_NAME}" "${GITHUB_URL}"
+    if  [ ! -z "$(command -v curl)" ] ; then
+	curl -L "${GITHUB_URL}" -o "${TAR_NAME}"
+    else
+	wget -O "${TAR_NAME}" "${GITHUB_URL}"
+    fi
 fi
-
-tar xzf simint-chem-simint-generator.tar.gz
-cd *-simint-generator-???????
-rm -f generator_types.patch
-cat > generator_types.patch <<EOF
---- simint-chem-simint-generator-c589bd7/generator/CommandLine.hpp	2018-12-11 10:48:31.000000000 -0800
-+++ modif/generator/CommandLine.hpp	2019-09-17 09:25:45.000000000 -0700
-@@ -10,6 +10,7 @@
- 
- #include <vector>
- #include "generator/Options.hpp"
-+#include "generator/Types.hpp"
- 
- 
- /*! \brief Get the next argument on the command line
---- simint-chem-simint-generator-c589bd7/skel/simint/vectorization/intrinsics_avx512.h.org	2019-09-19 23:15:32.768327180 -0700
-+++ modif/skel/simint/vectorization/intrinsics_avx512.h	2019-09-19 23:15:49.232376802 -0700
-@@ -207,7 +207,7 @@
-         return u.v;
-     }
-     
--    #define SIMINT_PRIM_SCREEN_STAT
-+    #define SIMINT_PRIM_SCREEN_STAT__
-     static inline
-     int count_prim_screen_survival(__m512d screen_val, const double screen_tol)
-     {
-edo@durian:~/nwchem/nwchem-master/src/NWints/simint/libsimint_source/edoapra-simint-generator-f690e3a$ diff -u skel/simint/vectorization/intrinsics_avx.h.org skel/simint/vectorization/intrinsics_avx.h 
---- simint-chem-simint-generator-c589bd7/skel/simint/vectorization/intrinsics_avx.h.org	2019-09-19 23:16:00.400410460 -0700
-+++ modif/skel/simint/vectorization/intrinsics_avx.h	2019-09-19 23:16:11.060442586 -0700
-@@ -216,7 +216,7 @@
-         return u.v;
-     }
-     
--    #define SIMINT_PRIM_SCREEN_STAT
-+    #define SIMINT_PRIM_SCREEN_STAT__
-     static inline
-     int count_prim_screen_survival(__m256d screen_val, const double screen_tol)
-     {
-EOF
-patch -p1 < ./generator_types.patch
-pwd
-mkdir -p build; cd build
 if [[ -z "${CMAKE}" ]]; then
     #look for cmake
     if [[ -z "$(command -v cmake)" ]]; then
-	echo cmake required to build Simint
-	echo Please install cmake
-	echo define the CMAKE env. variable
-	exit 1
+	cmake_instdir=../../../libext/libext_utils
+	get_cmake_release $cmake_instdir
+	status=$?
+	if [ $status -ne 0 ]; then
+	    echo cmake required to build simint
+	    echo Please install cmake
+	    echo define the CMAKE env. variable
+	    exit 1
+	fi
     else
 	CMAKE=cmake
     fi
 fi
-CMAKE_VER=$(${CMAKE} --version|cut -d " " -f 3|head -1|cut -c1)
-#echo CMAKE_VER is ${CMAKE_VER}
-if [[ ${CMAKE_VER} -lt 3 ]]; then
-    echo CMake 3.0.2 or higher is required
-    echo Please install CMake 3
-    echo define the CMAKE env. variable
-    exit 1
+CMAKE_VER_MAJ=$(${CMAKE} --version|cut -d " " -f 3|head -1|cut -d. -f1)
+CMAKE_VER_MIN=$(${CMAKE} --version|cut -d " " -f 3|head -1|cut -d. -f2)
+echo CMAKE_VER is ${CMAKE_VER_MAJ} ${CMAKE_VER_MIN}
+if ((CMAKE_VER_MAJ < 3)) || (((CMAKE_VER_MAJ > 2) && (CMAKE_VER_MIN < 21))); then
+    cmake_instdir=../../../libext/libext_utils/
+    get_cmake_release $cmake_instdir
+    status=$?
+    if [ $status -ne 0 ]; then
+	echo cmake 3.21 required to build simint
+	echo Please install cmake
+	echo define the CMAKE env. variable
+	exit 1
+    fi
 fi
+cd $mysimpwd
+tar xzf simint-chem-simint-generator.tar.gz
+cd *-simint-generator-???????
+pwd
+if [[  -z "${NWCHEM_TOP}" ]]; then
+    dir4=$(dirname `pwd`)
+    dir3=$(dirname "$dir4")
+    dir2=$(dirname "$dir3")
+    dir1=$(dirname "$dir2")
+    NWCHEM_TOP=$(dirname "$dir1")
+fi
+mkdir -p build; cd build
 if [[ -z "${SIMINT_BUILD_TYPE}" ]]; then
     SIMINT_BUILD_TYPE=Release
 fi
-$CMAKE  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}"  ../
-make -j2
-cd ..
-#./create.py -g build/generator/ostei -l 6 -p 4 -d 1 simint.l6_p4_d1
-#create.py -g build/generator/ostei -l 4 -p 4 -d 0 -ve 4 -he 4 -vg 5 -hg 5
-#https://www.cc.gatech.edu/~echow/pubs/huang-chow-sc18.pdf
-#workaround for PYTHONHOME crazyness
-if [[ ! -z "${PYTHONHOME}" ]]; then
-    export PYTHONHOMESET=${PYTHONHOME}
-    unset PYTHONHOME
-    echo 'PYTHONOME unset'
-fi
-time -p ./create.py -g build/generator/ostei -l ${SIMINT_MAXAM} -p ${PERMUTE_SLOW} -d ${DERIV} ../simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}  -ve 4 -he 4 -vg 5 -hg 5
-if [[ ! -z "${PYTHONHOME}" ]]; then
-    export PYTHONHOME=${PYTHONHOMESET}
-    unset PYTHONHOMESET
-    echo 'PYTHONOME set'
-fi
-cd ../simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}
-mkdir -p build
-cd build
 if [[ -z "${CXX}" ]]; then
     #look for c++
     if  [ -z "$(command -v c++)" ]; then
@@ -178,6 +161,38 @@ if [[ -z "${CXX}" ]]; then
 	CXX=c++
     fi
 fi    
+if [[ -z "${CXX_FOR_BUILD}" ]]; then
+    CXX_FOR_BUILD=${CXX}
+fi
+echo CXX_FOR_BUILD $CXX_FOR_BUILD && $CMAKE CXX=$CXX_FOR_BUILD -DCMAKE_CXX_COMPILER=$CXX_FOR_BUILD  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}"  ../
+make -j2
+cd ..
+#./create.py -g build/generator/ostei -l 6 -p 4 -d 1 simint.l6_p4_d1
+#create.py -g build/generator/ostei -l 4 -p 4 -d 0 -ve 4 -he 4 -vg 5 -hg 5
+#https://www.cc.gatech.edu/~echow/pubs/huang-chow-sc18.pdf
+#workaround for PYTHONHOME crazyness
+if [[ ! -z "${PYTHONHOME}" ]]; then
+    export PYTHONHOMESET=${PYTHONHOME}
+    unset PYTHONHOME
+    echo 'PYTHONOME unset'
+fi
+if [[ -z "${GENERATOR_PROCESSES}" ]]; then
+    GENERATOR_PROCESSES=3
+    #parallel processing broken for g++-10 and later (at least on macos)
+    if [[ $(expr `${CXX} -dumpversion | cut -f1 -d.` \> 9) == 1 ]]; then
+	GENERATOR_PROCESSES=1
+    fi
+fi
+echo GENERATOR_PROCESSES is ${GENERATOR_PROCESSES}
+time -p ./create.py -g build/generator/ostei -l ${SIMINT_MAXAM} -p ${PERMUTE_SLOW} -d ${DERIV} ../simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}  -ve 4 -he 4 -vg 5 -hg 5 -n ${GENERATOR_PROCESSES}
+if [[ ! -z "${PYTHONHOME}" ]]; then
+    export PYTHONHOME=${PYTHONHOMESET}
+    unset PYTHONHOMESET
+    echo 'PYTHONOME set'
+fi
+cd ../simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}
+mkdir -p build
+cd build
 if [[ -z "${FC}" ]]; then
     #look for gfortran
     if  [ -z "$(command -v gfortran)" ]; then
@@ -189,35 +204,55 @@ if [[ -z "${FC}" ]]; then
 	FC=gfortran
     fi
 fi    
-    GFORTRAN_EXTRA=$(echo $FC | cut -c 1-8)
-if [ ${FC} == gfortran ] || [ ${FC} == flang ] || [[ ${GFORTRAN_EXTRA} == gfortran ]] ; then
+FC_EXTRA=$(${NWCHEM_TOP}/src/config/strip_compiler.sh ${FC})
+echo FC_EXTRA $FC_EXTRA
+if [[ ${FC_EXTRA} == gfortran  || ${FC_EXTRA} == flang || ${FC_EXTRA} == armflang || (${FC} == ftn && ${PE_ENV} == GNU) || (${FC} == ftn && ${PE_ENV} == AOCC) ]] ; then
     Fortran_FLAGS="-fdefault-integer-8 -cpp"
+    if [[ ${FC_EXTRA} == gfortran  || (${FC} == ftn && ${PE_ENV} == GNU)]]; then
     GNUMAJOR=$(${FC} -dM -E - < /dev/null 2> /dev/null | grep __GNUC__ |cut -c18-)
     echo GNUMAJOR is $GNUMAJOR
     if [ $GNUMAJOR -ge 8 ]; then
     Fortran_FLAGS+=" -std=legacy "
     fi
+fi
 elif  [ ${FC} == xlf ] || [ ${FC} == xlf_r ] || [ ${FC} == xlf90 ]|| [ ${FC} == xlf90_r ]; then
     Fortran_FLAGS=" -qintsize=8 -qextname -qpreprocess"
-elif  [ ${FC} == ifort ]; then
+elif  [[ ${FC} == ifort || (${FC} == ftn && ${PE_ENV} == INTEL) ]]; then
     Fortran_FLAGS="-i8 -fpp"
-elif  [ ${FC} == nvfortran ] || [ ${FC} == pgf90 ] ; then
+elif  [ ${FC} == ftn ]  && [ ${PE_ENV} == CRAY  ]; then
+    Fortran_FLAGS=" -ffree -s integer64 -e F "
+elif  [[ ${FC_EXTRA} == nvfortran || ${FC} == pgf90 || (${FC} == ftn && ${PE_ENV} == NVIDIA) ]]; then
     Fortran_FLAGS="-i8 -cpp"
     CC=gcc
     CXX=g++
+    if  [[ ${PE_ENV} == NVIDIA ]]; then
+	unset CPATH
+    fi
+elif  [ ${FC} == frt ] || [ ${FC} == frtpx ] ; then
+    Fortran_FLAGS=" -fs -CcdLL8 -CcdII8 -cpp "
+    CC=/opt/FJSVxos/devkit/aarch64/bin/aarch64-linux-gnu-gcc
+    CXX=/opt/FJSVxos/devkit/aarch64/bin/aarch64-linux-gnu-g++
 fi
+if [[ ! -z ${FFLAGS_FORGA} ]]; then Fortran_FLAGS+=" ${FFLAGS_FORGA}" ; fi
 echo Fortran_FLAGS equal "$Fortran_FLAGS"
-FC="${FC}" CXX="${CXX}" $CMAKE \
+FC="${FC}" CC="${CC}" CXX="${CXX}" $CMAKE \
  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}" -DSIMINT_VECTOR=${VEC}  \
  -DCMAKE_INSTALL_LIBDIR=lib -DENABLE_FORTRAN=ON -DSIMINT_MAXAM=${SIMINT_MAXAM} -DSIMINT_MAXDER=${DERIV} \
  -DENABLE_TESTS=OFF     -DSIMINT_STANDALONE=OFF   \
  -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DCMAKE_INSTALL_PREFIX=${SRC_HOME}/simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install ../
-time -p make  -j2
-make simint install/fast
+time -p make  -j4
+make simint
+if [[ (${FC} == ftn && ${PE_ENV} == CRAY) ]] ; then
+    cp simint/SIMINTFORTRAN.mod simint/simintfortran.mod
+fi
+make install/fast
 cd ../..
 echo ln -sf  simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install simint_install
 ln -sf  simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install simint_install
 cd simint_install/lib
+if [[ "$arch" == "x86_64" ]]; then
+    strip --strip-debug libsimint.a
+fi
 ln -sf libsimint.a libnwc_simint.a
 export SIMINT_HOME=${SRC_HOME}/simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install
 echo 'SIMINT library built with maximum angular momentum='${SIMINT_MAXAM}
