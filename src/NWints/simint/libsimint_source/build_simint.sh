@@ -26,12 +26,19 @@ if  [ -z "$(command -v patch)" ]; then
     exit 1
 fi
 UNAME_S=$(uname -s)
+if [ ! -z "${CONDA_TOOLCHAIN_HOST}" ]; then
+    arch=$(echo $CONDA_TOOLCHAIN_HOST | cut -d - -f 1)
+else
+    arch=$(uname -m)
+fi
 if [[ ${UNAME_S} == Linux ]]; then
     CPU_FLAGS=$(cat /proc/cpuinfo | grep flags |tail -n 1)
     CPU_FLAGS_2=$(cat /proc/cpuinfo | grep flags |tail -n 1)
 elif [[ ${UNAME_S} == Darwin ]]; then
     CPU_FLAGS=$(sysctl -n machdep.cpu.features)
-    CPU_FLAGS_2=$(sysctl -n machdep.cpu.leaf7_features)
+    if [[ "$arch" == "x86_64" ]]; then
+	CPU_FLAGS_2=$(sysctl -n machdep.cpu.leaf7_features)
+    fi
 else
     echo Operating system not supported yet
     exit 1
@@ -105,7 +112,7 @@ if [[ -z "${CMAKE}" ]]; then
 	get_cmake_release $cmake_instdir
 	status=$?
 	if [ $status -ne 0 ]; then
-	    echo cmake required to build scalapack
+	    echo cmake required to build simint
 	    echo Please install cmake
 	    echo define the CMAKE env. variable
 	    exit 1
@@ -122,7 +129,7 @@ if ((CMAKE_VER_MAJ < 3)) || (((CMAKE_VER_MAJ > 2) && (CMAKE_VER_MIN < 21))); the
     get_cmake_release $cmake_instdir
     status=$?
     if [ $status -ne 0 ]; then
-	echo cmake required to build scalapack
+	echo cmake 3.21 required to build simint
 	echo Please install cmake
 	echo define the CMAKE env. variable
 	exit 1
@@ -143,18 +150,6 @@ mkdir -p build; cd build
 if [[ -z "${SIMINT_BUILD_TYPE}" ]]; then
     SIMINT_BUILD_TYPE=Release
 fi
-$CMAKE  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}"  ../
-make -j2
-cd ..
-#./create.py -g build/generator/ostei -l 6 -p 4 -d 1 simint.l6_p4_d1
-#create.py -g build/generator/ostei -l 4 -p 4 -d 0 -ve 4 -he 4 -vg 5 -hg 5
-#https://www.cc.gatech.edu/~echow/pubs/huang-chow-sc18.pdf
-#workaround for PYTHONHOME crazyness
-if [[ ! -z "${PYTHONHOME}" ]]; then
-    export PYTHONHOMESET=${PYTHONHOME}
-    unset PYTHONHOME
-    echo 'PYTHONOME unset'
-fi
 if [[ -z "${CXX}" ]]; then
     #look for c++
     if  [ -z "$(command -v c++)" ]; then
@@ -166,6 +161,21 @@ if [[ -z "${CXX}" ]]; then
 	CXX=c++
     fi
 fi    
+if [[ -z "${CXX_FOR_BUILD}" ]]; then
+    CXX_FOR_BUILD=${CXX}
+fi
+echo CXX_FOR_BUILD $CXX_FOR_BUILD && $CMAKE CXX=$CXX_FOR_BUILD -DCMAKE_CXX_COMPILER=$CXX_FOR_BUILD  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}"  ../
+make -j2
+cd ..
+#./create.py -g build/generator/ostei -l 6 -p 4 -d 1 simint.l6_p4_d1
+#create.py -g build/generator/ostei -l 4 -p 4 -d 0 -ve 4 -he 4 -vg 5 -hg 5
+#https://www.cc.gatech.edu/~echow/pubs/huang-chow-sc18.pdf
+#workaround for PYTHONHOME crazyness
+if [[ ! -z "${PYTHONHOME}" ]]; then
+    export PYTHONHOMESET=${PYTHONHOME}
+    unset PYTHONHOME
+    echo 'PYTHONOME unset'
+fi
 if [[ -z "${GENERATOR_PROCESSES}" ]]; then
     GENERATOR_PROCESSES=3
     #parallel processing broken for g++-10 and later (at least on macos)
@@ -195,13 +205,16 @@ if [[ -z "${FC}" ]]; then
     fi
 fi    
 FC_EXTRA=$(${NWCHEM_TOP}/src/config/strip_compiler.sh ${FC})
+echo FC_EXTRA $FC_EXTRA
 if [[ ${FC_EXTRA} == gfortran  || ${FC_EXTRA} == flang || ${FC_EXTRA} == armflang || (${FC} == ftn && ${PE_ENV} == GNU) || (${FC} == ftn && ${PE_ENV} == AOCC) ]] ; then
     Fortran_FLAGS="-fdefault-integer-8 -cpp"
+    if [[ ${FC_EXTRA} == gfortran  || (${FC} == ftn && ${PE_ENV} == GNU)]]; then
     GNUMAJOR=$(${FC} -dM -E - < /dev/null 2> /dev/null | grep __GNUC__ |cut -c18-)
     echo GNUMAJOR is $GNUMAJOR
     if [ $GNUMAJOR -ge 8 ]; then
     Fortran_FLAGS+=" -std=legacy "
     fi
+fi
 elif  [ ${FC} == xlf ] || [ ${FC} == xlf_r ] || [ ${FC} == xlf90 ]|| [ ${FC} == xlf90_r ]; then
     Fortran_FLAGS=" -qintsize=8 -qextname -qpreprocess"
 elif  [[ ${FC} == ifort || (${FC} == ftn && ${PE_ENV} == INTEL) ]]; then
@@ -220,6 +233,7 @@ elif  [ ${FC} == frt ] || [ ${FC} == frtpx ] ; then
     CC=/opt/FJSVxos/devkit/aarch64/bin/aarch64-linux-gnu-gcc
     CXX=/opt/FJSVxos/devkit/aarch64/bin/aarch64-linux-gnu-g++
 fi
+if [[ ! -z ${FFLAGS_FORGA} ]]; then Fortran_FLAGS+=" ${FFLAGS_FORGA}" ; fi
 echo Fortran_FLAGS equal "$Fortran_FLAGS"
 FC="${FC}" CC="${CC}" CXX="${CXX}" $CMAKE \
  -DCMAKE_BUILD_TYPE="${SIMINT_BUILD_TYPE}" -DSIMINT_VECTOR=${VEC}  \
@@ -236,6 +250,9 @@ cd ../..
 echo ln -sf  simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install simint_install
 ln -sf  simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install simint_install
 cd simint_install/lib
+if [[ "$arch" == "x86_64" ]]; then
+    strip --strip-debug libsimint.a
+fi
 ln -sf libsimint.a libnwc_simint.a
 export SIMINT_HOME=${SRC_HOME}/simint.l${SIMINT_MAXAM}_p${PERMUTE_SLOW}_d${DERIV}.install
 echo 'SIMINT library built with maximum angular momentum='${SIMINT_MAXAM}
