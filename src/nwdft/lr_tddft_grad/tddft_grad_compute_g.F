@@ -586,7 +586,7 @@ c for this gradient term in restricted triplet gradients.
         call dftgh_gridv0(rtdb,ihdl_geom,ihdl_bfao, ipol,nao,
      &       g_d, dum, dum, g_rhs_xc, calc_type,
      &       nat, log_mb(k_act), nat, dbl_mb(k_rdens_atom),
-     &       int_mb(k_cetobfr), 0, .false.)
+     &       int_mb(k_cetobfr), 0, .false., 0d0, .false.)
         call xc_exit_index(l_cntoce, l_cntobfr, l_cetobfr,
      &                     l_rdens_atom)
       endif
@@ -616,7 +616,7 @@ c
         call tddft_grad_compute_dao(ipol,nao,nocc,g_mo,g_d)
 c DEBUG
 c        call ga_print(g_d)
-        if (tddft_grad_util_print('tddft grad g',print_debug)) then
+        if (util_print('tddft grad g',print_debug)) then
           if (oroot) write(LuOut,*)'DEBUG: '//pname//'D'
           call tddft_grad_print_array(ipol,1,g_d,dble(ipol))
         endif
@@ -640,7 +640,7 @@ c
         enddo
 c DEBUG
 c        call ga_print(g_p_ao)
-        if (tddft_grad_util_print('tddft grad g',print_debug)) then
+        if (util_print('tddft grad g',print_debug)) then
           if (oroot) write(LuOut,*)'DEBUG: '//pname//'P'
 c          call tddft_grad_print_array(ipol,1,g_p_ao,dble(ipol))
           call tddft_grad_print_array(ipol,1,g_d(3),dble(ipol))
@@ -798,7 +798,7 @@ c
 c Daniel (11-30-12): Print X+Y and X-Y in the AO basis
 c DEBUG
 c        call ga_print(g_d(5))
-        if (tddft_grad_util_print('tddft grad g',print_debug)) then
+        if (util_print('tddft grad g',print_debug)) then
           if (oroot) write(LuOut,*)'DEBUG: '//pname//'(X+Y)'
           call tddft_grad_print_array(ipol,1,g_d(5),dble(ipol))
         endif
@@ -818,7 +818,7 @@ c Daniel (11-30-12): Print W (note, this contains the ground state
 c density matrix contribution as well).
 c DEBUG
 c        call ga_print(g_wp_ao)
-        if (tddft_grad_util_print('tddft grad g',print_debug)) then
+        if (util_print('tddft grad g',print_debug)) then
           if (oroot) write(LuOut,*)'DEBUG: '//pname//'W'
           call tddft_grad_print_array(1,1,g_wp_ao,dble(ipol))
         endif
@@ -849,7 +849,7 @@ c
      &         g_d, 
      &         dbl_mb(k_frc_df0), dum, idum, calc_type,
      &         nat, log_mb(k_act), nat, dbl_mb(k_rdens_atom),
-     &         int_mb(k_cetobfr), 0, otriplet)
+     &         int_mb(k_cetobfr), 0, otriplet, 0d0, .false.)
           call xc_exit_index(l_cntoce, l_cntobfr, l_cetobfr,
      &                       l_rdens_atom)
           if (ipol.eq.1) then
@@ -931,7 +931,7 @@ c the number of Fock matrices is always equal to 1.
           call dftgh_gridv0(rtdb,ihdl_geom,ihdl_bfao, ipol,nao,
      &         g_dtmp, dbl_mb(k_frc_dft), dum, idum, calc_type,
      &         nat, log_mb(k_act), nat, dbl_mb(k_rdens_atom),
-     &         int_mb(k_cetobfr), 1, otriplet)
+     &         int_mb(k_cetobfr), 1, otriplet, 0d0, .false.)
 c          call dftgh_gridv0(rtdb,ihdl_geom,ihdl_bfao, ipol,nao,
 c     &         g_dtmp, dbl_mb(k_frc_dft), dum, idum, calc_type,
 c     &         nat, log_mb(k_act), nat, dbl_mb(k_rdens_atom),
@@ -1140,7 +1140,7 @@ c Daniel (4-8-13): Need conditional statement here for CAM functionals
 c
 c       Print results if so required
 c
-        if (tddft_grad_util_print('tddft grad terms',print_high)) then
+        if (util_print('tddft grad terms',print_high)) then
           if (oroot) then
             write(LuOut,5)ir
     5       format(' The Excited State Energy Gradient by Terms',
