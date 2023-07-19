@@ -318,14 +318,14 @@ endif # SOCKETS
 ifdef USE_MPI
 
     MPI_COMBINED =
-    ifneq ($(MPI_INCLUDE),)
-        MPI_COMBINED += $(patsubst -I-I%,-I%,-I${MPI_INCLUDE})
+    ifneq ($(NWMPI_INCLUDE),)
+        MPI_COMBINED += $(patsubst -I-I%,-I%,-I${NWMPI_INCLUDE})
     endif
-    ifneq ($(MPI_LIB),)
-        MPI_COMBINED += $(patsubst -L-L%,-L%,-L${MPI_LIB})
+    ifneq ($(NWMPI_LIB),)
+        MPI_COMBINED += $(patsubst -L-L%,-L%,-L${NWMPI_LIB})
     endif
-    ifneq ($(LIBMPI),)
-        MPI_COMBINED += $(LIBMPI)
+    ifneq ($(NWLIBMPI),)
+        MPI_COMBINED += $(NWLIBMPI)
         ifeq ($(ARMCI_NETWORK),ARMCI)
            MPI_COMBINED += -lpthread
         endif
@@ -618,7 +618,7 @@ ifdef USE_GAGITHUB
 	GET_TOOLS=./get-tools-github
   ifdef USE_GA_RELEASE
     ifndef GA_RELEASE_NO
-      GA_RELEASE_NO=5.8.1
+      GA_RELEASE_NO=5.8.2
     endif
     GA_DIR=ga-$(GA_RELEASE_NO)
   else
@@ -676,6 +676,12 @@ ifeq ($(FC),$(findstring $(FC),scorep scorep-wrapper scorep-gfortran scorep-mpif
 #fix for configure or cmake
      MAYBE_HOST += SCOREP_WRAPPER=OFF
 endif
+ifneq ($(V),1)
+     MAYBE_HOST += -q --enable-silent-rules
+     ifneq ($(GOTFREEBSD),1)
+        MAKE= make V=0
+     endif
+endif
 BUILDDIR = build
 INSTALLDIR = install
 CONFIGURE_PATH = ../$(GA_DIR)/configure
@@ -721,6 +727,9 @@ $(BUILDDIR)/config.status: $(GA_DIR)/configure $(STAMP_FC) $(STAMP_CC) $(STAMP_D
 	@echo '*** Configuring Parallel Tools ****'
 	@echo ''
 	@(test -d $(BUILDDIR)) || mkdir $(BUILDDIR);
+	@echo ' '
+	@if [ "$V" != "1" ]; then echo '*** autoconf output redirected to config.log ****' ; echo '*** type make V=1 to get verbose output ***'; fi
+	@echo ' '
 	@(cd $(BUILDDIR) && echo $(CONFIGURE_PATH) $(CONFIGURE_ARGS) && $(CONFIGURE_PATH) $(CONFIGURE_ARGS)) || exit 1
 $(GA_DIR)/Makefile.in:
 	@echo "No Global Arrays found: Attempting running ./get-tools"
