@@ -21,11 +21,11 @@ if [ `check_tgz $TGZ` == 1 ]; then
     echo "using existing $TGZ"
 else
     rm -rf tblite*
-    curl -L https://github.com/dmejiar/tblite/tarball/${VERSION} -o $TGZ
+    curl  -sS -L https://github.com/dmejiar/tblite/tarball/${VERSION} -o $TGZ
 fi
 
 tar -xzf tblite-${VERSION}.tar.gz
-ln -sf dmejiar-tblite-??????? tblite
+ln -sf *tblite-??????? tblite
 
 
 if [[ -z "${MPIF90}" ]]; then
@@ -82,11 +82,17 @@ if [[ -n ${FC} ]] &&   [[ ${FC} == ftn ]]; then
 fi
 
 FC_EXTRA=$(${NWCHEM_TOP}/src/config/strip_compiler.sh ${FC})
+echo FC_EXTRA is $FC_EXTRA
 
 #Intel MPI
 if [[  -z "$I_MPI_F90"   ]] ; then
     export I_MPI_F90="$FC"
     echo I_MPI_F90 is "$I_MPI_F90"
+fi
+#Mpich
+if [[  -z "$MPICH_FC"   ]] ; then
+    export MPICH_FC="$FC"
+    echo MPICH_FC is "$MPICH_FC"
 fi
 if [[  -z "$PE_ENV"   ]] ; then
     #check if mpif90 and FC are consistent
@@ -196,19 +202,37 @@ fi
 if [[ ${FC} == nvfortran ]] || [[ ${FC} == pgf90 ]]; then
   Fortran_FLAGS+="-Mbackslash -fast -tp host"
 fi
-
+if [ ! -z "${CONDA_BUILD_SYSROOT}" ]; then
+if [ ! -z "${PREFIX}" ]; then
+ Fortran_FLAGS+="-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib"
+ C_FLAGS+="-Wl,-rpath,${PREFIX}/lib -L${PREFIX}/lib"
+fi
+fi
 if [[ -z "$USE_OPENMP" ]]; then
   DOOPENMP=OFF
 else
   DOOPENMP=ON
 fi
+# 2022 Intel compilers generate buggy code when USE_OPENMP=1
+if [[ ${FC} == ifort ]] || [[ ${FC} == ifx ]]; then
+    IFORTVER=$(ifort -v 2>&1|cut -d " " -f 3)
+    IFORTVER_YEAR=$(echo $IFORTVER | cut -d . -f 1)
+    if [[ "$IFORTVER_YEAR" -gt "2021" ]]; then
+	DOOPENMP=OFF
+    fi
+    if [[ ${FC} -eq "ifx" ]]; then
+	DOOPENMP=OFF
+    fi
+fi
+
+
 
 cd tblite
 rm -rf _build
 
-echo compiling TBlite stack with FC=$FC CC=$CC $CMAKE -B _build -DLAPACK_LIBRARIES="$BLASOPT" -DWITH_ILP64=$ilp64 -DWITH_OpenMP=$DOOPENMP -DCMAKE_INSTALL_PREFIX="../.." -DWITH_TESTS=OFF -DWITH_API=OFF -DWITH_APP=OFF -DCMAKE_INSTALL_LIBDIR="lib" -DCMAKE_IGNORE_PATH="/usr/local" -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS"
+echo compiling TBlite stack with FC=$FC CC=$CC $CMAKE -B _build -DLAPACK_LIBRARIES="$BLASOPT" -DWITH_ILP64=$ilp64 -DWITH_OpenMP=$DOOPENMP -DCMAKE_INSTALL_PREFIX="../.." -DWITH_TESTS=OFF -DWITH_API=OFF -DWITH_APP=OFF -DCMAKE_INSTALL_LIBDIR="lib" -DCMAKE_IGNORE_PATH="/usr/local" -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DCMAKE_C_FLAGS="$C_FLAGS"
 
-FC=$FC CC=$CC $CMAKE -B _build -DLAPACK_LIBRARIES="$BLASOPT" -DWITH_ILP64=$ilp64 -DWITH_OpenMP=$DOOPENMP -DCMAKE_INSTALL_PREFIX="../.." -DWITH_TESTS=OFF -DWITH_API=OFF -DWITH_APP=OFF -DCMAKE_INSTALL_LIBDIR="lib" -DCMAKE_IGNORE_PATH="/usr/local" -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS"
+FC=$FC CC=$CC $CMAKE -B _build -DLAPACK_LIBRARIES="$BLASOPT" -DWITH_ILP64=$ilp64 -DWITH_OpenMP=$DOOPENMP -DCMAKE_INSTALL_PREFIX="../.." -DWITH_TESTS=OFF -DWITH_API=OFF -DWITH_APP=OFF -DCMAKE_INSTALL_LIBDIR="lib" -DCMAKE_IGNORE_PATH="/usr/local" -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS"  -DCMAKE_C_FLAGS="$C_FLAGS"
 $CMAKE --build _build --parallel 4
 status=$?
 if [ $status -ne 0 ]; then
@@ -220,4 +244,14 @@ $CMAKE --install _build
 
 cd ..
 
+if [ ! -z "${CONDA_TOOLCHAIN_HOST}" ]; then
+    arch=$(echo $CONDA_TOOLCHAIN_HOST | cut -d - -f 1)
+else
+    arch=$(uname -m)
+fi
+if [[ $(uname -s) == "Linux" ]]; then
+    if [[ "$arch" == "x86_64" ]]; then
+	strip --strip-debug ../lib/libtblite.a
+    fi
+fi
 ln -sf  ../lib/libtblite.a  ../lib/libnwc_tblite.a
