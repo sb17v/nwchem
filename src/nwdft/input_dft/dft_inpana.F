@@ -21,9 +21,8 @@ c
 #include "bas.fh"
 #include "cdft.fh"
 #include "util.fh"
+#include "util_params.fh"
 c
-      double precision AUTOANG, ANGTOAU
-      Parameter (AUTOANG = 0.529177249d0, ANGTOAU = 1.d0/AUTOANG)
       logical even, cksetd, no_prune
       Integer rtdb              !  runtime database handle
       integer me,ichg,nel
@@ -49,12 +48,12 @@ c
       character*10 start_10c, NA_10c, asap_10c
       character*10 strng1, strng2, strng3, strng4, strng5, strng6
       character*16 tag, theory
-      character*20 rgridnames(8)
+      character*20 rgridnames(10)
       logical xc_gotxc
       external xc_gotxc
       data rgridnames /'Euler-MacLaurin','Mura-Knowles',
      .     'Treutler-Ahlrichs','Gauss-Legendre','G-C-interv',
-     ,     'Lindh','Chebyshev','Legendre'/
+     ,     'Lindh','Chebyshev','Legendre','DE2','DE2D'/
 c
       logical status  ! FA
       logical use_nwxc 
@@ -213,7 +212,7 @@ c
 c     
 c     write noc (consistent with definition in ddscf) to rtdb
 c     
-      if (.not. rtdb_put(rtdb, 'dft:noc', mt_int, 2, noc))
+      if (.not. rtdb_put(rtdb, 'dft:noc', mt_int, 2, noc(1)))
      &   call errquit('inpana: rtdb_put of noc failed', 0, RTDB_ERR)
 cHvD
       use_nwxc = util_module_avail("nwxc")
@@ -257,6 +256,7 @@ c
 c     Analyze any user specified XC functionals ... set if none
 c     
       cksetd = .true.
+      cksetd = cksetd .and. .not. libxcon
 c     
 c     Check if user has specified some type of functional,
 c     if so, do not set defaults.
@@ -538,6 +538,7 @@ cFA
             write(LuOut,*)
             call util_print_centered
      &         (LuOut,'XC Information',20,.true.)
+            if (libxcon) call nwchem_libxc_print_header()
 c     
 c           Write out XC info. Combo info first, than X components,
 c           than C components.
@@ -572,6 +573,8 @@ c
                   write(LuOut,9224) cname(n), cfac(n), nonlocal_c
                endif
             enddo
+
+            if (libxcon) call nwchem_libxc_print()
 c     
 c           Check XC coefficients to make sure appropriate components
 c           sum to 1.0
@@ -768,7 +771,7 @@ c
          if (oprint_grid.and.xc_gotxc())then     
             write(LuOut,*)
             call util_print_centered
-     &         (LuOut,'Grid Information',20,.true.)
+     &           (LuOut,'Grid Information',20,.true.)
             write(LuOut,9135)gridtype
             write(LuOut,9136) rgridnames(wradgrid)
             if (.not.leb)then
@@ -791,8 +794,8 @@ c
                   endif
                enddo
    40          continue
-               bsr = bsrad_atom_type(n)*AUTOANG
-               radang = dble(nint(autoang*dble(rad_cutoff(1,n))))
+               bsr = bsrad_atom_type(n)*CAU2ANG
+               radang = dble(nint(cau2ang*dble(rad_cutoff(1,n))))
                if (leb)then
                   write(LuOut,9138)tag,bsr,nrad(n),radang,
      &                nang(n)
@@ -1043,6 +1046,118 @@ c
      ,     ' iaoacc ',iaoacc,
      ,    ' tol_rho ',tol_rho
        call util_flush(luout)
+      endif
+      return
+      end
+      subroutine dft_sethfx(rtdb)
+      implicit none
+#include "geom.fh"
+#include "rtdb.fh"
+#include "mafdecls.fh"
+#include "cdft.fh"
+#include "errquit.fh"
+      integer rtdb
+c
+      character*10 pname
+      integer i,nopen
+      double precision thresh,tol2e
+      pname='dft_sethfx'
+c     multiplicity
+      if(rtdb_get(rtdb, 'scf:nopen', MT_INT, 1, nopen)) then
+         mult=nopen+1
+         ipol=2
+         if (.not. rtdb_put(rtdb, 'dft:ipol', mt_int, 1, ipol))
+     &   call errquit(pname//': rtdb_put failed', 0, RTDB_ERR)
+         if (.not. rtdb_put(rtdb, 'dft:mult', mt_int, 1, mult))
+     &   call errquit(pname//': rtdb_put failed', 1, RTDB_ERR)
+      endif
+      do i = 1, numfunc
+         xfac(i)=0.d0
+         cfac(i)=0.d0
+         lcfac(i)=.false.
+         nlcfac(i)=.false.
+         lxfac(i)=.false.
+         nlxfac(i)=.false.
+         xccomb(i)=.false.
+      enddo
+      lxfac(1) = .true.
+      nlxfac(1) = .true.
+      xfac(1) = 1.0d0
+      if (.not. rtdb_put(rtdb, 'dft:cfac',
+     &     mt_dbl, numfunc, cfac(1)))
+     &     call errquit(pname//': rtdb_put failed', 2, RTDB_ERR)
+      if (.not. rtdb_put(rtdb, 'dft:xfac',
+     &      mt_dbl, numfunc, xfac(1)))
+     &     call errquit(pname//': rtdb_put failed', 3, RTDB_ERR)
+      if (.not. rtdb_put(rtdb, 'dft:lcfac',
+     &     mt_log, numfunc, lcfac(1)))
+     &     call errquit(pname//': rtdb_put failed', 4, RTDB_ERR)
+      if (.not. rtdb_put(rtdb, 'dft:nlcfac',
+     &     mt_log, numfunc, nlcfac(1)))
+     &     call errquit(pname//': rtdb_put failed', 5, RTDB_ERR)
+      if (.not. rtdb_put(rtdb, 'dft:lxfac',
+     &     mt_log, numfunc, lxfac(1)))
+     &     call errquit(pname//': rtdb_put failed', 6, RTDB_ERR)
+      if (.not. rtdb_put(rtdb, 'dft:nlxfac',
+     &    mt_log, numfunc, nlxfac(1)))
+     &     call errquit(pname//': rtdb_put failed', 7, RTDB_ERR)
+      if (.not. rtdb_cput(rtdb, 'dft:theory', 1, 'dft'))
+     $        call errquit('rtdb_cput failed',0, RTDB_ERR)
+      if (.not.rtdb_put(rtdb,'dft:e_conv',mt_dbl,1,1d-8))
+     .     call errquit(pname//': rtdbput econv failed',0, RTDB_ERR)
+      if (.not.rtdb_get(rtdb, 'scf:thresh', MT_DBL, 1, thresh))
+     &     thresh=1d-4
+      d_conv=thresh*thresh
+cdbg      write(6,*) ' d_conv is ',d_conv
+      if(.not. rtdb_put(rtdb, 'dft:d_conv', mt_dbl, 1, d_conv))
+     &      call errquit('dft_rdinput: rtdb_put failed', 106, RTDB_ERR)
+      if (.not. rtdb_get(rtdb, 'scf:tol2e', MT_DBL, 1, tol2e))
+     *     tol2e=1d-12
+      itol2e=-log10(tol2e)
+cdbg      write(6,*) ' itol2e is ',itol2e
+      if (.not. rtdb_put(rtdb, 'dft:itol2e', mt_int, 1, 12))
+     .     call errquit(pname//': rtdbput itol2e failed',0, RTDB_ERR)
+      return
+      end
+      subroutine dft_sethfx_cleanup(rtdb)
+      implicit none
+#include "geom.fh"
+#include "bas.fh"
+#include "rtdb.fh"
+#include "mafdecls.fh"
+#include "cdft.fh"
+#include "errquit.fh"
+      integer level_org
+      common /dftg/ level_org
+      integer rtdb
+      character*18 pname
+      integer i
+      pname='dft_sethfx_cleanup'
+      call util_print_set_level(level_org)
+      return
+      end
+      logical function dft_guesshfx(rtdb)
+      implicit none
+#include "rtdb.fh"
+#include "mafdecls.fh"
+#include "cdft.fh"
+#include "errquit.fh"
+      integer level_org
+      common /dftg/ level_org
+      integer rtdb
+c
+      logical dftguess
+c      
+      dft_guesshfx=.false.
+      if(.not.rtdb_get(rtdb,'dftguess',mt_log,1,dftguess)) 
+     D     dftguess=.false.
+      if(dftguess) then
+         if(.not.rtdb_delete(rtdb,'dftguess'))
+     D        call errquit(' rtdb_delete failed',0,RTDB_ERR)
+         call dft_sethfx(rtdb)
+         dft_guesshfx=.true.
+         call util_print_get_level(level_org)
+         call util_print_set_level(10)
       endif
       return
       end

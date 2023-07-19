@@ -3,11 +3,10 @@
 *
 
 *     ***********************************
-*     *					*
-*     *	 	  psp_init  		*
-*     *					*
+*     *                                 *
+*     *             psp_init            *
+*     *                                 *
 *     ***********************************
-
       subroutine psp_init()      
       implicit none
 
@@ -266,7 +265,7 @@ c     >                    'Gijl',Gijl(2),Gijl(1))
          do l=0,psp_fmm_lmax
          do m=-l,l
             call Tesseral3_rgrid_lm_rl(l,m,
-     >                              n2ft3d,dbl_mb(rgrid(1)),
+     >                              n2ft3d,dbl_mb(tmp_rgrid(1)),
      >                              dbl_mb(psp_fmm_rTlm(1)+lm*n2ft3d))
             lm = lm + 1
          end do
@@ -338,7 +337,10 @@ c     >                    'Gijl',Gijl(2),Gijl(1))
 #include "bafdecls.fh"
 #include "psp.fh"
 
+*     **** local varaiables ****
       logical  periodic
+
+*     **** external functions ****
       integer  control_version
       external control_version
 
@@ -2039,6 +2041,7 @@ c                end do
 
       end do
 
+
       if (np_j.gt.1) then
          call D1dB_Vector_SumAll(2*npack0,vl_out)
       end if
@@ -3274,8 +3277,8 @@ c           end do
      >  call errquit('v_nonlocal:out of stack',0, MA_ERR)
 
       if (move) then
-       value = value.and.BA_push_get(mt_dbl,npack1,
-     >                               'xtmp',xtmp(2),xtmp(1))
+c       value = value.and.BA_push_get(mt_dbl,npack1,
+c     >                               'xtmp',xtmp(2),xtmp(1))
        value = value.and.BA_push_get(mt_dbl,3*nn,'sum',sum(2),sum(1))
        if (.not. value) 
      >  call errquit('v_nonlocal:out of stack',1,MA_ERR)
@@ -3287,6 +3290,7 @@ c           end do
 
       omega = lattice_omega()
       scal = 1.0d0/(omega)
+
 
 
       call nwpw_timing_start(56) 
@@ -3324,7 +3328,6 @@ c           end do
                call Pack_tc_iMul(1,dbl_mb(shift),
      >                            dcpl_mb(exi(1)),
      >                            dcpl_mb(prjtmp(1)+(l-1)*npack1))
-
             end if
 c            call Pack_cc_indot(1,nn,
 c     >                       psi1,
@@ -3335,8 +3338,14 @@ c     >                   psi1,
 c     >                   dcpl_mb(prjtmp(1)),
 c     >                   dbl_mb(sw1t(1)+(jp-1)*nn+tid*nn*n_prj_indx))
          end do
+
+
          call nwpw_timing_end(58) 
          call nwpw_timing_start(59) 
+c         call Pack_cc_indot_thread(1,nn,nproj,
+c     >                   psi1,
+c     >                   dcpl_mb(prjtmp(1)),
+c     >                   dbl_mb(sw1t(1)+jpl*nn+tid*nn*n_prj_indx))
          call Pack_cc_indot_thread(1,nn,nproj,
      >                   psi1,
      >                   dcpl_mb(prjtmp(1)),
@@ -3351,8 +3360,11 @@ c     >                   dbl_mb(sw1t(1)+(jp-1)*nn+tid*nn*n_prj_indx))
      >           dbl_mb(sw1t(1)+tid*nn*n_prj_indx),1,
      >           dbl_mb(sw1a(1)),1)
 !$OMP END CRITICAL
+!$OMP BARRIER
       call D3dB_Vector_SumAll(nn*n_prj_indx,dbl_mb(sw1a(1)))
       call nwpw_timing_end(56) 
+
+
 
 
 *     **** Compute sw2  ****
@@ -3515,18 +3527,27 @@ c     >             psi2,               2*npack1)
               nproj = int_mb(nproj_prj_indx(1)+ip-1)
 
               do l=1,nproj
-                 do n=1,nn
-                    call Pack_cct_iconjgMul(1,
-     >                                 dcpl_mb(prjtmp(1)+l1*npack1),
-     >                                 psi1(1+(n-1)*npack1),
-     >                                 dbl_mb(xtmp(1)))
-                   call Pack_tt_idot(1,dbl_mb(G(1)),dbl_mb(xtmp(1)),
-     >                               dbl_mb(sum(1)+3*(n-1)))
-                   call Pack_tt_idot(1,dbl_mb(G(2)),dbl_mb(xtmp(1)),
-     >                               dbl_mb(sum(1)+1+3*(n-1)))
-                   call Pack_tt_idot(1,dbl_mb(G(3)),dbl_mb(xtmp(1)),
-     >                               dbl_mb(sum(1)+2+3*(n-1)))
-                 end do
+                 call Pack_ch3t_i3ndot(1,
+     >                        dcpl_mb(prjtmp(1)+l1*npack1),
+     >                        nn,psi1,
+     >                        dbl_mb(G(1)),
+     >                        dbl_mb(G(2)),
+     >                        dbl_mb(G(3)),
+     >                        dbl_mb(sum(1)))
+
+c                 do n=1,nn
+c                    call Pack_cct_iconjgMul(1,
+c     >                                dcpl_mb(prjtmp(1)+l1*npack1),
+c     >                                psi1(1+(n-1)*npack1),
+c     >                                dbl_mb(xtmp(1)))
+c                   call Pack_tt_idot(1,dbl_mb(G(1)),dbl_mb(xtmp(1)),
+c     >                              dbl_mb(sum(1)+3*(n-1)))
+c                   call Pack_tt_idot(1,dbl_mb(G(2)),dbl_mb(xtmp(1)),
+c     >                              dbl_mb(sum(1)+1+3*(n-1)))
+c                   call Pack_tt_idot(1,dbl_mb(G(3)),dbl_mb(xtmp(1)),
+c     >                               dbl_mb(sum(1)+2+3*(n-1)))
+c                 end do
+
                  call D3dB_Vector_SumAll(3*(nn),dbl_mb(sum(1)))
 
                  !**** fractional weighting ****
@@ -3543,7 +3564,6 @@ c     >             psi2,               2*npack1)
                   end do
 !$OMP END DO
                  end if
- 
 !OMP BARRIER
 
                  ff(1) =2.0d0*ddot(nn,dbl_mb(sw2a(1)+(swstart+l1)*nn),1,
@@ -3559,7 +3579,6 @@ c     >             psi2,               2*npack1)
                  fion(2,ii) = fion(2,ii)  + ff(2)*(3-ispin)
                  fion(3,ii) = fion(3,ii)  + ff(3)*(3-ispin)
 !$OMP END MASTER
-!$OMP BARRIER
 
                  l1 = l1 + 1
               end do !** l **
@@ -3567,6 +3586,7 @@ c     >             psi2,               2*npack1)
          end if !** move **
 
       end do
+!OMP BARRIER
 
       value = .true.
       if (move) then
@@ -3576,7 +3596,7 @@ c     >             psi2,               2*npack1)
      >    call nwpw_compcharge_F_multipole_all(ispin,dbl_mb(zv(1)),fion)
 
          value = value.and.BA_pop_stack(sum(2))
-         value = value.and.BA_pop_stack(xtmp(2))
+         !value = value.and.BA_pop_stack(xtmp(2))
       end if
 
       value = value.and.BA_pop_stack(exi(2))
@@ -4644,11 +4664,10 @@ c       close(11)
       end
 
 *     ***********************************
-*     *					*
-*     *	 	  psp_readall  		*
-*     *					*
+*     *                                 *
+*     *          psp_readall            *
+*     *                                 *
 *     ***********************************
-
       subroutine psp_readall()
       implicit none
       
@@ -4686,12 +4705,12 @@ c     logocal semicore(0:nkatmx)
       parameter(MASTER=0)
 
 *     **** external functions ****
-      logical      nwpw_filefind,control_print
+      logical      nwpw_filefind,control_print,control_psp_reset
       integer      control_ngrid,ion_nion
       real*8       control_unita
       character*12 control_boundry
       character*4  ion_atom
-      external     nwpw_filefind,control_print
+      external     nwpw_filefind,control_print,control_psp_reset
       external     control_ngrid,ion_nion
       external     control_unita
       external     control_boundry
@@ -4721,7 +4740,7 @@ c     logocal semicore(0:nkatmx)
        element = ion_atom(ia)
        l = index(element,' ') - 1
        fname = element(1:l)//'.vpp'
-        
+
 
        found = .false.
        do while (.not.found)
@@ -4796,7 +4815,7 @@ c     logocal semicore(0:nkatmx)
            if (ierr.gt.0) go to 9000
 
 *          **** set pawexist ****
-           if (int_mb(psp_type(1)+ia-1).eq.4) pawexist = .true.
+           !if (int_mb(psp_type(1)+ia-1).eq.4) pawexist = .true.
 
 *          **************************************************************
 *          ***** logic for finding out if psp is correctly formatted ****
@@ -4804,7 +4823,8 @@ c     logocal semicore(0:nkatmx)
            correct_box = .true.
            boundry = control_boundry()
            l =index(boundry,' ') - 1
-           if ( (ngp(1).ne.control_ngrid(1)) .or.
+           if (control_psp_reset(ion_atom(ia)) .or.
+     >       (ngp(1).ne.control_ngrid(1)) .or.
      >       (ngp(2).ne.control_ngrid(2)) .or.
      >       (ngp(3).ne.control_ngrid(3)) .or. 
      >       (unita(1,1).ne.control_unita(1,1)) .or.
@@ -4820,9 +4840,9 @@ c     logocal semicore(0:nkatmx)
      >       ((boundry(1:l).eq.'aperiodic').and.(version.ne.4))) then
               correct_box = .false.
               if ((taskid.eq.MASTER).and.
-     >           control_print(print_medium)) then
-              write(luout,*) 
-     >         "pseudopotential is not correctly formatted:",fname
+     >            control_print(print_medium)) then
+                 write(luout,*) 
+     >           "pseudopotential is not correctly formatted:",fname
               end if
 
 
@@ -4852,8 +4872,12 @@ c     logocal semicore(0:nkatmx)
 
 
            end if
-           if (correct_box) found = .true.
+           if (correct_box) then
+              found = .true.
 
+*             **** set pawexist ****
+              if (int_mb(psp_type(1)+ia-1).eq.4) pawexist=.true.
+           end if
          end if
 
 *        **** generate formatted pseudopotential atom.vpp *****
