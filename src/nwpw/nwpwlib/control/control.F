@@ -1280,6 +1280,12 @@ c         return
      >      'nwpw:gram-schmidt',mt_log,1,gram_schmidt))
      >  gram_schmidt = .false.
 
+*     **** set gram_schmidt2 ***
+      gram_schmidt2 = .false.
+      if (.not.btdb_get(rtdb,
+     >      'nwpw:gram-schmidt2',mt_log,1,gram_schmidt2))
+     >  gram_schmidt2 = .false.
+
 *     **** set translation ***
       translation = control_allow_translation()
       dof_translation = translation
@@ -4215,7 +4221,7 @@ c      end if
 *     *****************************
 *     *                	          *		 
 *     *   control_pspparameters   *
-*     *                 	  *
+*     *                	          *		 
 *     *****************************
       subroutine control_pspparameters(atom,lmax,locp,rlocal)
       implicit none
@@ -4257,6 +4263,120 @@ c      end if
       
       return
       end
+
+*     **********************************
+*     *                                *              
+*     *      control_psp_reset         *
+*     *                                *
+*     **********************************
+      logical function control_psp_reset(atom)
+      implicit none
+      character*4 atom
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+#include "errquit.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical reset
+      integer k,l
+      character*5  element
+      character*50 rtdb_name
+
+      element = '     '
+      element = atom
+      l = index(element,' ') - 1
+      rtdb_name = '                      '
+      rtdb_name = element(1:l)//':psp_reset'
+      reset = .false.
+
+      k = index(rtdb_name,' ') - 1
+      if (.not.btdb_get(rtdb,rtdb_name(1:k),mt_log,1,reset)) 
+     >   reset = .false.
+     
+      control_psp_reset = reset
+      return
+      end
+
+*     **********************************
+*     *                                *              
+*     *      control_psp_reset_new     *
+*     *                                *
+*     **********************************
+      subroutine control_psp_reset_new(atom)
+      implicit none
+      character*4 atom
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+#include "errquit.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical reset
+      integer k,l
+      character*5  element
+      character*50 rtdb_name
+
+      element = '     '
+      element = atom
+      l = index(element,' ') - 1
+      rtdb_name = '                      '
+      rtdb_name = element(1:l)//':psp_reset'
+      reset = .true.
+
+      k = index(rtdb_name,' ') - 1
+      if (.not.btdb_put(rtdb,rtdb_name(1:k),mt_log,1,reset))
+     >   call errquit('control_psp_reset_new: failed',0,RTDB_ERR)
+
+      return
+      end
+
+*     **********************************
+*     *                                *
+*     *    control_psp_reset_delete    *
+*     *                                *
+*     **********************************
+      subroutine control_psp_reset_delete(atom)
+      implicit none
+      character*4 atom
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+#include "errquit.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical reset,tmp
+      integer k,l
+      character*5  element
+      character*50 rtdb_name
+
+      element = '     '
+      element = atom
+      l = index(element,' ') - 1
+      rtdb_name = '                       '
+      rtdb_name = element(1:l)//':psp_reset'
+      reset = .true.
+
+      k = index(rtdb_name,' ') - 1
+      if (btdb_get(rtdb,rtdb_name(1:k),mt_log,1,tmp)) then
+        if (tmp) then
+           if (.not.rtdb_delete(rtdb,rtdb_name(1:k)))
+     >       call errquit('control_psp_reset_delete: failed',0,RTDB_ERR)
+        end if
+      end if
+
+      return
+      end
+
 
 *     **********************************
 *     *                                *              
@@ -4405,9 +4525,9 @@ c      end if
 
 
 *     ***************************
-*     *                	   	*
-*     *    control_gram_schmidt *
-*     *                  	*
+*     *                         *
+*     *   control_gram_schmidt  *
+*     *                         *
 *     ***************************
       logical function control_gram_schmidt()
       implicit none
@@ -4417,6 +4537,21 @@ c      end if
       control_gram_schmidt=gram_schmidt
       return
       end
+
+*     ***************************
+*     *                         *
+*     *  control_gram_schmidt2  *
+*     *                         *
+*     ***************************
+      logical function control_gram_schmidt2()
+      implicit none
+
+#include "control.fh"
+
+      control_gram_schmidt2=gram_schmidt2
+      return
+      end
+
 
 
 *     ***************************
@@ -5510,6 +5645,31 @@ c      end if
      >   value = .false.
 
       control_kbpp_filter = value
+      return
+      end
+
+*     ***********************************
+*     *                                 *
+*     *    control_kbpp_filter_scale    *
+*     *                                 *
+*     ***********************************
+      real*8 function control_kbpp_filter_scale()
+      implicit none
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+      
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+      
+      real*8 scal
+
+      scal = 1.0d0
+      if (.not.btdb_get(rtdb,'nwpw:kbpp_filter_scale',mt_dbl,1,scal))
+     >  scal=1.0d0
+      
+      control_kbpp_filter_scale = scal
       return
       end
 
@@ -7500,3 +7660,32 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       control_single_precision_on = single_precision_on
       return
       end
+
+
+
+*     ***********************************
+*     *                                 *
+*     *        control_CI_cg_thresh     *
+*     *                                 *
+*     ***********************************
+      real*8 function control_CI_cg_thresh()
+      implicit none
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      real*8 thresh
+
+      thresh = 1.5d0 
+      if (.not.btdb_get(rtdb,'nwpw:CI_cg_thresh',mt_dbl,1,thresh))
+     >   thresh = 1.5d0
+
+      control_CI_cg_thresh = thresh
+      return
+      end
+
+
