@@ -41,10 +41,10 @@ USES_BLAS = ccsd_t_doubles.F ccsd_t_singles.F \
 
 
 ifdef TCE_CUDA
- LIB_INCLUDES = -I../include -I../ttlg/includes
+ LIB_INCLUDES += -I../include 
  OBJ_OPTIMIZE += hybrid.o memory.o ccsd_t_gpu.o ccsd_t_singles_gpu.o ccsd_t_doubles_gpu.o
  ifdef USE_TTLG
-  LIB_INCLUDES += -I../include 
+  LIB_INCLUDES += -I../ttlg/includes
   OBJ_OPTIMIZE +=  sd_t_total_ttlg.o
  else
   OBJ_OPTIMIZE +=  sd_t_total.o
@@ -61,6 +61,9 @@ ifdef TCE_HIP
 endif
 
 
+ifdef TCE_OPENACC
+  OBJ_OPTIMIZE += ccsd_t_kernels_acc.o
+endif
 
 ifdef TCE_NEW_OPENMP
  OBJ_OPTIMIZE += ccsd_t_omp.o

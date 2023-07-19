@@ -112,7 +112,13 @@ endif
 ifdef USE_OPENACC
   OBJ_OPTIMIZE += ccsd_trpdrv_openacc.o
   USES_BLAS    += ccsd_trpdrv_openacc.F
-  FOPTIONS += -acc -gpu=managed -cuda -cudalib=cublas -DUSE_OPENACC
+  FOPTIONS += -DUSE_OPENACC_TRPDRV
+  ifeq ($(_FC),pgf90)
+      FOPTIONS += -Mextend -acc -cuda -cudalib=cublas
+  endif
+  ifeq ($(_FC),gfortran)
+      FOPTIONS += -ffree-form -fopenacc -lcublas
+  endif
 endif
 
 

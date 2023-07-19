@@ -5,6 +5,7 @@
 
 include ../config/makefile.h
 
+
 SUBDIRS=
 ifdef BUILD_OPENBLAS
     SUBDIRS += openblas
@@ -21,8 +22,17 @@ endif
 ifdef USE_LIBXC
     SUBDIRS += libxc
 endif
+ifdef USE_TBLITE
+    SUBDIRS += tblite
+endif
+ifdef BUILD_PLUMED
+    SUBDIRS += plumed
+endif
 
 include ../config/makelib.h
+
+64_to_32 32_to_64:
+	@echo No blas conversion done here
 
 
 
