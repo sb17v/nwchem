@@ -1,44 +1,9 @@
 #!/usr/bin/env bash
-get_cmake_master(){
-    CMAKE_COMMIT=09dd52c9d2684e933a3e013abc4f6848cb1befbf
-    if [[ -f "cmake-$CMAKE_COMMIT.zip" ]]; then
-	echo "using existing"  "cmake-$CMAKE_COMMIT.zip"
-    else
-	curl -L https://gitlab.kitware.com/cmake/cmake/-/archive/$CMAKE_COMMIT.zip -o cmake-$CMAKE_COMMIT.zip
-    fi
-    unzip -n -q cmake-$CMAKE_COMMIT.zip
-    mkdir -p  cmake-$CMAKE_COMMIT/build
-    cd cmake-$CMAKE_COMMIT/build
-    if [[ -x "$(command -v cmake)" ]]; then
-        cmake -DBUILD_CursesDialog=OFF -DBUILD_TESTING=OFF -DBUILD_QtDialog=OFF -DCMAKE_INSTALL_PREFIX=`pwd`/.. ../
-    else
-	../bootstrap --parallel=4 --prefix=`pwd`/..
-    fi
-    make -j4
-    make -j4 install
-    CMAKE=`pwd`/../bin/cmake
-    ${CMAKE} -version
-    cd ../..
-    return 0
-}
-get_cmake38(){
-	UNAME_S=$(uname -s)
-	if [[ ${UNAME_S} == "Linux" ]] || [[ ${UNAME_S} == "Darwin" ]] && [[ $(uname -m) == "x86_64" ]] ; then
-	    CMAKE_VER=3.16.8
-	    rm -f cmake-${CMAKE_VER}-${UNAME_S}-x86_64.tar.gz
-	    curl -L https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}-${UNAME_S}-x86_64.tar.gz -o cmake-${CMAKE_VER}-${UNAME_S}-x86_64.tar.gz
-	    tar xzf cmake-${CMAKE_VER}-${UNAME_S}-x86_64.tar.gz
-	    if [[ ${UNAME_S} == "Darwin" ]] ;then
-		CMAKE=`pwd`/cmake-${CMAKE_VER}-${UNAME_S}-x86_64/CMake.app/Contents/bin/cmake
-	    else
-		CMAKE=`pwd`/cmake-${CMAKE_VER}-${UNAME_S}-x86_64/bin/cmake
-	    fi
-	    return 0
-	else
-	    return 1
-	fi
+myscalapwd=`pwd`
+source ../libext_utils/cmake.sh
+cd $myscalapwd
 
-}
+if [[ -z "${MPIF90}" ]]; then
 if [[ "$FC" = "ftn"  ]] ; then
     MPIF90="ftn"
     MPICC="cc"
@@ -51,8 +16,11 @@ else
 	exit 1
     else
 	MPIF90="mpif90"
-        MPICC=mpicc
+	if [[ -z "${MPICC}" ]]; then
+            MPICC=mpicc
+	fi
     fi
+fi
 fi
 if [[  -z "${FC}" ]]; then
     FC=$($MPIF90 -show|cut -d " " -f 1)
@@ -62,13 +30,31 @@ if [[  -z "${NWCHEM_TOP}" ]]; then
     dir2=$(dirname "$dir3")
     NWCHEM_TOP=$(dirname "$dir2")
 fi
+# take care of xcode 15 quirks
+source ${NWCHEM_TOP}/src/config/fix_xcode15.sh
+
+if [[ ! -z "${BUILD_MPICH}" ]]; then
+    export PATH=${NWCHEM_TOP}/src/libext/bin:$PATH
+    if [ -x "$(command -v pkg-config1)" ]; then
+        export LDFLAGS=`pkg-config --libs-only-L hwloc`
+    else
+	if [ -x "$(command -v brew)" ]; then
+	    export LDFLAGS=-L`brew --prefix`/lib/
+	else
+	    echo 'WARNING: cannot guess the location of the hwloc library'
+#	    exit 1
+	fi
+    fi
+    echo LDFLAGS for hwloc is $LDFLAGS
+fi
 if [[ "$FC" = "ftn"  ]] || [[ ! -z "$USE_CMAKE_MASTER" ]] ; then
     get_cmake_master
 else
 if [[ -z "${CMAKE}" ]]; then
     #look for cmake
     if [[ -z "$(command -v cmake)" ]]; then
-	get_cmake38
+	cmake_instdir=../libext_utils
+	get_cmake_release $cmake_instdir
 	status=$?
 	if [ $status -ne 0 ]; then
 	    echo cmake required to build scalapack
@@ -84,8 +70,9 @@ fi
 CMAKE_VER_MAJ=$(${CMAKE} --version|cut -d " " -f 3|head -1|cut -d. -f1)
 CMAKE_VER_MIN=$(${CMAKE} --version|cut -d " " -f 3|head -1|cut -d. -f2)
 echo CMAKE_VER is ${CMAKE_VER_MAJ} ${CMAKE_VER_MIN}
-if ((CMAKE_VER_MAJ < 3)) || (((CMAKE_VER_MAJ > 2) && (CMAKE_VER_MIN < 8))); then
-    get_cmake38
+if ((CMAKE_VER_MAJ < 3)) || (((CMAKE_VER_MAJ > 2) && (CMAKE_VER_MIN < 99))); then
+    cmake_instdir=../libext_utils
+    get_cmake_release $cmake_instdir
     status=$?
     if [ $status -ne 0 ]; then
 	echo cmake required to build scalapack
@@ -94,6 +81,7 @@ if ((CMAKE_VER_MAJ < 3)) || (((CMAKE_VER_MAJ > 2) && (CMAKE_VER_MIN < 8))); then
 	exit 1
     fi
 fi
+cd $myscalapwd
 pwd
 
 #if [[ "$SCALAPACK_SIZE" != "4"  ]] ; then
@@ -128,23 +116,37 @@ fi
 VERSION=2.1.0
 #curl -L https://github.com/Reference-ScaLAPACK/scalapack/archive/v${VERSION}.tar.gz -o scalapack.tgz
 #COMMIT=bc6cad585362aa58e05186bb85d4b619080c45a9
-COMMIT=ea5d20668a6b8bbee645b7ffe44623c623969d33
+#COMMIT=ea5d20668a6b8bbee645b7ffe44623c623969d33
+COMMIT=5bad7487f496c811192334640ce4d3fc5f88144b
+COMMIT=782e739f8eb0e7f4d51ad7dd23fc1d03dc99d240
 rm -rf scalapack 
-if [[ -f "scalapack-$COMMIT.zip" ]]; then
-    echo "using existing"  "scalapack-$COMMIT.zip"
+if [[ -f "scalapack-$COMMIT.tar.gz" ]]; then
+    echo "using existing"  "scalapack-$COMMIT.tar.gz"
 else
-    echo "downloading"  "scalapack-$COMMIT.zip"
-    rm -f scalapack-$COMMIT.zip
-    curl -L https://github.com/Reference-ScaLAPACK/scalapack/archive/$COMMIT.zip -o scalapack-$COMMIT.zip
+    echo "downloading"  "scalapack-$COMMIT.tar.gz"
+    rm -f scalapack-$COMMIT.tar.gz
+    tries=1 ; until [ "$tries" -ge 6 ] ; do
+		  if [ "$tries" -gt 1 ]; then sleep 9; echo attempt no.  $tries ; fi
+		  curl -L https://github.com/Reference-ScaLAPACK/scalapack/archive/$COMMIT.tar.gz -o scalapack-$COMMIT.tar.gz
+		  # check tar.gz integrity
+		  gzip -t scalapack-$COMMIT.tar.gz >&  /dev/null
+		  if [ $? -eq 0 ]; then break ;  fi
+		  tries=$((tries+1)) ;  done
 fi
-unzip -n -q scalapack-$COMMIT.zip
+tar xzf scalapack-$COMMIT.tar.gz
 ln -sf scalapack-$COMMIT scalapack
 #ln -sf scalapack-${VERSION} scalapack
 #curl -L http://www.netlib.org/scalapack/scalapack-${VERSION}.tgz -o scalapack.tgz
 #tar xzf scalapack.tgz
 cd scalapack
 # macos accelerate does not contain dcombossq
-if [[ $(echo "$BLASOPT" |awk '/Accelerate/ {print "Y"; exit}' ) == "Y" ]]; then
+if [[ $(echo "$LAPACK_LIB" |awk '/Accelerate/ {print "Y"; exit}' ) == "Y" ]]; then
+    export USE_DCOMBSSQ=1
+fi
+if [[ $(echo "$LAPACK_LIB" |awk '/lapack/ {print "Y"; exit}' ) == "Y" ]]; then
+    export USE_DCOMBSSQ=1
+fi
+if [[ $(echo ""$LAPACK_LIB |awk '/lfjlapack/ {print "Y"; exit}'  ) == "Y" ]]; then
     export USE_DCOMBSSQ=1
 fi
 if [[  -z "$USE_DCOMBSSQ" ]]; then
@@ -169,11 +171,6 @@ fi
 #if [[ ! -z "$BUILD_SCALAPACK"   ]] ; then
 #    Fortran_FLAGS+=-I"$NWCHEM_TOP"/src/libext/include
 #fi
-#fix for clang 12 error in implicit-function-declaration
-GOTCLANG=$( "$MPICC" -dM -E - </dev/null 2> /dev/null |grep __clang__|head -1|cut -c19)
-if [[ ${GOTCLANG} == "1" ]] ; then
-    C_FLAGS=" -Wno-error=implicit-function-declaration "
-fi
 echo "SCALAPACK_SIZE" is $SCALAPACK_SIZE
 if [[ ${FC} == ftn ]]; then
     if [[ ${PE_ENV} == PGI ]]; then
@@ -199,6 +196,25 @@ if [[ ${FC} == ftn ]]; then
     fi
 fi
 FC_EXTRA=$(${NWCHEM_TOP}/src/config/strip_compiler.sh ${FC})
+
+if [[  -z "$MPICH_FC"   ]] ; then
+    export MPICH_FC="$FC"
+fi
+echo MPICH_FC is "$MPICH_FC"
+if [[  -z "$MPICH_CC"   ]] ; then
+    export MPICH_CC="$CC"
+fi
+echo MPICH_CC is "$MPICH_CC"
+echo $(mpicc -show)
+#Intel MPI
+if [[  -z "$I_MPI_F90"   ]] ; then
+    export I_MPI_F90="$FC"
+fi
+if [[  -z "$I_MPI_CC"   ]] ; then
+    export I_MPI_CC="$CC"
+fi
+echo I_MPI_F90 is "$I_MPI_F90"
+echo I_MPI_CC is "$I_MPI_CC"
 if [[  -z "$PE_ENV"   ]] ; then
     #check if mpif90 and FC are consistent
     MPIF90_EXTRA=$(${NWCHEM_TOP}/src/config/strip_compiler.sh `${MPIF90} -show`)
@@ -211,6 +227,11 @@ if [[  -z "$PE_ENV"   ]] ; then
 	exit 1
     fi
 fi
+#fix for clang 12 error in implicit-function-declaration
+GOTCLANG=$( "$MPICC" -dM -E - </dev/null 2> /dev/null |grep __clang__|head -1|cut -c19)
+if [[ ${GOTCLANG} == "1" ]] ; then
+    C_FLAGS=" -Wno-error=implicit-function-declaration "
+fi
 if [[  "$SCALAPACK_SIZE" == 8 ]] ; then
     if  [[ ${FC} == f95 ]] || [[ ${FC_EXTRA} == gfortran ]] ; then
     Fortran_FLAGS+=" -fdefault-integer-8 -w "
@@ -218,17 +239,36 @@ if [[  "$SCALAPACK_SIZE" == 8 ]] ; then
     Fortran_FLAGS=" -qintsize=8 -qextname "
     elif  [[ ${FC} == crayftn ]]; then
     Fortran_FLAGS=" -s integer64 -h nopattern"
+    elif  [[ ${FC} == frtpx ]] || [[ ${FC} == frt ]]; then
+    Fortran_FLAGS=" -fs -CcdLL8 -CcdII8 "
     else
     Fortran_FLAGS+=" -i8 "
     fi
     C_FLAGS+=" -DInt=long"
 fi
+#cross-compilation: we set CDEFS
+#https://github.com/Reference-ScaLAPACK/scalapack/commit/1bdf63ec17bf8e827b8c5abd292f0e41bdc2f56e
+CMAKE_EXTRA=" "
+if  [[ ${FC} == frtpx ]] ||  [ -x "$(command -v xx-info)" ]; then
+    CMAKE_EXTRA="-DCDEFS=Add_"
+fi    
 #skip argument check for gfortran
+arch=`uname -m`
+echo arch is $arch
+if  [[ ${FC_EXTRA} == nvfortran ]]; then
+echo 'nvfortran -V is ' `nvfortran -V`
+    if  [[ ${USE_HWOPT} == n ]]; then
+      if [[ "$arch" == "x86_64" ]]; then
+	Fortran_FLAGS+=" -tp px "
+      fi
+    fi
+fi
 if  [[ ${FC_EXTRA} == gfortran ]] || [[ ${FC} == f95 ]]; then
     Fortran_FLAGS+=" -fPIC "
     if [[ "$(expr `${FC} -dumpversion | cut -f1 -d.` \> 7)" == 1 ]]; then
 	Fortran_FLAGS+=" -std=legacy "
     fi
+    LDFLAGS+=" -fno-lto "
 fi
 if [[ ${PE_ENV} == NVIDIA ]] || [[ ${FC} == nvfortran ]] ; then
   Fortran_FLAGS+=" -fPIC "
@@ -237,15 +277,32 @@ if [[ "$CRAY_CPU_TARGET" == "mic-knl" ]]; then
     module swap craype-mic-knl craype-haswell
     KNL_SWAP=1
 fi
-echo compiling with CC="$MPICC"  FC=$MPIF90 CFLAGS="$C_FLAGS" FFLAGS="$Fortran_FLAGS" $CMAKE -Wno-dev ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS="$C_FLAGS"  -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DTEST_SCALAPACK=OFF  -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF  -DBLAS_openblas_LIBRARY="$BLASOPT"  -DBLAS_LIBRARIES="$BLASOPT"  -DLAPACK_openblas_LIBRARY="$BLASOPT"  -DLAPACK_LIBRARIES="$BLASOPT"
-CC="$MPICC"  FC=$MPIF90 CFLAGS="$C_FLAGS" FFLAGS="$Fortran_FLAGS" $CMAKE -Wno-dev ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_C_FLAGS="$C_FLAGS"  -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DTEST_SCALAPACK=OFF  -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF  -DBLAS_openblas_LIBRARY="$BLASOPT"  -DBLAS_LIBRARIES="$BLASOPT"  -DLAPACK_openblas_LIBRARY="$BLASOPT"  -DLAPACK_LIBRARIES="$BLASOPT"
+
+# force -m32 flag on 32-bit x86 linux to avoid -mx32
+Fortran_FLAGS_RELWITHDEB=" -O2 -g -DNDEBUG "
+if [[ "$arch" == "i686" ]] || [[ "$arch" == "x86_64" ]]; then
+    if [[ ${NWCHEM_TARGET} == LINUX ]] && [[ ${FC_EXTRA} == gfortran ]] ; then
+       Fortran_FLAGS+=" -m32 "
+       C_FLAGS+=" -m32 "
+    fi
+fi
+echo " $MPIF90 -show is " `$MPIF90 -show`
+echo LDFLAGS is $LDFLAGS
+if [[ ${FC} == nvfortran ]] ; then
+    echo compiling with CC="$MPICC"  FC=$FC MPIF90=$MPIF90 CFLAGS="$C_FLAGS" FFLAGS="$Fortran_FLAGS" $CMAKE -Wno-dev ../ -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_C_FLAGS="$C_FLAGS"  -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DTEST_SCALAPACK=OFF  -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF  -DBLAS_openblas_LIBRARY="$BLASOPT"  -DBLAS_LIBRARIES="$BLASOPT"  -DLAPACK_openblas_LIBRARY="$BLASOPT"  -DLAPACK_LIBRARIES="$BLASOPT" -DCMAKE_Fortran_FLAGS_RELWITHDEBINFO="-O2 -g -DNDEBUG  $Fortran_FLAGS"  $CMAKE_EXTRA  -DMPI_Fortran_COMPILE_OPTIONS="$Fortran_FLAGS"
+    CC="$MPICC"  FC=$FC MPIF90=$MPIF90 CFLAGS="$C_FLAGS" FFLAGS="$Fortran_FLAGS" $CMAKE -Wdev ../ -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_C_FLAGS="$C_FLAGS"  -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DTEST_SCALAPACK=OFF  -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF  -DBLAS_openblas_LIBRARY="$BLASOPT"  -DBLAS_LIBRARIES="$BLASOPT"  -DLAPACK_openblas_LIBRARY="$BLASOPT"  -DLAPACK_LIBRARIES="$BLASOPT" -DCMAKE_Fortran_FLAGS_RELWITHDEBINFO="-O2 -g -DNDEBUG  $Fortran_FLAGS" $CMAKE_EXTRA -DMPI_Fortran_COMPILE_OPTIONS="$Fortran_FLAGS"
+else
+    echo compiling with CC="$MPICC"  CFLAGS="$C_FLAGS" FC=$MPIF90 FFLAGS="$Fortran_FLAGS" $CMAKE -Wno-dev ../ -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_C_FLAGS="$C_FLAGS"  -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DTEST_SCALAPACK=OFF  -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF  -DBLAS_openblas_LIBRARY="$BLASOPT"  -DBLAS_LIBRARIES="$BLASOPT"  -DLAPACK_openblas_LIBRARY="$BLASOPT"  -DLAPACK_LIBRARIES="$BLASOPT" -DCMAKE_Fortran_FLAGS_RELWITHDEBINFO="-O2 -g -DNDEBUG  $Fortran_FLAGS"  $CMAKE_EXTRA
+    CC="$MPICC"  FC=$MPIF90 CFLAGS="$C_FLAGS" FFLAGS="$Fortran_FLAGS" $CMAKE -Wdev ../ -DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_C_FLAGS="$C_FLAGS"  -DCMAKE_Fortran_FLAGS="$Fortran_FLAGS" -DTEST_SCALAPACK=OFF  -DBUILD_TESTING=OFF -DBUILD_SHARED_LIBS=OFF  -DBLAS_openblas_LIBRARY="$BLASOPT"  -DBLAS_LIBRARIES="$BLASOPT"  -DLAPACK_openblas_LIBRARY="$BLASOPT"  -DLAPACK_LIBRARIES="$BLASOPT" -DCMAKE_Fortran_FLAGS_RELWITHDEBINFO="-O2 -g -DNDEBUG  $Fortran_FLAGS" $CMAKE_EXTRA
+fi
 if [[ "$?" != "0" ]]; then
     echo " "
     echo "cmake failed"
     echo " "
+    cat $(find . -name *log)
     exit 1
 fi
-make V=0 -j4 scalapack/fast
+make V=0 -j3 scalapack/fast
 if [[ "$?" != "0" ]]; then
     echo " "
     echo "compilation failed"
@@ -253,6 +310,15 @@ if [[ "$?" != "0" ]]; then
     exit 1
 fi
 mkdir -p ../../../lib
+if [[ $(uname -s) == "Linux" ]]; then
+    if [ -x "$(command -v xx-info)" ]; then
+	MYSTRIP=$(xx-info)-strip
+    else
+	MYSTRIP=strip
+    fi
+    echo MYSTRIP is $MYSTRIP
+    $MYSTRIP --strip-debug lib/libscalapack.a
+fi
 cp lib/libscalapack.a ../../../lib/libnwc_scalapack.a
 if [[ "$KNL_SWAP" == "1" ]]; then
     module swap  craype-haswell craype-mic-knl

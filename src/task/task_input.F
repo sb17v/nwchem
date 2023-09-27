@@ -102,6 +102,8 @@ c
             operation = 'et'
          else if (inp_compare(.false.,test,'rt_tddft')) then
             operation = 'rt_tddft'
+         else if (inp_compare(.false.,test,'gw')) then
+            operation = 'gw'
          else if (inp_compare(.false.,test,'fcidump')) then
             operation = 'fcidump'
 c         else if (inp_compare(.false.,test,'prepare')) then
@@ -228,6 +230,15 @@ c            oembed = .true.
          else if (inp_compare(.false.,test,
      >                        'rdf')) then
             operation='rdf'
+         else if (inp_compare(.false.,test,
+     >                        'aoints')) then
+            operation='aoints'
+         else if (inp_compare(.false.,test,
+     >                        'grdtrc')) then
+            operation='grdtrc'
+         else if (inp_compare(.false.,test,
+     >                        'nadtrc')) then
+            operation='nadtrc'
          else if (inp_compare(.false.,test,
      >                        'lcao')) then
             operation='lcao'

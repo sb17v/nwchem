@@ -94,13 +94,15 @@ c     real*8     fion(3,natmx)
       integer nion1
 
 *     ***** external functions ****
-      logical  control_move,psp_semicore,psp_pawexist
+      logical  control_gram_schmidt,control_gram_schmidt2
+      external control_gram_schmidt,control_gram_schmidt2
+      logical  control_move,psp_semicore,psp_pawexist,control_Fei
       logical  pspw_SIC,pspw_SIC_relaxed
       logical  pspw_HFX,pspw_HFX_relaxed
       integer  ion_nion,control_gga
       real*8   control_time_step,control_fake_mass,ion_dti
       real*8   lattice_omega,coulomb_e,ewald_e
-      external control_move,psp_semicore,psp_pawexist
+      external control_move,psp_semicore,psp_pawexist,control_Fei
       external pspw_SIC,pspw_SIC_relaxed
       external pspw_HFX,pspw_HFX_relaxed
       external ion_nion,control_gga
@@ -190,7 +192,6 @@ c     real*8     fion(3,natmx)
       common /matrix_blocking/ mblock,nblock,algorithm
 #endif
 
-
       call nwpw_timing_start(42)
 
 
@@ -205,6 +206,7 @@ c     real*8     fion(3,natmx)
       cosmo_on  = nwpw_cosmo_on()
       cosmo1_on = nwpw_cosmo1_on()
       V_APC_on  = pspw_V_APC_on()
+
 
       call nwpw_timing_start(12)
 *     **** allocate MA local variables ****
@@ -661,13 +663,20 @@ c          call Pack_cc_Sum(1,psi2(1,n),psi1(1,n),psi2(1,n))
         if (psp_pawexist()) then
            call psp_overlap_S(ispin,ne,psi1,psi_r)
            if (move) call phafac2()
-           call psi_lmbda_paw(ispin,ne,nemax,npack1,psi_r,psi2,
-     >                     dte,
-     >                     lmd,dbl_mb(tmp_L(1)),ierr)
-
+           if (control_gram_schmidt()) then
+              if (control_gram_schmidt2()) then
+                 call Dneall_f_GramSchmidt(ms,psi2,npack1)
+              else
+                 call Dneall_f_Sortho(ms,psi2,psi_r,npack1)
+              end if
+           else
+              call psi_lmbda_paw(ispin,ne,nemax,npack1,psi_r,psi2,dte,
+     >                            lmd,dbl_mb(tmp_L(1)),ierr)
+c              call psi_lmbda_paw1(ispin,ne,nemax,npack1,psi_r,psi2,dte,
+c     >                             lmd,dbl_mb(tmp_L(1)),ierr)
+           end if
         else if (fractional) then
-           call psi_lmbda2(ispin,ne,nemax,npack1,psi1,psi2,
-     >                     dte,occ1,
+           call psi_lmbda2(ispin,ne,nemax,npack1,psi1,psi2,dte,occ1,
      >                     lmd,dbl_mb(tmp_L(1)),ierr)
         !else if (sic.or.hfx) then
         else if (sic) then
@@ -978,6 +987,8 @@ c     >        - ehartree_atom - ecmp_cmp - ecmp_pw
          E(1)  = E(1) + E(33)
       end if
 
+*     **** output Forces for Fei ***
+      if (control_Fei()) call fei_output(E(1),dbl_mb(fion(1)))
 
 
 *     **** set convergence variables ****
