@@ -4,11 +4,10 @@
 
 *
 *     ***********************************
-*     *					*
-*     *	        D1dB_SumAll		*	
-*     *					*
+*     *                                 *
+*     *            D1dB_SumAll          *
+*     *                                 *
 *     ***********************************
-
       subroutine D1dB_SumAll(sum)
 c     implicit none
       real*8  sum
@@ -191,11 +190,10 @@ c     implicit none
 
 
 *     ***********************************
-*     *					*
-*     *	        D1dB_Vector_SumAll	*	
-*     *					*
+*     *                                 *
+*     *        D1dB_Vector_SumAll       *
+*     *                                 *
 *     ***********************************
-
       subroutine D1dB_Vector_SumAll(n,sum)
 c     implicit none
       integer n
@@ -804,7 +802,7 @@ cccccc      !Level = (log(dble(np_j))/log(2.0d0))
      >                    requests,reqcnt)
 
       call D1dB_WaitAll(requests,reqcnt)
-      call daxpy(rsize*n2ft3d,1.0d0,tmp,1,hpsi_rep(1,rindx),1)
+      call DAXPY_OMP(rsize*n2ft3d,1.0d0,tmp,1,hpsi_rep(1,rindx),1)
 
       return
       end
