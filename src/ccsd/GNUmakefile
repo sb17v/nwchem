@@ -104,7 +104,12 @@ endif
 ifeq ($(_FC),xlf)
   LIB_DEFINES += -DTRPMIXP_OFF
 endif
-HAVE_SET_GA_PROPERTY_DISABLES = $(shell cat ${NWCHEM_TOP}/src/tools/build/global/src/ga-wapi.h | awk ' /wnga_set_property/ {print "Y"}')
+ifdef EXTERNAL_GA_PATH
+  GA_WAPI.H=${EXTERNAL_GA_PATH}/include/ga-wapi.h
+else
+  GA_WAPI.H=${NWCHEM_TOP}/src/tools/build/global/src/ga-wapi.h
+endif
+HAVE_SET_GA_PROPERTY_DISABLES = $(shell cat  ${GA_WAPI.H} | awk ' /wnga_set_property/ {print "Y"}')
 ifeq ($(HAVE_SET_GA_PROPERTY),Y)
       LIB_DEFINES += -DHAVE_SET_GA_PROPERTY
 endif
@@ -112,7 +117,13 @@ endif
 ifdef USE_OPENACC_TRPDRV
   OBJ_OPTIMIZE += ccsd_trpdrv_openacc.o
   USES_BLAS    += ccsd_trpdrv_openacc.F
-  FOPTIONS += -acc -gpu=managed -cuda -cudalib=cublas -DUSE_OPENACC_TRPDRV
+  FOPTIONS += -DUSE_OPENACC_TRPDRV
+  ifeq ($(_FC),pgf90)
+      FOPTIONS += -Mextend -acc -cuda -cudalib=cublas
+  endif
+  ifeq ($(_FC),gfortran)
+      FOPTIONS += -ffree-form -fopenacc -lcublas
+  endif
 endif
 
 

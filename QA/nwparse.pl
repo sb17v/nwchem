@@ -166,15 +166,15 @@ foreach $filename (@FILES_TO_PARSE) {
 		if (! $quiet) {
 		    printf " %10s %10.3f %10.3f %10.3f\n", 
 		         $atoms[$iatom], 
-		         set_to_digits($grads[$indx1],4), 
-		         set_to_digits($grads[$indx2],4),
-  		         set_to_digits($grads[$indx3],4);
+		         set_to_digits($grads[$indx1],3), 
+		         set_to_digits($grads[$indx2],3),
+  		         set_to_digits($grads[$indx3],3);
 		}
 		printf FILE_OUTPUT " %10s %10.3f %10.3f %10.3f\n", 
 		         $atoms[$iatom], 
-		         set_to_digits($grads[$indx1],4), 
-		         set_to_digits($grads[$indx2],4),
-  		         set_to_digits($grads[$indx3],4);
+		         set_to_digits($grads[$indx1],3), 
+		         set_to_digits($grads[$indx2],3),
+  		         set_to_digits($grads[$indx3],3);
 	    }
 	    
 	    @atoms = ();
@@ -312,7 +312,7 @@ foreach $filename (@FILES_TO_PARSE) {
 	}
         if (! $sgroup) {
 	if (/Total/ && /energy/) {
-	 if (/SCF/ || /DFT/ || /CCSD/ || /MP2/ || /MCSCF/ || /RIMP2/ || /RISCF/ || /BAND/ || /PAW/ || /PSPW/ || /WFN1/ ) {
+	 if (/SCF/ || /DFT/ || /CCSD/ || /MP2/ || /MCSCF/ || /RIMP2/ || /RISCF/ || /BAND/ || /PAW/ || /PSPW/ || /WFN1/ || /xTB/ ) {
 		if ($debug) {print "\ndebug: $_";}
 		@line_tokens = split(' ');
 		$num_line_tokens = @line_tokens;
@@ -358,7 +358,51 @@ foreach $filename (@FILES_TO_PARSE) {
 	    }
 	}
 	}
-	if (/Excitation energy/ || /Rotatory /) {
+
+        if (!$sgroup) {
+          if (/\@GW/) {
+            if ($debug) {print "\ndebug: $_";}
+            @line_tokens = split(' ');
+            $num_line_tokens = @line_tokens;
+            if ($debug) {
+              print "debug:line_tokens: @line_tokens \n";
+              print "debug:number     : $num_line_tokens \n";
+            }
+            for($itok = 0; $itok <($num_line_tokens-2); $itok++){
+              if (! $quiet) {
+                printf "%s ", @line_tokens[$itok];
+              }
+              printf FILE_OUTPUT "%s ", @line_tokens[$itok];
+            }
+            if (!$quiet) {
+              printf "%.2f\n", set_to_digits(@line_tokens[$itok],2);
+            }
+            printf FILE_OUTPUT "%.2f\n", set_to_digits(@line_tokens[$itok],2);
+          }
+        }
+        if (!$sgroup) {
+	    if (/rt\_tddft/ && /Etot/) {
+            if ($debug) {print "\ndebug: $_";}
+            @line_tokens = split(' ');
+            $num_line_tokens = @line_tokens;
+            if ($debug) {
+              print "debug:line_tokens: @line_tokens \n";
+              print "debug:number     : $num_line_tokens \n";
+            }
+            for($itok = 0; $itok <($num_line_tokens-3); $itok++){
+              if (! $quiet) {
+                printf "%s ", @line_tokens[$itok];
+              }
+              printf FILE_OUTPUT "%s ", @line_tokens[$itok];
+            }
+            if (!$quiet) {
+              printf "%.4f\n", set_to_digits(@line_tokens[$itok],4);
+            }
+            printf FILE_OUTPUT "%.4f\n", set_to_digits(@line_tokens[$itok],4);
+          }
+        }
+
+	if (/Excitation energy/ || /Rotatory / || /IBO loc: largest element in /) {
 	    if ($debug) {print "\ndebug: $_";}
 	    @line_tokens = split(' ');
 	    $num_line_tokens = @line_tokens;
@@ -398,7 +442,7 @@ foreach $filename (@FILES_TO_PARSE) {
             }
             printf FILE_OUTPUT "%.10f\n", set_to_digits(@line_tokens[$itok],10);
         }
-	if (/isotropic =/ || /anisotropy =/ ) {
+	if (/sotropic =/ || /anisotropy =/ ) {
 		if ($debug) {print "\ndebug: $_";}
 		@line_tokens = split(' ');
 		$num_line_tokens = @line_tokens;
@@ -626,8 +670,6 @@ sub set_to_digits
     for ($i = 0; $i < $digits ; $i++) {$value *= 10.0;}
     if ($value < 0.0) {$value -= 0.5;}
     else              {$value += 0.5;}
-    if ($value < 0.0) {$value -= 5*10.**(-2);}
-    else              {$value += 5*10.**(-2);}
     $value = int ($value);
     for ($i = 0; $i < $digits ; $i++) {$value /= 10.0;}
     if (abs($value) == 0.0) {$value = 0.0;}

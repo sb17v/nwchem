@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 Vx=7
-Vy=0
+Vy=2
 Vz=0
 NWVER="$Vx"."$Vy"."$Vz"-release
 unset NWCHEM_TOP
+export USE_MPI=y
 TOPDIR=nwchem-"$Vx"."$Vy"."$Vz"
 BRANCH=release-"$Vx"-"$Vy"-"$Vz"
+#TOPDIR=nwchem
+#BRANCH=master
 # need to change BRANCH for patch releases
 rm -rf temp.`date +%Y%m%d`
 mkdir -p temp.`date +%Y%m%d`
 cd temp.`date +%Y%m%d`
 git clone --depth 1 --shallow-submodules -b $BRANCH https://github.com/nwchemgit/nwchem $TOPDIR
 cd $TOPDIR/src/tools
-rm -f *tar*gz
+rm -f *.tar.*
 ./get-tools-github
 cd ../util
 ./util_ga_version.bash
@@ -21,7 +24,7 @@ cd ..
 # set USE_64TO32=y on by default since we do make 64_to_32 for this tarball
 patch -p1  < ../contrib/git.nwchem/use6432y.patch
 # do  make 64_to_32 
-export NWCHEM_MODULES=all\ python
+export NWCHEM_MODULES=all\ python\ gwmol
 make nwchem_config NWCHEM_MODULES=all\ python
 export EACCSD=1
 export IPCCSD=1
@@ -44,6 +47,8 @@ tar --exclude=".git" -czf nwchem-"${NWVER}".revision-"${REVGIT}"-src.`date +%Y-%
 md5sum nwchem-"${NWVER}".revision-"${REVGIT}"-src.`date +%Y-%m-%d`.tar.gz > nwchem-"${NWVER}".revision"${REVGIT}"-src.`date +%Y-%m-%d`.tar.gz.md5
 tar --exclude=".git" -cjf nwchem-"${NWVER}".revision-"${REVGIT}"-src.`date +%Y-%m-%d`.tar.bz2 $TOPDIR/*
 md5sum nwchem-"${NWVER}".revision-"${REVGIT}"-src.`date +%Y-%m-%d`.tar.bz2 >  nwchem-"${NWVER}".revision"${REVGIT}"-src.`date +%Y-%m-%d`.tar.bz2.md5
+tar --exclude=".git" -cJf nwchem-"${NWVER}".revision-"${REVGIT}"-src.`date +%Y-%m-%d`.tar.xz $TOPDIR/*
+md5sum nwchem-"${NWVER}".revision-"${REVGIT}"-src.`date +%Y-%m-%d`.tar.xz >  nwchem-"${NWVER}".revision"${REVGIT}"-src.`date +%Y-%m-%d`.tar.xz.md5
 tar --exclude=".git" -cjf nwchem-"${NWVER}".revision-"${REVGIT}"-srconly.`date +%Y-%m-%d`.tar.bz2 $TOPDIR/src/*
 md5sum nwchem-"${NWVER}".revision-"${REVGIT}"-srconly.`date +%Y-%m-%d`.tar.bz2>  nwchem-"${NWVER}".revision"${REVGIT}"-srconly.`date +%Y-%m-%d`.tar.bz2.md5
 tar --exclude=".git" --exclude="src" -cjf nwchem-"${NWVER}".revision-"${REVGIT}"-nonsrconly.`date +%Y-%m-%d`.tar.bz2 $TOPDIR/*

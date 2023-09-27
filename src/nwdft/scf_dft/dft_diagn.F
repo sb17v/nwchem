@@ -268,6 +268,7 @@ c     patching non computed eigenvectors with identity
          nmoout=0
          call ga_evp_real(g_s, g_svecs, evals,nb,nmoout)
       elseif(yev.eq.'l') then
+         call errquit('yev=l disabled ',0,0)
          nmoout=nocc
          call ga_evp_real(g_s, g_svecs, evals,nb,nmoout)
          call dft_idtyvecs(g_svecs,nmoout+1)
@@ -437,3 +438,15 @@ c     pop memory
 c     
       return
       end
+
+      subroutine dft_utilscal(rtdb)
+      integer rtdb
+#include "rtdb.fh"
+#include "dft_scaleig.fh"
+#include "mafdecls.fh"
+      if (.not. rtdb_cget(rtdb, 'dft:scaladiag',1,yev))
+     &     yev='d'
+      if (.not. rtdb_get(rtdb, 'dft:scalanb',mt_int,1,nb))
+     &     nb=0
+
+      end subroutine

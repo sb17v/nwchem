@@ -7,7 +7,7 @@ c
       subroutine tddft_grad_compute_w(rtdb,ihdl_geom,ihdl_bfao,tol2e,
      +           tda,ipol,nroots,nfc,naoc,nocc,nav,
      +           nfv,nao,g_mo,g_p,g_z,g_xpy,g_xmy,eps,omega,g_w,
-     +           kfac,lhashf,otriplet)
+     +           kfac,lhashf,otriplet,lhascd)
 c
       implicit none
 c
@@ -43,6 +43,7 @@ c
       logical otriplet  ! =.true.  triplet excited states
                         ! =.false. singlet excited states
                         ! value does not matter for TDUDFT
+      logical lhascd
 c
       double precision kfac          ! the weight of the Hartree-Fock
                                      ! exchange contributions
@@ -140,7 +141,8 @@ c
       parameter (oskel=.false.)
       double precision Exc(2)    ! Exchange-correlation energy
 c
-      logical tdaloc
+      logical tdaloc, tddft_grad_tdaloc
+      external tddft_grad_tdaloc
       logical doitw,doitz
       logical doitxpy1,doitxpy2
       logical doitxmy1,doitxmy2
@@ -472,7 +474,8 @@ c fock_xc:triplet here for restricted triplet calculations to work.
      1    call errquit(pname//'failed to set triplet',0,RTDB_ERR)
       endif
       call tddft_nga_cont(rtdb,ihdl_geom,ihdl_bfao,g_puv,g_apbp,g_ambp,
-     +     nao,ipol,tol2e,tda,oskel,kfac,lhashf,.false.,nroots,iwhich)
+     +     nao,ipol,tol2e,tda,oskel,kfac,lhashf,.false.,nroots,iwhich,
+     +     lhascd)
 c Daniel (2-26-13): Reset fock_xc:triplet here for restricted triplet 
 c calculations to work.
       if (otriplet) then
@@ -597,7 +600,7 @@ c Daniel (2-12-13): We need to set triplet here for fock_xc.
      +               int_mb(k_gxc), Exc, ipol, .false.)
         call ga_sync()
 c DEBUG
-      if (tddft_grad_util_print('tddft grad w',print_debug)) then
+      if (util_print('tddft grad w',print_debug)) then
         oroot = ga_nodeid().eq.0
         if (oroot) write(LuOut,*)'DEBUG: '//pname//'gxc'
         call tddft_grad_print_array(ipol,nroots,int_mb(k_gxc),
@@ -744,33 +747,13 @@ c
 c
 c     - Compute (A+B)X, (A-B)X, (A+B)Y and (A-B)Y
 c
-c Daniel (1-7-13): We manipulate the code here because the
-c R vector has the same number of terms for RPA and CIS.  This is a
-c consequence of (X-Y) = X.  It might be a good idea to avoid doing this
-c part for the Y vector since Y = 0.  Note that the coupling matrix
-c expressions H^+[V] and H^-[V] can both be nonzero for CIS, so it isn't
-c okay to skip the anti-symmetric part in the tddft_nga_cont routine.  
-c What CIS does is makes the Y vector contribution zero in the following
-c routines.
-c Daniel (2-8-13): Set the local TDA variable so that we don't change
-c the global one.
-      if (lhashf) then
-        if (tda) then
-          tdaloc = .false. ! For CIS and TDDFT/TDA (hybrid) calculations
-        else
-          tdaloc = .false. ! For RPA and TDDFT (hybrid) calculations
-        endif
-      else
-        if (tda) then
-          tdaloc = .true.  ! For TDDFT/TDA (pure) calculations
-        else
-          tdaloc = .false. ! For TDDFT (pure) calculations
-        endif
-      endif
+      tdaloc=tddft_grad_tdaloc(rtdb,tda,lhashf)
       call tddft_nga_cont(rtdb,ihdl_geom,ihdl_bfao,g_x,g_apbx,g_ambx,
-     +   nao,ipol,tol2e,tdaloc,oskel,kfac,lhashf,otriplet,nroots,iwhich)
+     +   nao,ipol,tol2e,tdaloc,oskel,kfac,lhashf,otriplet,nroots,iwhich,
+     +   lhascd)
       call tddft_nga_cont(rtdb,ihdl_geom,ihdl_bfao,g_y,g_apby,g_amby,
-     +   nao,ipol,tol2e,tdaloc,oskel,kfac,lhashf,otriplet,nroots,iwhich)
+     +   nao,ipol,tol2e,tdaloc,oskel,kfac,lhashf,otriplet,nroots,iwhich,
+     +   lhascd)
 c
 c     - Dispose of X and Y
 c
@@ -1186,7 +1169,7 @@ c
       enddo
       call ga_sync()
 c
-      if (tddft_grad_util_print('tddft grad w',print_debug)) then
+      if (util_print('tddft grad w',print_debug)) then
         oroot = ga_nodeid().eq.0
         if (oroot) write(LuOut,*)'DEBUG: '//pname//'W'
         call tddft_grad_print_array(ipol,nroots,g_w,dble(ipol))
