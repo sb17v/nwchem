@@ -15,7 +15,7 @@
 *  *      then control file                                   *
 *  ************************************************************
 #ifdef USE_OPENMP
-#define NO_PSI_OMP
+#define PSI_OMP
 #endif
 
   
@@ -94,13 +94,15 @@ c     real*8     fion(3,natmx)
       integer nion1
 
 *     ***** external functions ****
-      logical  control_move,psp_semicore,psp_pawexist
+      logical  control_gram_schmidt,control_gram_schmidt2
+      external control_gram_schmidt,control_gram_schmidt2
+      logical  control_move,psp_semicore,psp_pawexist,control_Fei
       logical  pspw_SIC,pspw_SIC_relaxed
       logical  pspw_HFX,pspw_HFX_relaxed
       integer  ion_nion,control_gga
       real*8   control_time_step,control_fake_mass,ion_dti
       real*8   lattice_omega,coulomb_e,ewald_e
-      external control_move,psp_semicore,psp_pawexist
+      external control_move,psp_semicore,psp_pawexist,control_Fei
       external pspw_SIC,pspw_SIC_relaxed
       external pspw_HFX,pspw_HFX_relaxed
       external ion_nion,control_gga
@@ -190,7 +192,6 @@ c     real*8     fion(3,natmx)
       common /matrix_blocking/ mblock,nblock,algorithm
 #endif
 
-
       call nwpw_timing_start(42)
 
 
@@ -205,6 +206,7 @@ c     real*8     fion(3,natmx)
       cosmo_on  = nwpw_cosmo_on()
       cosmo1_on = nwpw_cosmo1_on()
       V_APC_on  = pspw_V_APC_on()
+
 
       call nwpw_timing_start(12)
 *     **** allocate MA local variables ****
@@ -255,6 +257,9 @@ c     real*8     fion(3,natmx)
      >        BA_push_get(mt_dbl,(3*natmx),'ftest',ftest(2),ftest(1))
       value = value.and.
      >        BA_push_get(mt_dbl,(nemax),'sumi',sumi(2),sumi(1))
+
+      call Parallel_shared_vector_zero(.false.,3*natmx,dbl_mb(fion(1)))
+      call Parallel_shared_vector_zero(.true.,3*natmx,dbl_mb(ftest(1)))
 #ifdef PSI_OMP
       mthr = Parallel_maxthreads()
       mthr = max(mthr,4)
@@ -295,9 +300,10 @@ c      value = value .and. MA_set_auto_verify(.true.)
 #endif
 
       if (.not. value) call errquit('out of stack memory',0, MA_ERR)
-      call dcopy(4*nfft3d,0.0d0,0,dbl_mb(dnall(1)),1)
-      call dcopy(4*nfft3d,0.0d0,0,dbl_mb(xcp(1)),1)
-      call dcopy(4*nfft3d,0.0d0,0,dbl_mb(xce(1)),1)
+      call Parallel_shared_vector_zero(.false.,
+     >                           4*nfft3d,dbl_mb(dnall(1)))
+      call Parallel_shared_vector_zero(.false.,4*nfft3d,dbl_mb(xcp(1)))
+      call Parallel_shared_vector_zero(.true.,4*nfft3d,dbl_mb(xce(1)))
       !call D3dB_r_nZero(1,2,dbl_mb(dnall(1)))
       !call D3dB_r_nZero(1,2,dbl_mb(xcp(1)))
       !call D3dB_r_nZero(1,2,dbl_mb(xce(1)))
@@ -482,6 +488,7 @@ c        call mask_C(0,dcpl_mb(dng(1)))
      >               dcpl_mb(dng(1)),
      >               dbl_mb(fion(1)))
 
+
 *       *** long-range psp for charge systems ***
         if (control_version().eq.4) then
           call v_lr_local(dbl_mb(r_grid(1)),
@@ -497,7 +504,9 @@ c        call mask_C(0,dcpl_mb(dng(1)))
            call pspw_V_APC(ispin,ne,
      >                           dcpl_mb(dng(1)),
      >                           dcpl_mb(vl(1)),
-     >                           Eapc,Papc)
+     >                           Eapc,Papc,
+     >                           move,
+     >                           dbl_mb(fion(1)))
         end if
 
 
@@ -561,6 +570,7 @@ c        call mask_C(0,dcpl_mb(dng(1)))
      >             dbl_mb(vc(1)),dbl_mb(xcp(1)),Hpsi,
      >             move,dbl_mb(fion(1)),fractional,occ1)
 
+
         call nwpw_timing_end(47)
 
         
@@ -583,6 +593,7 @@ c          call Pack_cc_Sum(1,psi2(1,n),psi1(1,n),psi2(1,n))
 
 *          **** get the ewald force ****
            if (control_version().eq.3) call ewald_f(dbl_mb(fion(1)))
+
 
 *          **** get the free-space ion force ****
            if (control_version().eq.4) call ion_ion_f(dbl_mb(fion(1)))
@@ -652,13 +663,20 @@ c          call Pack_cc_Sum(1,psi2(1,n),psi1(1,n),psi2(1,n))
         if (psp_pawexist()) then
            call psp_overlap_S(ispin,ne,psi1,psi_r)
            if (move) call phafac2()
-           call psi_lmbda_paw(ispin,ne,nemax,npack1,psi_r,psi2,
-     >                     dte,
-     >                     lmd,dbl_mb(tmp_L(1)),ierr)
-
+           if (control_gram_schmidt()) then
+              if (control_gram_schmidt2()) then
+                 call Dneall_f_GramSchmidt(ms,psi2,npack1)
+              else
+                 call Dneall_f_Sortho(ms,psi2,psi_r,npack1)
+              end if
+           else
+              call psi_lmbda_paw(ispin,ne,nemax,npack1,psi_r,psi2,dte,
+     >                            lmd,dbl_mb(tmp_L(1)),ierr)
+c              call psi_lmbda_paw1(ispin,ne,nemax,npack1,psi_r,psi2,dte,
+c     >                             lmd,dbl_mb(tmp_L(1)),ierr)
+           end if
         else if (fractional) then
-           call psi_lmbda2(ispin,ne,nemax,npack1,psi1,psi2,
-     >                     dte,occ1,
+           call psi_lmbda2(ispin,ne,nemax,npack1,psi1,psi2,dte,occ1,
      >                     lmd,dbl_mb(tmp_L(1)),ierr)
         !else if (sic.or.hfx) then
         else if (sic) then
@@ -907,21 +925,21 @@ c     >        - ehartree_atom - ecmp_cmp - ecmp_pw
 
          !*** cosmo2 ****
          else
-            E(22) = Eapc
-            E(23) = Papc
+            E(52) = Eapc
+            E(53) = Papc
             E(46) = Eapc
             E(47) = nwpw_cosmo_EQionq() !** E(Qion|q)
             E(48) = nwpw_cosmo_Eqq()    !** E(q|q)
 
-            !E(1)  = E(1) + E(22) - E(23) + E(47) + E(48)
-            E(1)  = E(1) + E(22) - E(23) 
+            !E(1)  = E(1) + E(52) - E(53) + E(47) + E(48)
+            E(1)  = E(1) + E(52) - E(53) 
          end if
      
 *     **** AQC Energy ****
       else if (V_APC_on) then
-         E(22) = Eapc
-         E(23) = Papc
-         E(1)  = E(1) + E(22) - E(23)
+         E(52) = Eapc
+         E(53) = Papc
+         E(1)  = E(1) + E(52) - E(53)
       end if
 
 
@@ -969,6 +987,8 @@ c     >        - ehartree_atom - ecmp_cmp - ecmp_pw
          E(1)  = E(1) + E(33)
       end if
 
+*     **** output Forces for Fei ***
+      if (control_Fei()) call fei_output(E(1),dbl_mb(fion(1)))
 
 
 *     **** set convergence variables ****
@@ -1002,7 +1022,7 @@ c         fion(2,i) = (r2(2,i) - r1(2,i))/ion_dti(i)
 c         fion(3,i) = (r2(3,i) - r1(3,i))/ion_dti(i)
 c     end do
 
-*     *** deltar ***
+*     *** deltar  ***
       deltar = deltamm
       if (move) then
         do i=1,ion_nion()
@@ -1012,6 +1032,7 @@ c     end do
            if (sum.gt.deltar) deltar = sum
         end do
       end if
+      
        
       call nwpw_timing_end(10)
 

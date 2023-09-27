@@ -1982,6 +1982,8 @@ c     ****************************************
 
          value = BA_push_get(mt_dbl,(2*ne(1)*ne(1)),
      >                       'tmp1',tmp1(2),tmp1(1))
+         value = value.and.BA_push_get(mt_dbl,ne(1),
+     >                                'ework',ework(2),ework(1))
          if (.not. value) 
      >      call errquit('Dneall_m_diagonalize:out of stack',
      >                    1,MA_ERR)
@@ -1993,13 +1995,24 @@ c     ****************************************
             if (ne(ms).le.0) go to 30
 
 !$OMP MASTER
+            call EIGEN_SET(ne(ms),hml(shift2),dbl_mb(ework(1)))
             call DSYEV('V','U',ne(ms),
      >                 hml(shift2),ne(ms), 
      >                 eig(shift1),
      >                 dbl_mb(tmp1(1)),2*ne(1)*ne(1),
      >                 ierr)
-            if(ierr.ne.0) 
-     >        call errquit('dneadiag: dsyev err.ne.0 ',ierr,0)
+c            ierr = 0
+c            call EIGEN_UNSORT(ne(ms),ne(ms),
+c     >                        hml(shift2),eig(shift1),
+c     >                        dbl_mb(tmp1(1)),ierr)
+            if (ierr.ne.0) then
+              write(*,*) "dnem_iag:dsyev err=",ierr,0
+              call EIGEN_FAIL(ne(ms),
+     >                        hml(shift2),
+     >                        dbl_mb(ework(1)),
+     >                        eig(shift1))
+              !call errquit("dnem_iag:dsyev err=",ierr,0)
+            end if
 !$OMP END MASTER
 !$OMP BARRIER
 
@@ -2017,7 +2030,8 @@ c     ****************************************
             call Parallel_Brdcst_values(MASTER,ne(mb)*ne(mb),hml)
          end if
 
-         value = BA_pop_stack(tmp1(2))
+         value = BA_pop_stack(ework(2))
+         value = value.and.BA_pop_stack(tmp1(2))
          if (.not. value) 
      >    call errquit('error popping stack in Dneall_m_diagonalize',
      >                 0,MA_ERR)
@@ -2025,6 +2039,32 @@ c     ****************************************
       end if
 
       call nwpw_timing_end(17)
+      return
+      end
+
+      subroutine EIGEN_SET(N,HML,EW)
+      implicit none
+      integer N
+      real*8 HML(N,N),EW(N)
+      integer i
+      do i=1,N
+         EW(I) = HML(i,i)
+      end do
+      return
+      end
+
+      subroutine EIGEN_FAIL(N,HML,EW,EIG)
+      implicit none
+      integer N
+      real*8 HML(N,N),EW(N),EIG(N)
+      integer i
+      do i=1,N
+         EIG(i) = EW(i)
+      end do
+      call dcopy(N*N,0.0d0,0,HML,1)
+      do i=1,N
+          HML(i,i) = 1.0d0
+      end do
       return
       end
 
@@ -3895,10 +3935,9 @@ c     ****************************************
 
 c     ****************************************
 c     *                                      *
-c     *        Dneall_m_scale_s21           *
+c     *        Dneall_m_scale_s21            *
 c     *                                      *
 c     ****************************************
-
       subroutine Dneall_m_scale_s21(mb,dte,s21)
       implicit none
       integer mb
@@ -3968,9 +4007,10 @@ c     ****************************************
       end
 
 
+
 c     ****************************************
 c     *                                      *
-c     *        Dneall_m_scale_s11           *
+c     *        Dneall_m_scale_s11            *
 c     *                                      *
 c     ****************************************
 
@@ -4467,7 +4507,7 @@ c     ****************************************
       real*8   ddot
       external ddot
 
-
+     
       if (parallelized) then
          if (mb.eq.0) then
             nn  = ne(1)  + ne(2)
@@ -4505,8 +4545,8 @@ c     ****************************************
          end do
 !$OMP END MASTER
 !$OMP BARRIER
-         call D1dB_SumAll(nn*nprj,dbl_mb(sw1b(1)))
-         call D1dB_SumAll(nn*nprj,dbl_mb(sw2b(1)))
+         call D1dB_Vector_SumAll(nn*nprj,dbl_mb(sw1b(1)))
+         call D1dB_Vector_SumAll(nn*nprj,dbl_mb(sw2b(1)))
 
          if (mparallelized) then
             call Parallel_taskid(taskid)
@@ -4569,6 +4609,7 @@ c     ****************************************
          if (.not.value)
      >   call errquit('Dneall_m_add_sw1sw2:pop stack',1,MA_ERR)
       else
+
          if (mb.eq.0) then
             ms1 = 1
             ms2 = ispin
@@ -6001,7 +6042,7 @@ c     ****************************************
 
 c     ****************************************
 c     *                                      *
-c     *        Dneall_4m_RotateSkew         *
+c     *        Dneall_4m_RotateSkew          *
 c     *                                      *
 c     ****************************************
 
@@ -6842,7 +6883,7 @@ c     ****************************************
       end
 
 
-
+        
 c     ****************************************
 c     *                                      *
 c     *        Dne_ffm_combo_sym_Multiply    *
@@ -7360,13 +7401,14 @@ c     ****************************************
             ms2 = ispin
             ishift1 = nein(1)
             ishift2 = nein(1)*ne(1)
-            call dcopy((nein(1)+nein(2)),0.0d0,0,eig,1)
+            call Parallel_shared_vector_zero(.true.,
+     >                            (nein(1)+nein(2)),eig)
          else
             ms1 = mb
             ms2 = mb
             ishift1 = 0
             ishift2 = 0
-            call dcopy(nein(mb),0.0d0,0,eig,1)
+            call Parallel_shared_vector_zero(.true.,nein(mb),eig)
          end if
 
          value = BA_push_get(mt_dbl,(2*nein(1)*nein(1)),
@@ -7387,7 +7429,13 @@ c     ****************************************
      >                 eig(shift1),
      >                 dbl_mb(tmp1(1)),2*nein(1)*nein(1),
      >                 ierr)
-         if(ierr.ne.0) call errquit('dneamdg: dsyev err.ne.0 ',ierr,0)
+            if (ierr.ne.0) then
+               ierr = 0
+               call EIGEN_UNSORT(nein(ms),nein(ms),
+     >                           hml(shift2),eig(shift1),
+     >                           dbl_mb(tmp1(1)),ierr)
+c              call errquit('dneamdg: dsyev err.ne.0 ',ierr,0)
+            end if
 
             if (.not.assending)
      >       call eigsrt(eig(shift1),

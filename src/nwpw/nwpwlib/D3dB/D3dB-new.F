@@ -309,7 +309,6 @@ c     >   (int_mb(p_map3(1,nb)+k+j*(nx(nb)/2+1)), k=0,nx(nb)/2)
 c      end do
 c      write(*,*)
 c      end if
-     
 
       nfft3d(nb) = (nx(nb)/2+1)*nq1(nb)
       if ((ny(nb)*nq2(nb)).gt.nfft3d(nb)) nfft3d(nb) = ny(nb)*nq2(nb)
@@ -371,9 +370,12 @@ c     integer i2_start(NFFT3+1)
 
       logical value
       integer i
+      logical  control_single_precision_on
+      external control_single_precision_on
 
       call D3dB_timereverse_end(nb)
       call D3dB_fft_end(nb)
+      if (control_single_precision_on()) call D3dBs_fft_end(nb)
 
       value=.true.
 
@@ -772,6 +774,8 @@ c     p = p_map(k)
       integer taskid,np
       integer  Parallel_threadid
       external Parallel_threadid
+      logical  control_single_precision_on
+      external control_single_precision_on
 
 
 
@@ -880,6 +884,7 @@ c     p = p_map(k)
 
       call D3dB_c_timereverse_init(nb)
       call D3dB_fft_init(nb)
+      if (control_single_precision_on()) call D3dBs_fft_init(nb)
       
       return
       end
@@ -1178,7 +1183,7 @@ c      call dcopy(n2ft3d_map(nb),0.0d0,0,A,1)
       common    / D3dB_fft / tmpx,tmpy,tmpz
 
 #ifdef FFTW3
-#include "fftw3.fh"
+#include <fftw3.f>
        integer Atest(2),nxh,nxhz,nxhy
 #endif
 
@@ -1402,6 +1407,11 @@ c      call dfftw_cleanup_threads()
 
       return
       end
+
+
+
+
+
 
 
 c*     ***********************************
@@ -1889,6 +1899,7 @@ c     end do
       return
       end 
 
+
       subroutine cshift1_fftb1(nx,A)
       implicit none
       integer nx
@@ -1899,6 +1910,7 @@ c     end do
       end do 
       return
       end
+
 
       subroutine zeroend_fftb1(nx,A)
       implicit none
@@ -5628,6 +5640,7 @@ c     integer i2_start(NFFT3+1)
       return
       end
 
+
       subroutine D3dB_pfft_index2_zero(n,index,a)
       implicit none
       integer n
@@ -5644,6 +5657,8 @@ c     integer i2_start(NFFT3+1)
 !$OMP END DO
       return
       end
+
+
 
       subroutine D3dB_pfft_index2_copy_conjg(n,index,a,b)
       implicit none
