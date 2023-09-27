@@ -165,7 +165,10 @@ c
       integer g_s
 
       integer nshells_bas,nbf_mxnbf_ce2
-      integer basis
+      integer basis,g_dens_org(2)
+      integer type,ndim,dims(3)
+      integer dft_npatch, iptr
+      external dft_npatch
 
 #ifdef SOLARIS
 c     needed for -stackvar option
@@ -196,6 +199,11 @@ c
       npol = (ipol*(ipol+1))/2
       if (.not.rtdb_get(rtdb,'dft:largenode', mt_log, 1, largenode))
      &     largenode=.false.
+      call nga_inquire(g_dens(1), type, ndim, dims)
+      if(ga_nodeid().eq.0.and.oprint) then
+         write(luout,*) ' ndim ',ndim
+         write(luout,*) ' dims ',(dims(ii),ii=1,ndim)
+      endif
 c
 c     Open grid pts file
 c     
@@ -446,21 +454,38 @@ c Daniel (1-11-13): I think we can stay similar to calc_type = 2 for
 c XC-third derivatives in this portion of the code, since this part
 c doesn't depend on having 3-dimensional GAs.
       if (calc_type.eq.2.or.calc_type.eq.5) then
+         call dfill(ipol*nctrs*nctrs, 0.0d0, dbl_mb(irdens_atom), 1)
+         if(ndim.eq.3) then
+            do isp=1,ipol
+               g_dens_org(isp)=g_dens(isp)
+            enddo
+         endif
          do isp=1,ipol
-            call util_ga_mat_reduce(nbf_ao, nctrs, int_mb(icetobfr), 
-     A           g_dens(1+(isp-1)*(nmat+1)),  1, 
-     A           dbl_mb(irdens_atom+(isp-1)*nctrs*nctrs), 'absmax', 
-     &           dbl_mb(iscr), nbf_ao_mxnbf_ce,.true.)
-            do ii=2,(nmat+1)
+            do ii=1,nmat+1
+               iptr=ii+(isp-1)*(nmat+1)
+               if(ndim.eq.3) then
+                  g_dens(iptr) =
+     =                 dft_npatch(g_dens_org,ii,nbf_ao,geom,ao_bas_han)
+               endif
+c DM in last position is the scf DM               
                call util_ga_mat_reduce(nbf_ao,nctrs,int_mb(icetobfr), 
-     A              g_dens(ii+(isp-1)*(nmat+1)),  1, 
+     A              g_dens(iptr),  1, 
      A              dbl_mb(irdens_atom+(isp-1)*nctrs*nctrs), 'absmax', 
      &              dbl_mb(iscr), nbf_ao_mxnbf_ce,.false.)
+               if(ndim.eq.3) then
+                  if (.not. ga_destroy(g_dens(iptr))) call errquit
+     P                 (pname//'failed destroy',g_dens,GA_ERR)
+               endif
             enddo
          enddo
+         if(ndim.eq.3) then
+            do isp=1,ipol
+               g_dens(isp)=g_dens_org(isp)
+            enddo
+         endif
       elseif (adft) then
         call adft_reduce(nbf_xc, nctrs, int_mb(icetobfr), tmat, ipol,
-     &                   dbl_mb(irdens_atom), nbf_xc_mxnbf_ce)
+     &                   dbl_mb(irdens_atom))
       else   
       call util_ga_mat_reduce(nbf_ao, nctrs, int_mb(icetobfr), g_dens, 
      &                        ipol, dbl_mb(irdens_atom), 'absmax', 
@@ -1040,25 +1065,3 @@ c
       return
       end
 
-      subroutine adft_reduce(nbf, nat, cetobfr, coef, ipol, rdens_atom)
-      implicit none
-      integer nbf, nat, ipol, mxnbf
-      integer cetobfr(2,nat)
-      double precision rdens_atom(nat,nat,ipol),coef(nbf,ipol)
-      double precision dabsmax
-      external dabsmax
-
-      integer iat,istart,iend
-
-      rdens_atom(:,:,:) = 0d0
-
-      do iat=1,nat
-        istart = cetobfr(1,iat)
-        iend   = cetobfr(2,iat)
-        rdens_atom(1,iat,1) = dabsmax(iend-istart+1,coef(istart,1))
-        if (ipol.gt.1) then
-          rdens_atom(1,iat,2) = dabsmax(iend-istart+1,coef(istart,2))
-        endif
-      enddo
-
-      end
