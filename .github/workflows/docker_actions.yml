@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 420
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: 'nwchemgit/nwchem-dockerfiles'
           fetch-depth: 5
@@ -35,7 +35,7 @@ jobs:
           key: ${{ matrix.folder}}-${{ matrix.fc}}/${{ matrix.archs}}-nwchem-dockeractions-v002
       - name: Qemu
         id: qemu
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           image: tonistiigi/binfmt:qemu-v6.0.0-10
       - name: Available platforms
@@ -43,7 +43,7 @@ jobs:
           echo ${{ steps.qemu.outputs.platforms }}
           docker images
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v3
         with:
           driver-opts: |
               image=moby/buildkit:v0.10.4
@@ -62,7 +62,7 @@ jobs:
         run: |
           echo "cache_hit=N" >> $GITHUB_ENV
       - name: build_schedule
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           push: false
           context: ${{ matrix.folder }}
