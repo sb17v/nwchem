@@ -1,4 +1,4 @@
-name: NWChem_CI_tahoma
+name: NWChem_CI_tahoma_test
 
 on:
   repository_dispatch:
@@ -11,7 +11,7 @@ jobs:
       inherit
   build_singularity:
     needs: [build_workflow]
-    uses: edoapra/nwchem-singularity/.github/workflows/apptainer_action.ifx.yml@master
+    uses: edoapra/nwchem-singularity/.github/workflows/apptainer_action.test.yml@master
     secrets:
       inherit
   test_on_tahoma:
@@ -23,7 +23,6 @@ jobs:
         os:
           - [self-hosted, centos7]
         branch:
-          - hotfix/release-7-2-0
           - master
         sing_image:
           - ompi41x.ifx
@@ -56,8 +55,8 @@ jobs:
           pwd
           cd ..
           rm  -rf ${{ env.dirname }}
-          wget -q https://github.com/nwchemgit/nwchem/tarball/${{ matrix.branch }} -O - | tar -xz --exclude=src --exclude=contrib --exclude=web --exclude=examples --exclude=doc --exclude=travis --exclude="nwxc*"  --exclude="chem-library-tests"
-          mv nwchemgit-nwchem-* ${{ env.dirname }}
+          wget -q https://github.com/${{ github.repository_owner }}/nwchem/tarball/${{ matrix.branch }} -O - | tar -xz --exclude=src --exclude=contrib --exclude=web --exclude=examples --exclude=doc --exclude=travis --exclude="nwxc*"  --exclude="chem-library-tests"
+          mv ${{ github.repository_owner }}-nwchem-* ${{ env.dirname }}
           ls -lr ${{ env.dirname }}/QA
         shell: bash
 
