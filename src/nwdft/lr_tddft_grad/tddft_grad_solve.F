@@ -5,7 +5,7 @@ c
       subroutine tddft_grad_solve(rtdb,ihdl_geom,ihdl_bfao,ipol,nroots,
      +           nao,nocc,naoc,nav,nfc,nfv,g_mo,iptr_mo_e,tda,oskel,
      +           kfac,lhashf,otriplet,solve_thresh,solve_maxsub,
-     +           solve_maxit,fn_solve,solve_when,tol2e,g_r,g_z)
+     +           solve_maxit,fn_solve,solve_when,tol2e,g_r,g_z,lhascd)
 c
 c     At this point Ria has just been computed. The quantities
 c     are stored in 3D global arrays as R(1)(1:nroot,1:nocca,1:nvirta),
@@ -60,7 +60,6 @@ c
 c
       logical odiff,oprint
       parameter (odiff=.true.)
-      parameter (oprint=.true.)
 c
 c     Input:
 c
@@ -70,6 +69,7 @@ c
       logical oskel       ! Use of symmetry in Fock build
       logical lhashf      ! has the functional got HF exchange
       logical otriplet    ! are we doing triplet excitations
+      logical lhascd
       integer nroots      ! the number of roots
       integer nao         ! the number of AOs
       integer nfc(2)      ! the number of frozen core orbitals
@@ -123,35 +123,20 @@ c
       logical oroot
 c
       character*32 pname
-      logical tdaloc
+      logical tdaloc, tddft_grad_tdaloc
+      external tddft_grad_tdaloc
+      logical oprint_debug
 c
       pname= "tddft_grad_solve: "
+      oprint=util_print('tddft_grad_solve',print_medium)
+      oprint_debug=util_print('tddft_grad_solvecphf',print_debug)
 c
 c     Initialize the common block for tddft_grad_solve_product and
 c     tddft_grad_solve_precond
 c
       oroot = ga_nodeid().eq.0
 c
-c Daniel (1-5-13): For a CIS calculation, we still need to solve the
-c full Z vector equation (i.e. we need to have the equation solved when
-c B =/= 0).  This is confirmed by running an RPA calculation with B = 0,
-c since there were no further modifications beyond making B = 0 for
-c that formulation of the linear response equations and you obtain the 
-c correct answer for the CIS gradients that way.
-c
-      if (lhashf) then
-        if (tda) then
-          tdaloc = .false. ! For CIS calculations
-        else
-          tdaloc = .false. ! For RPA calculations
-        endif
-      else 
-        if (tda) then
-          tdaloc = .true.  ! For TDDFT/TDA calculations
-        else
-          tdaloc = .false. ! For TDDFT calculations
-        endif
-      endif
+      tdaloc=tddft_grad_tdaloc(rtdb,tda,lhashf)
 c End test
       tdg_tol2e   = tol2e
       tdg_kfac    = kfac
@@ -176,12 +161,12 @@ c End test
       tdg_g_mo(1) = g_mo(1)
       tdg_g_mo(2) = g_mo(2)
       tdg_e_mo    = iptr_mo_e
-c      tdg_tda     = tda
       tdg_tda     = tdaloc
       tdg_oskel   = oskel
       tdg_lhashf  = lhashf
 cold  tdg_triplet = otriplet
       tdg_triplet = .false.
+      tdg_lhascd  = lhascd
 c Daniel (2-26-13): It was not obvious that we need to unset
 c fock_xc:triplet here for restricted triplet calculations to work.
       if (otriplet) then
@@ -222,6 +207,14 @@ c
         call ga_copy(g_b,g_x)
         call tddft_grad_solve_precond(g_x,0.0d0)
       endif
+      if(oprint_debug) then
+         if(oroot) write(luout,*) ' LHS'
+         call util_flush(luout)
+         call ga_print(g_x)
+         if(oroot) write(luout,*) ' RHS'
+         call util_flush(luout)
+         call ga_print(g_b)
+      endif
 c
       call ga_lkain(rtdb,g_x,g_b,tddft_grad_solve_product,
      +              tddft_grad_solve_precond,solve_thresh,
@@ -252,7 +245,7 @@ c
       if (.not.ga_destroy(g_x)) 
      +   call errquit(pname//'failed to destroy g_x',0, GA_ERR)
 c
-      if (tddft_grad_util_print('tddft grad z',print_debug)) then
+      if (util_print('tddft grad z',print_debug)) then
         if (oroot) write(LuOut,*)'DEBUG: '//pname//'Z'
         call tddft_grad_print_array(ipol,nroots,g_z,dble(ipol))
       endif
@@ -264,4 +257,41 @@ c     Reset fock_xc:triplet here for restricted triplet calculations
       endif
 c
       end
-c $Id$
+c  We manipulate the code here because the
+c R vector has the same number of terms for RPA and CIS.  This is a
+c consequence of (X-Y) = X.  It might be a good idea to avoid doing this
+c part for the Y vector since Y = 0.  Note that the coupling matrix
+c expressions H^+[V] and H^-[V] can both be nonzero for CIS, so it isn't
+c okay to skip the anti-symmetric part in the tddft_nga_cont routine.  
+c What CIS does is makes the Y vector contribution zero in the following
+c routines.
+c Set the local TDA variable so that we don't change
+c the global one.
+      logical function tddft_grad_tdaloc(rtdb,tda,lhashf)
+      implicit none
+#include "rtdb.fh"
+#include "mafdecls.fh"
+      integer rtdb
+      logical tda
+      logical lhashf
+c
+      logical tdaloc_rtdb
+c      
+      if (lhashf) then
+        if (tda) then
+          tddft_grad_tdaloc = .false. ! For CIS calculations
+        else
+          tddft_grad_tdaloc = .false. ! For RPA calculations
+        endif
+      else 
+        if (tda) then
+cold          tddft_grad_tdaloc = .true.  ! For TDDFT/TDA calculations
+          tddft_grad_tdaloc = .false.  ! For TDDFT/TDA calculations
+        else
+          tddft_grad_tdaloc = .false. ! For TDDFT calculations
+        endif
+      endif
+      if (rtdb_get(rtdb,'tddft:tdaloc',mt_log,1,tdaloc_rtdb))
+     +     tddft_grad_tdaloc=tdaloc_rtdb
+      return
+      end

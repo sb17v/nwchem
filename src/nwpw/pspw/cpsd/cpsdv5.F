@@ -63,7 +63,7 @@ cccc#include "frac_occ.fh"
     
 
 *     ***** energy variables ****
-      real*8  E(60),Egas
+      real*8  E(60),Egas,dt,emotion_time_shift
 
 *     real*8  eig(2*nemax)
 *     real*8  hml(2*nemax*nemax)
@@ -82,7 +82,7 @@ cccc#include "frac_occ.fh"
       integer ierr
 
 *     **** local variables ****
-      logical oprint,lprint,hprint,mparallelized
+      logical oprint,lprint,hprint,mparallelized,found,found_bak
       integer ms,mapping,mapping1d
       real*8  deltae,deltac,deltar
       real*8  gx,gy,gz,cx,cy,cz,sum1,sum2
@@ -93,7 +93,7 @@ cccc#include "frac_occ.fh"
       real*8 w,sumall,virial,dv
       integer nfft3
       parameter (nfft3=32)
-      character*255 full_filename
+      character*255 full_filename,full_bak
       integer tmp1(2)
 
       logical value,psi_nogrid,field_exist
@@ -105,8 +105,6 @@ cccc#include "frac_occ.fh"
       external     control_input_psi
       logical  wvfnc_expander
       external wvfnc_expander
-
-  
 
 
 *     **** external functions ****
@@ -214,6 +212,8 @@ c#include "Parallel.fh"
       external control_fractional_kT
       real*8   control_fractional_alpha
       external control_fractional_alpha
+      logical  control_gram_schmidt
+      external control_gram_schmidt
 
       integer  pspw_Efield_type
       external pspw_Efield_type
@@ -226,6 +226,7 @@ c#include "Parallel.fh"
 
       value = .true.
       pi = 4.0d0*datan(1.0d0)
+      dt = 1.0d0
 
       call nwpw_timing_init()
       call dcopy(60,0.0d0,0,E,1)
@@ -717,6 +718,7 @@ c           write(luout,1151) (psp_rc(i,ia),i=0,psp_lmax(ia))
          write(luout,1290) control_tole(),control_tolc(),control_tolr()
          write(luout,1281) control_it_in()*control_it_out(),
      >                 control_it_in(),control_it_out()
+         if (control_gram_schmidt()) write(luout,1282)
 
         if (control_fractional()) then
            write(6,1297)
@@ -744,6 +746,59 @@ c           write(luout,1151) (psp_rc(i,ia),i=0,psp_lmax(ia))
 *                |***************************|
 ******************     start iterations      **********************
 *                |***************************|
+
+*     **** open xyz and MOTION and fei file ****
+      call xyz_init()          ! unit=18
+      call MOTION_init(rtdb)   ! unit=19
+      call fei_init(rtdb)
+
+*     **** open EMOTION file ****
+      if (.not.btdb_cget(rtdb,'cpsd:emotion_filename',1,filename))
+     >  call util_file_prefix('emotion',filename)
+      call util_file_name_noprefix(filename,.false.,
+     >                             .false.,
+     >                             full_filename)
+      if (taskid.eq.MASTER) then
+
+*        **** check for backup file ****
+         call util_file_name_noprefix('EMOTION99-bak',.false.,
+     >                                .false.,
+     >                                full_bak)
+         inquire(file=full_bak,exist=found_bak)
+         if (found_bak) then
+            write(*,*)
+            write(*,*) "EMOTION99-bak exists:"
+            i=index(full_bak,' ')
+            j=index(full_filename,' ')
+            write(*,*) "   Copying ",full_bak(1:i),
+     >                 " to ",full_filename(1:j)
+            write(*,*)
+            call util_file_copy(full_bak,full_filename)
+         end if
+
+         emotion_time_shift = 0.0d0
+         inquire(file=full_filename,exist=found)
+         if (found) then
+
+*          **** make a new backup file ***
+           call util_file_copy(full_filename,full_bak)
+
+           open(unit=31,file=full_filename,form='formatted',
+     >          status='old')
+           do while (found)
+           read(31,*,end=100) emotion_time_shift,w,sumall,gx,gy,gz
+           end do
+  100      continue
+#if defined(FUJITSU) || defined(PSCALE) || defined(__crayx1) || defined(GCC46)
+#warning backspace           
+           backspace 31
+#endif
+         else
+           open(unit=31,file=full_filename,form='formatted',
+     >          status='new')
+         end if
+      end if
+
 
       if (oprint) call current_second(cpu2)
       if (oprint) call nwpw_message(14)
@@ -786,6 +841,18 @@ c           write(luout,1151) (psp_rc(i,ia),i=0,psp_lmax(ia))
             go to 2
          end if
 
+
+         !**** emotion write ****
+         if (taskid.eq.MASTER) then
+            write(31,1311) icount*it_in*dt + emotion_time_shift,
+     >                     e(1),deltae,deltac,deltar,e(2),e(3),e(4),
+     >                     e(5),e(6),e(7),e(8),e(9),e(10)
+            call util_flush(31)
+         end if
+
+         !**** xyz write ****
+         call xyz_novelocity_write()
+
 *        ***** define fractional occupation ****
          if ((icount.lt.it_out).and.fractional.and.
      >       (smeartype.ge.0)) then
@@ -821,6 +888,20 @@ c            end do
    2  continue
       if (oprint) CALL nwpw_message(3)
       if (oprint) call current_second(cpu3)
+
+      if (taskid.eq.MASTER) then
+        close(unit=31)
+*        **** remove EMOTION backup file ***
+         call util_file_name_noprefix('EMOTION99-bak',.false.,
+     >                                .false.,
+     >                                full_bak)
+         call util_file_unlink(full_bak)
+      end if
+
+*     *** close xyz and fei io ****
+      call xyz_end()
+      call MOTION_end()
+      call fei_end()
 
 *         |****************************************|
 *********** produce CHECK file and diagonalize hml *****************
@@ -1449,6 +1530,7 @@ c      call frac_occ_end()
  1280 FORMAT(5X, ' time step=',F10.2,5X,'fictitious mass=',F10.1)
  1281 FORMAT(5X, ' maximum iterations =',I10,
      >           ' ( ',I4,' inner ',I6,' outer )')
+ 1282 FORMAT(5X, ' Gram Schmidt orthonormality used')
  1290 FORMAT(5X, ' tolerance=',E9.3,' (energy)',E12.3,
      &        ' (electron)',E12.3,' (ion)')
  1297 FORMAT(/' fractional smearing parameters:')
@@ -1459,6 +1541,7 @@ c      call frac_occ_end()
  1305 FORMAT(10X,
      >       '==================== iteration =========================')
  1310 FORMAT(I8,E20.10,3E15.5)
+ 1311 format(100e19.10)
  1320 FORMAT(' number of electrons: spin up=',F11.5,'  down=',F11.5,A)
  1321 FORMAT(' total charge of system:',F11.5,A)
  1322 FORMAT('     plane-wave part:         ',F11.5,'       ',F11.5,A)
@@ -1469,10 +1552,10 @@ c      call frac_occ_end()
  1332 FORMAT(/' Elements of Hamiltonian matrix (down)')
  1333 FORMAT(/' Diagonal Elements of Hamiltonian matrix(up/restricted)')
  1334 FORMAT(/' Diagonal Elements of Hamiltonian matrix(down)')
- 1340 FORMAT(I3,2I3,' H=',E16.7,', L=',E16.7,', H-L=',E16.7)
- 1341 FORMAT(I3,2I3,' H=',E16.6)
+ 1340 FORMAT(I5,2I5,' H=',E16.7,', L=',E16.7,', H-L=',E16.7)
+ 1341 FORMAT(I5,2I5,' H=',E16.6)
  1350 FORMAT(/' orthonormality')
- 1360 FORMAT(I3,2I3,E18.7)
+ 1360 FORMAT(I5,2I5,E18.7)
  1370 FORMAT(I3)
  1380 FORMAT(' ''',a,'''',I4)
  1390 FORMAT(I3)
