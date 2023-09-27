@@ -9,6 +9,8 @@
       character*50 input_v_wavefunction_filename
       character*50 output_ewavefunction_filename
       character*50 input_ewavefunction_filename
+      character*50 output_qwavefunction_filename
+      character*50 input_qwavefunction_filename
       character*50 xyz_filename,cell_name
       character*12 boundry
       real*8      unita(3,3),unita_frozen(3,3)
@@ -24,11 +26,13 @@
       integer     code,gga,fmm_lmax,fmm_lr
       integer	  ispin,multiplicity
       integer     est_finish_time,est_step_time
-      logical     move,frac_coord,SA,fei,fei_quench,gram_schmidt
+      logical     move,frac_coord,SA,fei,fei_quench
+      logical     gram_schmidt,gram_schmidt2
       logical     rotation,translation,dof_rotation,dof_translation
       logical     balance,spin_orbit,dipole_motion
       logical     two_comp_ppot,frozen,pio,fast_erf,fmm,smooth_cutoff
       logical     hess_model,periodic_dipole,precondition
+      logical     single_precision_on
       integer     maxit_orb,maxit_orbs,scf_algorithm,ks_algorithm
       integer     diis_histories
       integer     symm_number,minimizer
@@ -49,12 +53,14 @@
      >                         ks_algorithm,minimizer,
      >                         symm_number,
      >                         move,frac_coord,SA,fei,fei_quench,
-     >                         gram_schmidt,rotation,translation,
+     >                         gram_schmidt,gram_schmidt2,
+     >                         rotation,translation,
      >                         dof_rotation,dof_translation,
      >                         balance,spin_orbit,dipole_motion,
      >                         two_comp_ppot,frozen,pio,fast_erf,
      >                         fmm,smooth_cutoff,hess_model,
-     >                         periodic_dipole,precondition
+     >                         periodic_dipole,precondition,
+     >                         single_precision_on
       common / control_blkchar / boutput_wavefunction_filename,
      >                         output_wavefunction_filename,
      >                         input_wavefunction_filename,
@@ -62,6 +68,8 @@
      >                         input_v_wavefunction_filename,
      >                         output_ewavefunction_filename,
      >                         input_ewavefunction_filename,
+     >                         output_qwavefunction_filename,
+     >                         input_qwavefunction_filename,
      >                         xyz_filename,cell_name,
      >                         boundry 
       common / control_blktime / cpu1_time,cpu2_time,

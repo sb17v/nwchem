@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # source env. variables
 if [[ -z "$TRAVIS_BUILD_DIR" ]] ; then
     TRAVIS_BUILD_DIR=$(pwd)
@@ -18,7 +18,16 @@ fi
  cd $TRAVIS_BUILD_DIR/src
      make nwchem_config
 if [[ ! -z "$USE_64TO32"  ]]; then
-     echo " CONVERSION 64_to_32"
-     make 64_to_32
+    echo " CONVERSION 64_to_32"
+    os=`uname`
+    echo output redirected to 64.log
+    if [[ "$os" == "Darwin" ]]; then
+        make 64_to_32  >& 64log 
+    else
+        make 64_to_32 CONVERT_ALL=y >& 64log
+    fi
+    echo @@@@ tail 64log
+    tail -30 64log
+    echo @@@
 fi
 env

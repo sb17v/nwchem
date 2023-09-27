@@ -1,5 +1,7 @@
 C$Id$
 
+c     Modifications (c) 2021 Advanced Micro Devices, Inc. All Rights Reserved.
+
 C #ifndef VERY_VERBOSE
 C #define VERY_VERBOSE   1
 C #endif
@@ -14,6 +16,12 @@ C #endif
 #define TEAMS_DISTRIBUTE
 #endif
 
+#ifdef USE_OMP_SCHEDULE_STATIC_1
+#define OMP_SCHEDULE schedule(static,1)
+#else
+#define OMP_SCHEDULE
+#endif
+
 #ifdef DEBUG_TRIPLESX
 #ifndef OFFLOAD_CODE
       subroutine debug_triplesx_d(triplesx, l_triplesx)
@@ -26,7 +34,7 @@ C #endif
       double precision res
       res = 0d0
       if (offload_enabled()) then
-!$omp target teams distribute parallel do map(tofrom:res)
+!$omp target TEAMS_DISTRIBUTE parallel do map(tofrom:res)
         do it=1,l_triplesx
           res = res + triplesx(it)
         enddo
@@ -38,6 +46,23 @@ C #endif
       endif
       write (*,*) 'res D triplesx:', res
       end
+#endif
+#endif
+
+#ifdef OFFLOAD_CODE
+#ifdef AOMP_MAPPING_FIXED
+c     the mapping functions won't be needed
+#else
+      subroutine offl_dbl_map(array, sz)
+        double precision array(sz)
+        integer sz
+!$omp target enter data map(to:array)
+      end subroutine
+      subroutine offl_dbl_unmap(array, sz)
+        double precision array(sz)
+        integer sz
+!$omp target exit data map(from:array)
+      end subroutine
 #endif
 #endif
 
@@ -233,9 +258,17 @@ c
          end if
       enddo
 c
+#ifdef TCE_OPENACC
+!$acc  enter data copyin(scratch(1:l_t2sub))
+!$acc& copyin(t2sub(1:l_t2sub))
+!$acc& copyin(v2sub(1:l_v2sub))
+#else
 #ifdef OFFLOAD_CODE
-#if OPENMP_OFFLOAD
+#ifdef AOMP_MAPPING_FIXED
 !$omp target data map(alloc:scratch(1:l_t2sub))
+#else
+      call offl_dbl_map(scratch, l_t2sub)
+#endif
 #endif
 #endif
       do ia6=1,9
@@ -303,8 +336,102 @@ c     figure out  cycles to work on
       write (*,'(A)',advance="no") '+'
 #endif
 #ifdef OFFLOAD_CODE
+#if AOMP_MAPPING_FIXED
 !$omp target data map(to:t2sub(1:l_t2sub)) map(to:v2sub(1:l_v2sub))
+#else
+      call offl_dbl_map(t2sub, l_t2sub)
+      call offl_dbl_map(v2sub, l_v2sub)
 #endif
+#endif
+
+#ifdef TCE_OPENACC
+!$acc update device(t2sub(1:l_t2sub))      
+!$acc update device(v2sub(1:l_v2sub))      
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d1_1(k_range_h3b_1,k_range_h2b_1,
+     1     k_range_h1b_1,k_range_p6b_1,
+     2     k_range_p5b_1,k_range_p4b_1,
+     3     k_range_h7b_1,
+     4     triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d1_2(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_h7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+         call acc_sd_t_d1_3(k_range_h3b_1,k_range_h2b_1,
+     1     k_range_h1b_1,k_range_p6b_1,
+     2     k_range_p5b_1,k_range_p4b_1,
+     3     k_range_h7b_1,
+     4     triplesx,t2sub,v2sub)
+       END IF
+      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d1_4(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_h7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d1_5(k_range_h3b_1,k_range_h2b_1,
+     1     k_range_h1b_1,k_range_p6b_1,
+     2     k_range_p5b_1,k_range_p4b_1,
+     3     k_range_h7b_1,
+     4     triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p6b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+         call acc_sd_t_d1_6(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_h7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d1_7(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_h7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d1_8(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_h7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p5b)
+     & .and. (t_h1b .eq. h2b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &1b)) THEN
+         call acc_sd_t_d1_9(k_range_h3b_1,k_range_h2b_1,
+     1     k_range_h1b_1,k_range_p6b_1,
+     2     k_range_p5b_1,k_range_p4b_1,
+     3     k_range_h7b_1,
+     4     triplesx,t2sub,v2sub)
+      END IF
+
+c if not using TCE_OPENACC:      
+#else 
+
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
      &3b)) THEN
@@ -458,8 +585,18 @@ c        call tce_sdtime0(t0)
 c         call tce_sdtime(t0,deltat_mic,
 c     ,        fdist_sdkrnl19,fdist_sdcomp19)
       END IF
+c end if using using TCE_OPENACC kernels
+#endif
+
+
 #ifdef OFFLOAD_CODE
+#if AOMP_MAPPING_FIXED
+c     unmap(to:t2sub(1:l_t2sub)) unmap(to:v2sub(1:l_v2sub))
 !$omp end target data
+#else
+      call offl_dbl_unmap(t2sub, l_t2sub)
+      call offl_dbl_unmap(v2sub, l_v2sub)
+#endif
 #endif
       endif
       END DO !h7b loop
@@ -613,8 +750,100 @@ c     figure out  cycles to work on
 #ifdef VERY_VERBOSE
       write (*, '(A)', advance="no") '='
 #endif
+#ifdef TCE_OPENACC
+!$acc update device(t2sub(1:l_t2sub))      
+!$acc update device(v2sub(1:l_v2sub))      
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d2_1(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &2b)) THEN
+         call acc_sd_t_d2_2(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &2b)) THEN
+         call acc_sd_t_d2_3(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d2_4(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &2b)) THEN
+         call acc_sd_t_d2_5(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p4b) .and. (t_p6b .eq. p6b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &2b)) THEN
+         call acc_sd_t_d2_6(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
+     &3b)) THEN
+         call acc_sd_t_d2_7(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h3b) .and. (t_h2b .eq. h1b) .and. (t_h3b .eq. h
+     &2b)) THEN
+         call acc_sd_t_d2_8(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+      IF ((t_p4b .eq. p5b) .and. (t_p5b .eq. p6b) .and. (t_p6b .eq. p4b)
+     & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h3b) .and. (t_h3b .eq. h
+     &2b)) THEN
+         call acc_sd_t_d2_9(k_range_h3b_1,k_range_h2b_1,
+     1        k_range_h1b_1,k_range_p6b_1,
+     2        k_range_p5b_1,k_range_p4b_1,
+     3        k_range_p7b_1,
+     4        triplesx,t2sub,v2sub)
+      END IF
+
+c else if not using OPENACC kernels
+#else
 #ifdef OFFLOAD_CODE
+#if AOMP_MAPPING_FIXED
 !$omp target data map(to:t2sub(1:l_t2sub)) map(to:v2sub(1:l_v2sub))
+#else
+      call offl_dbl_map(t2sub, l_t2sub)
+      call offl_dbl_map(v2sub, l_v2sub)
+#endif
 #endif
       IF ((t_p4b .eq. p4b) .and. (t_p5b .eq. p5b) .and. (t_p6b .eq. p6b)
      & .and. (t_h1b .eq. h1b) .and. (t_h2b .eq. h2b) .and. (t_h3b .eq. h
@@ -662,7 +891,7 @@ c        call tce_sdtime0(t0)
      1        k_range_h1b_1,k_range_p6b_1,
      2        k_range_p5b_1,k_range_p4b_1,
      3        k_range_p7b_1,
-     4        triplesx,t2sub,v2sub,scratch,
+     4        triplesx,t2sub,v2sub,
      D        deltat_mic)
 c         call tce_sdtime(t0,deltat_mic,
 c     ,        fdist_sdkrnl23,fdist_sdcomp23)
@@ -770,8 +999,16 @@ c        call tce_sdtime0(t0)
 c         call tce_sdtime(t0,deltat_mic,
 c     ,        fdist_sdkrnl29,fdist_sdcomp29)
       END IF
+
+#endif
 #ifdef OFFLOAD_CODE
+#ifdef AOMP_MAPPING_FIXED
+c     unmap(to:t2sub(1:l_t2sub)) unmap(to:v2sub(1:l_v2sub))
 !$omp end target data
+#else
+      call offl_dbl_unmap(t2sub, l_t2sub)
+      call offl_dbl_unmap(v2sub, l_v2sub)
+#endif
 #endif
       endif
       END DO ! p7b loop
@@ -781,13 +1018,24 @@ c
 c
       END IF
       END DO ! ia6 loop
+
+#ifdef TCE_OPENACC
+!$acc  exit data delete(t2sub(1:l_t2sub))
+!$acc& delete(v2sub(1:l_v2sub))
+!$acc& delete(scratch(1:l_t2sub))
+#else
+
 #ifdef OFFLOAD_CODE
-#ifdef OPENMP_OFFLOAD
+#ifdef AOMP_MAPPING_FIXED
+c     unmap(to:scratch(1:l_t2sub))
 !$omp end target data
+#else
+      call offl_dbl_unmap(scratch, l_t2sub)
 #endif
 #endif
 #ifdef DEBUG_TRIPLESX
       call debug_triplesx_d(triplesx, l_triplesx)
+#endif
 #endif
       RETURN
       END
@@ -814,7 +1062,7 @@ c
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2,h3,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2,h3,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -880,7 +1128,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2,h3,h1,h7)
-!$omp&collapse(4)
+!$omp&collapse(4) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2,h3,h1,h7) collapse(4)
 #endif
@@ -951,7 +1199,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h3h2,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h3h2,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -1006,7 +1254,7 @@ c
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2,h3,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2,h3,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -1071,7 +1319,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h3,h2,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h3,h2,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -1143,7 +1391,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2h3,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2h3,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -1197,7 +1445,7 @@ c
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2,h3,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2,h3,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -1261,7 +1509,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2,h3,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2,h3,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -1332,7 +1580,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h3h2,h1,h7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h3h2,h1,h7) collapse(OMPCOLLAPSE)
 #endif
@@ -1397,7 +1645,7 @@ c
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2,h1,h3,p7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2,h1,h3,p7) collapse(OMPCOLLAPSE)
 #endif
@@ -1466,7 +1714,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2h1,h3,p7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2h1,h3,p7) collapse(OMPCOLLAPSE)
 #endif
@@ -1532,7 +1780,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p5,p6,p4,h1,h3,h2,p7)
-!$omp&collapse(4)
+!$omp&collapse(4) OMP_SCHEDULE
 #else
 !$omp parallel do private(p5,p6,p4,h1,h3,h2,p7) collapse(4)
 #endif
@@ -1600,7 +1848,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2,h1,h3,p7)
-!$omp&collapse(4)
+!$omp&collapse(4) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2,h1,h3,p7) collapse(4)
 #endif
@@ -1670,7 +1918,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2h1,h3,p7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2h1,h3,p7) collapse(OMPCOLLAPSE)
 #endif
@@ -1736,7 +1984,7 @@ c
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p5,p6,p4,h1,h3,h2,p7)
-!$omp&collapse(4)
+!$omp&collapse(4) OMP_SCHEDULE
 #else
 !$omp parallel do private(p5,p6,p4,h1,h3,h2,p7) collapse(4)
 #endif
@@ -1804,7 +2052,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p5,p6,p4,h1,h3,h2,p7)
-!$omp&collapse(4)
+!$omp&collapse(4) OMP_SCHEDULE
 #else
 !$omp parallel do private(p5,p6,p4,h1,h3,h2,p7) collapse(4)
 #endif
@@ -1872,7 +2120,7 @@ c
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p4,p5,p6,h2h1,h3,p7)
-!$omp&collapse(OMPCOLLAPSE)
+!$omp&collapse(OMPCOLLAPSE) OMP_SCHEDULE
 #else
 !$omp parallel do private(p4,p5,p6,h2h1,h3,p7) collapse(OMPCOLLAPSE)
 #endif
@@ -1939,7 +2187,7 @@ CDIR$ NOINLINE
 #endif
 !$omp target
 !$omp TEAMS_DISTRIBUTE parallel do private(p5,p6,p4,h1,h3,h2,p7)
-!$omp&collapse(4)
+!$omp&collapse(4) OMP_SCHEDULE
 #else
 !$omp parallel do private(p5,p6,p4,h1,h3,h2,p7) collapse(4)
 #endif

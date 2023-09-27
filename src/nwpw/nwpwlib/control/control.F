@@ -3,9 +3,9 @@
 *
 
 *     ***********************************
-*     *					*
-*     *		control_read		*
-*     *					*
+*     *                                 *
+*     *          control_read	          *
+*     *                                 *
 *     ***********************************
       logical function control_read(code_in,rtdb)
       implicit none 
@@ -277,6 +277,11 @@ c        call nwpwxc_print()
      > spin_orbit=.false.
       if (spin_orbit) ispin=2
 
+      if (.not.btdb_get(rtdb,'cpsd:fei',mt_log,1,fei))
+     >  fei = .false.
+      if(.not.btdb_cget(rtdb,'cpsd:xyz_filename',1,xyz_filename))
+     >  call util_file_prefix('xyz',xyz_filename)
+
 
 *     ****************************************
 *     **** cpmd and band_cpmd code: stuff ****
@@ -452,13 +457,24 @@ c
          end if
       end if
 
-      if (.not.btdb_cget(rtdb,'cgsd:input_ewavefunction_filename',
-     >                  1,input_ewavefunction_filename))
-     >  call util_file_prefix('emovecs',input_ewavefunction_filename)
+      !**** determing input_ewavefunction_filename ****
+      if (.not.btdb_cget(rtdb, 'pspw:input evectors', 
+     >                   1,input_ewavefunction_filename)) then
+         if (.not.btdb_cget(rtdb,'cgsd:input_ewavefunction_filename',
+     >                     1,input_ewavefunction_filename))
+     >     call util_file_prefix('emovecs',input_ewavefunction_filename)
+      end if
 
-      if (.not.btdb_cget(rtdb,'cgsd:output_ewavefunction_filename',
-     >                  1,output_ewavefunction_filename))
-     >  call util_file_prefix('emovecs',output_ewavefunction_filename)
+
+      !**** determing output_ewavefunction_filename ****
+      if (.not.btdb_cget(rtdb,'pspw:output evectors', 
+     >                   1,output_ewavefunction_filename)) then
+         if (.not.btdb_cget(rtdb,'cgsd:output_ewavefunction_filename',
+     >                     1,output_ewavefunction_filename)) then
+            output_ewavefunction_filename=input_ewavefunction_filename
+         end if
+      end if
+
 
       if (code.eq.11) then
      
@@ -1217,6 +1233,11 @@ c         return
       if ((code.eq.4) .or.(code.eq.9).or.(code.eq.10))
      >   has_ngrid_small = .false.
 
+*     **** set single_p;recision hfx ****
+      if (.not.btdb_get(rtdb,'pspw:HFX_single_precision',mt_log,1,
+     >                  single_precision_on))
+     >   single_precision_on = .false.
+
 
 *     **** set fractional (smearing) parameters ****
       if (.not.
@@ -1258,6 +1279,12 @@ c         return
       if (.not.btdb_get(rtdb,
      >      'nwpw:gram-schmidt',mt_log,1,gram_schmidt))
      >  gram_schmidt = .false.
+
+*     **** set gram_schmidt2 ***
+      gram_schmidt2 = .false.
+      if (.not.btdb_get(rtdb,
+     >      'nwpw:gram-schmidt2',mt_log,1,gram_schmidt2))
+     >  gram_schmidt2 = .false.
 
 *     **** set translation ***
       translation = control_allow_translation()
@@ -2807,6 +2834,20 @@ c      end
       return 
       end
 
+*     ***********************************
+*     *					*
+*     *		control_output_qpsi	*
+*     *					*
+*     ***********************************
+      character*50 function control_output_qpsi()
+      implicit none
+
+#include "control.fh"
+
+      control_output_qpsi = output_qwavefunction_filename
+      return 
+      end
+
 
 *     ***********************************
 *     *					*
@@ -2834,6 +2875,20 @@ c      end
 #include "control.fh"
 
       control_input_epsi = input_ewavefunction_filename
+      return 
+      end
+
+*     ***********************************
+*     *					*
+*     *		control_input_qpsi	*
+*     *					*
+*     ***********************************
+      character*50 function control_input_qpsi()
+      implicit none
+
+#include "control.fh"
+
+      control_input_qpsi = input_qwavefunction_filename
       return 
       end
 
@@ -3282,6 +3337,50 @@ c     >               (ispin.eq.ispin_wf))
       control_check_number_virtuals = check
       return
       end
+
+
+*     *****************************************
+*     *                                       *
+*     *      control_check_q_orbitals         *
+*     *                                       *
+*     *****************************************
+      logical function control_check_q_orbitals()
+      implicit none
+
+#include "control.fh"
+
+*    *** local variables ***
+      logical check
+      integer ispin_wf,ne_wf(2),ne(2)
+
+*     ***** local functions ****
+      logical  qpsi_filefind
+      external qpsi_filefind
+      integer  psi_ne
+      external psi_ne
+
+*     **** check wavefunction file ****
+      if (qpsi_filefind()) then
+
+*        **** get mult and e-charge from wavefunction file ****
+         call psi_get_ne_qpsi(ispin_wf,ne_wf)
+         ne(1) = psi_ne(1)
+         ne(2) = psi_ne(2)
+
+         check = ((ne(1).eq.ne_wf(1)).and.
+     >            (ne(2).eq.ne_wf(2)).and.
+     >            (ispin.eq.ispin_wf))
+
+*     **** no wavefunction file ***
+      else
+         check = .false.
+      end if
+
+      control_check_q_orbitals = check
+      return
+      end
+
+
 
 
 
@@ -4122,7 +4221,7 @@ c      end if
 *     *****************************
 *     *                	          *		 
 *     *   control_pspparameters   *
-*     *                 	  *
+*     *                	          *		 
 *     *****************************
       subroutine control_pspparameters(atom,lmax,locp,rlocal)
       implicit none
@@ -4164,6 +4263,120 @@ c      end if
       
       return
       end
+
+*     **********************************
+*     *                                *              
+*     *      control_psp_reset         *
+*     *                                *
+*     **********************************
+      logical function control_psp_reset(atom)
+      implicit none
+      character*4 atom
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+#include "errquit.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical reset
+      integer k,l
+      character*5  element
+      character*50 rtdb_name
+
+      element = '     '
+      element = atom
+      l = index(element,' ') - 1
+      rtdb_name = '                      '
+      rtdb_name = element(1:l)//':psp_reset'
+      reset = .false.
+
+      k = index(rtdb_name,' ') - 1
+      if (.not.btdb_get(rtdb,rtdb_name(1:k),mt_log,1,reset)) 
+     >   reset = .false.
+     
+      control_psp_reset = reset
+      return
+      end
+
+*     **********************************
+*     *                                *              
+*     *      control_psp_reset_new     *
+*     *                                *
+*     **********************************
+      subroutine control_psp_reset_new(atom)
+      implicit none
+      character*4 atom
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+#include "errquit.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical reset
+      integer k,l
+      character*5  element
+      character*50 rtdb_name
+
+      element = '     '
+      element = atom
+      l = index(element,' ') - 1
+      rtdb_name = '                      '
+      rtdb_name = element(1:l)//':psp_reset'
+      reset = .true.
+
+      k = index(rtdb_name,' ') - 1
+      if (.not.btdb_put(rtdb,rtdb_name(1:k),mt_log,1,reset))
+     >   call errquit('control_psp_reset_new: failed',0,RTDB_ERR)
+
+      return
+      end
+
+*     **********************************
+*     *                                *
+*     *    control_psp_reset_delete    *
+*     *                                *
+*     **********************************
+      subroutine control_psp_reset_delete(atom)
+      implicit none
+      character*4 atom
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+#include "errquit.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical reset,tmp
+      integer k,l
+      character*5  element
+      character*50 rtdb_name
+
+      element = '     '
+      element = atom
+      l = index(element,' ') - 1
+      rtdb_name = '                       '
+      rtdb_name = element(1:l)//':psp_reset'
+      reset = .true.
+
+      k = index(rtdb_name,' ') - 1
+      if (btdb_get(rtdb,rtdb_name(1:k),mt_log,1,tmp)) then
+        if (tmp) then
+           if (.not.rtdb_delete(rtdb,rtdb_name(1:k)))
+     >       call errquit('control_psp_reset_delete: failed',0,RTDB_ERR)
+        end if
+      end if
+
+      return
+      end
+
 
 *     **********************************
 *     *                                *              
@@ -4312,9 +4525,9 @@ c      end if
 
 
 *     ***************************
-*     *                	   	*
-*     *    control_gram_schmidt *
-*     *                  	*
+*     *                         *
+*     *   control_gram_schmidt  *
+*     *                         *
 *     ***************************
       logical function control_gram_schmidt()
       implicit none
@@ -4324,6 +4537,21 @@ c      end if
       control_gram_schmidt=gram_schmidt
       return
       end
+
+*     ***************************
+*     *                         *
+*     *  control_gram_schmidt2  *
+*     *                         *
+*     ***************************
+      logical function control_gram_schmidt2()
+      implicit none
+
+#include "control.fh"
+
+      control_gram_schmidt2=gram_schmidt2
+      return
+      end
+
 
 
 *     ***************************
@@ -5420,6 +5648,31 @@ c      end if
       return
       end
 
+*     ***********************************
+*     *                                 *
+*     *    control_kbpp_filter_scale    *
+*     *                                 *
+*     ***********************************
+      real*8 function control_kbpp_filter_scale()
+      implicit none
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+      
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+      
+      real*8 scal
+
+      scal = 1.0d0
+      if (.not.btdb_get(rtdb,'nwpw:kbpp_filter_scale',mt_dbl,1,scal))
+     >  scal=1.0d0
+      
+      control_kbpp_filter_scale = scal
+      return
+      end
+
 
 *     ***********************************
 *     *                                 *
@@ -5760,6 +6013,33 @@ c      end if
       return
       end
 
+
+*     ***********************************
+*     *                                 *
+*     *       control_3x3ne_virtual     *
+*     *                                 *
+*     ***********************************
+      logical function control_3x3ne_virtual()
+      implicit none
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      logical value
+
+      value = .false.
+      if (.not.btdb_get(rtdb,'nwpw:3x3ne_virtual',mt_log,1,value))
+     >   value = .false.
+
+      control_3x3ne_virtual = value
+      return
+      end
+
+
 *     ***********************************
 *     *                                 *
 *     *       control_4x4_virtual       *
@@ -5807,8 +6087,8 @@ c      end if
       external control_2x2_virtual,control_3x3_virtual
       logical  control_4x4_virtual
       external control_4x4_virtual
-      logical  control_2x2ne_virtual
-      external control_2x2ne_virtual
+      logical  control_2x2ne_virtual,control_3x3ne_virtual
+      external control_2x2ne_virtual,control_3x3ne_virtual
       
       ivalue = 0
       if (.not.btdb_get(rtdb,'nwpw:CI_virtual',mt_int,1,ivalue)) then
@@ -5820,6 +6100,8 @@ c      end if
             ivalue = 4
          else if (control_2x2ne_virtual()) then
             ivalue = 5
+         else if (control_3x3ne_virtual()) then
+            ivalue = 6
          end if
       end if
       
@@ -7091,13 +7373,13 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       common / control_rtdb1 / rtdb
 
 *     **** external functions ****
-      logical  nwpw_cosmo_on
-      external nwpw_cosmo_on
+      logical  nwpw_cosmo_on, nwpw_born_on
+      external nwpw_cosmo_on, nwpw_born_on
 
       real*8 egas
 
       egas = 0.0d0
-      if (nwpw_cosmo_on()) then
+      if (nwpw_cosmo_on().or.nwpw_born_on()) then
          if (.not.btdb_get(rtdb,'nwpw:gas_energy',mt_dbl,1,egas))
      >      egas = 0.0d0
       end if
@@ -7124,12 +7406,12 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       common / control_rtdb1 / rtdb
 
 *     **** extertnal functions ****
-      logical  nwpw_cosmo_on
-      external nwpw_cosmo_on
+      logical  nwpw_cosmo_on,nwpw_born_on
+      external nwpw_cosmo_on,nwpw_born_on
       logical ok
 
       ok=.true.
-      if (.not.nwpw_cosmo_on()) then
+      if (.not.(nwpw_cosmo_on().or.nwpw_born_on())) then
          ok=ok.and.btdb_put(rtdb,'nwpw:gas_energy',mt_dbl,1,egas)
       end if
       control_gas_energy_set=ok
@@ -7363,3 +7645,47 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       control_Efield_on = value
       return
       end
+
+
+*     *********************************************
+*     *                                           *
+*     *        control_single_precision_on        *
+*     *                                           *
+*     *********************************************
+      logical function control_single_precision_on()
+      implicit none
+
+#include "control.fh"
+
+      control_single_precision_on = single_precision_on
+      return
+      end
+
+
+
+*     ***********************************
+*     *                                 *
+*     *        control_CI_cg_thresh     *
+*     *                                 *
+*     ***********************************
+      real*8 function control_CI_cg_thresh()
+      implicit none
+
+#include "bafdecls.fh"
+#include "btdb.fh"
+
+*     **** control_rtdb common block ****
+      integer rtdb
+      common / control_rtdb1 / rtdb
+
+      real*8 thresh
+
+      thresh = 1.5d0 
+      if (.not.btdb_get(rtdb,'nwpw:CI_cg_thresh',mt_dbl,1,thresh))
+     >   thresh = 1.5d0
+
+      control_CI_cg_thresh = thresh
+      return
+      end
+
+

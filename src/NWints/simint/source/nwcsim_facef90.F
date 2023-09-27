@@ -67,6 +67,9 @@ c     needed for 1-e integrals
 c
 c     create shells simint structure
 c
+      call simint_initialize_multi_shellpair(bra_msh)
+      call simint_initialize_multi_shellpair(ket_msh)
+ 
       nwcsim_nbas=nbas
       do ibasis=1,nbas
          basis = bases(ibasis) 
@@ -138,11 +141,7 @@ c
 c
 c      iszb_2e4c=isz_2e4c
       
-      if(num_der.eq.1) then
-         memb_2e4c = mem_2e4c + mem_2e4c/5
-      else
-         memb_2e4c = mem_2e4c + mem_2e4c/10 ! +10% to be safe
-      endif
+      memb_2e4c = mem_2e4c + mem_2e4c/5  ! +20% to be safe
       call util_align(isz_2e4c,SIMINT_SIMD_LEN)
       call util_align(mem_2e4c,SIMINT_SIMD_LEN)
       call util_align(memb_2e4c,SIMINT_SIMD_LEN)
@@ -176,6 +175,8 @@ c
       pname="nwcsim_termina"
 c
       if(nwcsim_initialized) then
+      call simint_free_multi_shellpair(bra_msh)
+      call simint_free_multi_shellpair(ket_msh)
       do ibasis=1,nwcsim_nbas
          bas=nwcsim_bas(ibasis)
             do icsh=1,nwcsim_noshell(bas)

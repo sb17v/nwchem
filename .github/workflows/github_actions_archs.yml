@@ -2,6 +2,8 @@ name: NWChem_CI_archs
 
 on:
   push:
+    paths-ignore:
+      - .gitlab-ci.yml
   pull_request:
   release:
   schedule:
@@ -14,13 +16,13 @@ jobs:
     if: |
       github.event_name == 'schedule' ||
       (!contains(github.event.head_commit.message, 'ci skip') && (contains(github.event.head_commit.message, 'do_extra_archs')||github.event_name == 'workflow_dispatch'))
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - arch: aarch64
             distro_short: ubuntu
-            distro: ubuntu18.04
+            distro: ubuntu20.04
             ftarget: " TARGET=ARMV8"
             blas: "build_openblas"
             scalapack: "off"
@@ -38,7 +40,7 @@ jobs:
             fc: "nvfortran"
           - arch: ppc64le
             distro_short: ubuntu
-            distro: ubuntu18.04
+            distro: ubuntu20.04
             blas: "build_openblas"
             scalapack: "on"
             ftarget: " TARGET=POWER8"
@@ -50,12 +52,12 @@ jobs:
     steps: 
       - name: Setup cache
         id: setup-cache
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: |
             ~/cache
-          key: ${{ runner.os }}-${{ matrix.mpi_impl}}-${{ matrix.distro}}-${{ matrix.arch}}-nwchem-v006
-      - uses: actions/checkout@v2
+          key: ${{ runner.os }}-${{ matrix.mpi_impl}}-${{ matrix.distro}}-${{ matrix.arch}}-nwchem-v009
+      - uses: actions/checkout@v4
         name: Checkout
         with:
           fetch-depth: 40
@@ -65,17 +67,13 @@ jobs:
           cd src/tools
           ./get-tools-github
           cd ..
-          mkdir -p ../bin/LINUX64
-          gcc -o ../bin/LINUX64/depend.x config/depend.c
           make USE_INTERNALBLAS=y nwchem_config NWCHEM_MODULES="${{ matrix.nwchem_modules }}"
-          make USE_INTERNALBLAS=y deps_stamp
-          rm -f ../bin/LINUX64/depend.x
       - name: reconfig when needed
         if: steps.setup-cache.outputs.cache-hit != 'true'
         run: |
           cd src
           make USE_INTERNALBLAS=y nwchem_config NWCHEM_MODULES="nwdft driver solvation"
-      - uses: uraimo/run-on-arch-action@v2.0.9
+      - uses: uraimo/run-on-arch-action@v2
         name: Build and Test NWChem
         id: build
         with:
@@ -93,7 +91,7 @@ jobs:
           env: |
             FORCETARGET: ${{ matrix.ftarget }}
             COMEX_MAX_NB_OUTSTANDING: 4
-            SIMINT_MAXAM: 3
+            SIMINT_MAXAM: 4
             MPI_IMPL: ${{ matrix.mpi_impl }}
             ARMCI_NETWORK: MPI-TS
             FC: ${{ matrix.fc }}
@@ -110,7 +108,7 @@ jobs:
             export DEBIAN_FRONTEND=noninteractive
             apt-get install -y tzdata apt-utils
             dpkg-reconfigure --frontend noninteractive tzdata
-            DEBIAN_FRONTEND=noninteractive apt-get install -q -y sudo git  gfortran curl wget unzip perl rsync python3-dev python-dev cmake 
+            DEBIAN_FRONTEND=noninteractive apt-get install -q -y sudo git  gfortran curl wget unzip perl rsync python3-dev python-dev cmake libnuma1
             ;;
             fedora*)
             dnf -y update
