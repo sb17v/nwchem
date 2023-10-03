@@ -174,6 +174,15 @@ if [[ "$os" == "Linux" ]]; then
 #            sh ./"$hpc".sh -a -c -s --action remove --install-dir  $IONEAPI_ROOT  --eula accept
 	    
             sh ./"$base".sh -a -c -s --action install --components intel.oneapi.lin.mkl.devel --install-dir $IONEAPI_ROOT  --eula accept
+	    if [[ "$?" != 0 ]]; then
+		df -h
+		echo "base kit install failed: exit code " "${?}"
+		exit 1
+	    fi
+	    rm  -rf $IONEAPI_ROOT/mkl/latest/lib/ia32
+	    rm  -rf $IONEAPI_ROOT/mkl/latest/lib/intel64/*sycl*
+	    rm  -rf $IONEAPI_ROOT/mkl/latest/lib/intel64/*_pgi_*
+	    rm  -rf $IONEAPI_ROOT/mkl/latest/lib/intel64/*_gf_*
 	    intel_components="intel.oneapi.lin.ifort-compiler:intel.oneapi.lin.dpcpp-cpp-compiler-pro"
 	    if [[ "$MPI_IMPL" == "intel" ]]; then
 		intel_components+=":intel.oneapi.lin.mpi.devel"
@@ -186,17 +195,19 @@ if [[ "$os" == "Linux" ]]; then
 		echo "hpc kit install failed: exit code " "${?}"
 		exit 1
 	    fi
+	    rm  -rf $IONEAPI_ROOT/compiler/latest/linux/lib/oclfpga
 	    rm -f ./"$hpc".sh ./"$base".sh
 #Critical updates for 2023.2
-#	    wget https://registrationcenter-download.intel.com/akdlm/IRC_NAS/0d65c8d4-f245-4756-80c4-6712b43cf835/l_fortran-compiler_p_2023.2.1.8.sh
-#	    sh l_fortran-compiler_p_2023.2.1.8.sh -a -c -s --action install --install-dir $IONEAPI_ROOT  --components intel.oneapi.lin.ifort-compiler  --eula accept
-#	    wget https://registrationcenter-download.intel.com/akdlm/IRC_NAS/ebf5d9aa-17a7-46a4-b5df-ace004227c0e/l_dpcpp-cpp-compiler_p_2023.2.1.8.sh
-#	    sh l_dpcpp-cpp-compiler_p_2023.2.1.8.sh -a -s  --install-dir $IONEAPI_ROOT  --eula accept
+	    wget https://registrationcenter-download.intel.com/akdlm/IRC_NAS/0d65c8d4-f245-4756-80c4-6712b43cf835/l_fortran-compiler_p_2023.2.1.8.sh
+	    sh l_fortran-compiler_p_2023.2.1.8.sh -a -c -s --action install --install-dir $IONEAPI_ROOT  --components intel.oneapi.lin.ifort-compiler  --eula accept
+	    wget https://registrationcenter-download.intel.com/akdlm/IRC_NAS/ebf5d9aa-17a7-46a4-b5df-ace004227c0e/l_dpcpp-cpp-compiler_p_2023.2.1.8.sh
+	    sh l_dpcpp-cpp-compiler_p_2023.2.1.8.sh -a -s  --install-dir $IONEAPI_ROOT  --eula accept
 	    if [[ "$?" != 0 ]]; then
 		echo "apt-get install failed: exit code " "${?}"
 		exit 1
 	    fi
 	    rm -f l_*comp*sh || true
+	    rm  -rf $IONEAPI_ROOT/compiler/latest/linux/lib/oclfpga || true
             source "$IONEAPI_ROOT"/setvars.sh || true
 	    export I_MPI_F90="$FC"
 	    "$FC" -V ; if [[ $? != 0 ]]; then echo "Intel SW install failed"; exit 1; fi
@@ -248,11 +259,12 @@ if [[ "$os" == "Linux" ]]; then
 	if [[ "$FC" == "nvfortran" ]]; then
 	    $MYSUDO apt-get -y install lmod g++ libtinfo5 libncursesw5 lua-posix lua-filesystem lua-lpeg lua-luaossl
 	    nv_major=23
-	    nv_minor=3
+	    nv_minor=7
 	    nverdot="$nv_major"."$nv_minor"
 	    nverdash="$nv_major"-"$nv_minor"
 	    arch_dpkg=`dpkg --print-architecture`
-	    echo 'deb [trusted=yes] https://developer.download.nvidia.com/hpc-sdk/ubuntu/'$arch_dpkg' /' | $MYSUDO tee /etc/apt/sources.list.d/nvhpc.list
+	    curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --yes --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
+            echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/'$arch_dpkg' /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
 	    echo '*** added hpc-sdk source to /etc/aps ***'
 	    ls -lrt /etc/apt/sources.list.d/ || true
 	    ls -lrt	/etc/apt/sources.list.d/nvhpc.list || true
@@ -266,7 +278,10 @@ if [[ "$os" == "Linux" ]]; then
 	    export PATH=/opt/nvidia/hpc_sdk/Linux_"$arch"/"$nverdot"/compilers/bin:$PATH
 	    export LD_LIBRARY_PATH=/opt/nvidia/hpc_sdk/Linux_"$arch"/"$nverdot"/compilers/lib:$LD_LIBRARY_PATH
 	    $MYSUDO /opt/nvidia/hpc_sdk/Linux_"$arch"/"$nverdot"/compilers/bin/makelocalrc -x
-	    
+	    #clean stuff we do not use
+	    $MYSUDO rm -rf /opt/nvidia/hpc_sdk/Linux_"$arch"/"$nverdot"/profilers
+	    $MYSUDO rm -rf /opt/nvidia/hpc_sdk/Linux_"$arch"/"$nverdot"/comm_libs
+	    $MYSUDO rm -rf /opt/nvidia/hpc_sdk/Linux_"$arch"/"$nverdot"/math_libs
 	    export FC=nvfortran
 	    export CC=gcc
 	    nvfortran -V ;if [[ $? != 0 ]]; then echo "nvfortran install failed"; exit 1; fi
