@@ -27,10 +27,6 @@ int stack_name_in_use = 0;
 
 void tpi_start_(int * n)
 {
-#if defined(MPI)
-    HPM_Init();
-#endif
-
 #if defined(MPI) && defined(DEBUG)
     int rank = 0;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -82,12 +78,6 @@ void tpi_stop_(void)
     free(active_timers);
     free(timer_total);
 
-#if defined(MPI)
-    HPM_Print();
-    HPM_Print_Flops();
-    HPM_Print_Flops_Agg();
-#endif
-
     return;
 }
 
@@ -121,7 +111,6 @@ void tpi_push_name_(char * name, int n)
     stack_name_in_use = 1;
 
 #if defined(MPI)
-    HPM_Start(stack_name);
     timer_push = MPI_Wtime();
 #elif defined(OMP)
     timer_push = omp_get_wtime();
@@ -144,7 +133,6 @@ void tpi_pop_name_(char * name, int n)
 
 #if defined(MPI)
     timer_pop = MPI_Wtime();
-    HPM_Stop(stack_name);
 #elif defined(OMP)
     timer_pop = omp_get_wtime();
 #endif
