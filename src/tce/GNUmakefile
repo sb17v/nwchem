@@ -103,7 +103,7 @@ USES_BLAS = tce_mbpt2.F tce_residual_t1.F tce_residual_t2.F \
             tce_mo2e_zones_4a_disk_ga_chop_N5.F tce_mod1_new.F new_ga4ind_N5.F new4ind_N5_osu.F \
             tce_read_t.F
 
-SUBDIRS = include diis diis2 gradients \
+SUBDIRS = include tpi diis diis2 gradients \
           ccsd ccsd_lambda eomccsd \
           ccsd_t cr-eomccsd_t lrh emb \
           ccd lccd lccsd qcisd cc3 \
