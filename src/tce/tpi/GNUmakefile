@@ -1,7 +1,6 @@
 #$Id$
 
-OBJ_OPTIMIZE = add_block.o ccsd_t2.o ccsd_t2_driver.o ccsd_t2_terms.o \
-	get_block.o get_block_ind.o put_block.o \
+OBJ_OPTIMIZE = add_block.o get_block.o get_block_ind.o put_block.o \
 	tce_profile_agemm.o tce_profile_nxtask.o \
 	tce_profile_sort.o tce_profile_sortacc.o
                
