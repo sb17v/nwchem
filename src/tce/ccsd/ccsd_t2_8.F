@@ -135,7 +135,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       ELSE
       isuperp = isuperp + 1
       END IF
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,2.0d0/FACTORIAL(
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,2.0d0/FACTORIAL(
      &nsuperp(1))/FACTORIAL(nsuperp(2)),dbl_mb(k_as),dim_common,dbl_
      &mb(k_bs),dim_common,1.0d0,dbl_mb(k_cs),dima_sort)
       IF (.not.MA_POP_STACK(l_bs)) CALL ERRQUIT('ccsd_t2_8',7,MA_ERR
@@ -227,7 +227,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       allocate(f_a(1:dimhhpp),stat=e_a)
       allocate(f_b(1:dimpppp),stat=e_b)
       allocate(f_c(1:dimhhpp),stat=e_c)
-# ifndef USE_LOOPS_NOT_DGEMM
+# ifndef USE_LOOPS_NOT_AGEMM
       allocate(f_t(1:dimtemp),stat=e_t)
 # endif
 #else
@@ -237,7 +237,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       if(.not.MA_PUSH_GET(mt_dbl,dimpppp,"b",l_b,k_b)) e_b=-1
       e_c=0
       if(.not.MA_PUSH_GET(mt_dbl,dimhhpp,"c",l_c,k_c)) e_c=-1
-# ifndef USE_LOOPS_NOT_DGEMM
+# ifndef USE_LOOPS_NOT_AGEMM
       e_t=0
       if(.not.MA_PUSH_GET(mt_dbl,dimtemp,"t",l_t,k_t)) e_t=-1
 # else
@@ -293,7 +293,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
                   dima = dim_common * dima_sort
                   dimb = dim_common * dimb_sort
                   IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                    CALL GET_HASH_BLOCK(d_a,f_a,dima,
      &                  int_mb(k_a_offset),(h2b_1-1+noab*(h1b_1-1+noab*
      &                  (p6b_1-noab-1+nvab*(p5b_1-noab-1)))))
@@ -307,7 +307,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &                  4,3,2,1,1.0d0)
 #endif
                    if(.not.intorb) then
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                     CALL GET_HASH_BLOCK(d_b,f_b,dimb,
      &                   int_mb(k_b_offset),(p6b_2-1+(noab+nvab)*
      &                   (p5b_2-1+(noab+nvab)*(p4b_2-1+(noab+nvab)*
@@ -319,7 +319,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &                   (p3b_2-1)))))
 #endif
                    else
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                     CALL GET_HASH_BLOCK_I(d_b,f_b,dimb,
      &                   int_mb(k_b_offset),(p6b_2-1+(noab+nvab)*
      &                   (p5b_2-1+(noab+nvab)*(p4b_2-1+(noab+nvab)*
@@ -331,7 +331,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &                   (p3b_2-1)))),p6b_2,p5b_2,p4b_2,p3b_2)
 #endif
                    end if
-#ifndef USE_LOOPS_NOT_DGEMM
+#ifndef USE_LOOPS_NOT_AGEMM
                    CALL TCE_SORT_4(f_t,f_b,
      &                  int_mb(k_range+p3b-1),int_mb(k_range+p4b-1),
      &                  int_mb(k_range+p5b-1),int_mb(k_range+p6b-1),
@@ -342,7 +342,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
                    else
                     alpha = 2.0d0
                    end if
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                    call t2_p8(int_mb(k_range+h1b-1),
      &                        int_mb(k_range+h2b-1),
      &                        int_mb(k_range+p3b-1),
@@ -352,7 +352,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &                        f_a,f_b,f_c,
      &                        0.5d0*alpha)
 #else
-                   CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+                   CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &                  alpha,f_a,dim_common,f_b,
      &                  dim_common,1.0d0,f_c,dima_sort)
 #endif
@@ -361,7 +361,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
                 END IF
                END DO
               END DO
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
               CALL ADD_HASH_BLOCK(d_c,f_c,dimc,
      &             int_mb(k_c_offset),(h2b-1+noab*(h1b-1+noab*
      &             (p4b-noab-1+nvab*(p3b-noab-1)))))
@@ -393,7 +393,7 @@ celse// USE_F90_ALLOCATABLE
                   dima = dim_common * dima_sort
                   dimb = dim_common * dimb_sort
                   IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                    CALL GET_HASH_BLOCK(d_a,dbl_mb(k_a),dima,
      &                  int_mb(k_a_offset),(h2b_1-1+noab*(h1b_1-1+noab*
      &                  (p6b_1-noab-1+nvab*(p5b_1-noab-1)))))
@@ -407,7 +407,7 @@ celse// USE_F90_ALLOCATABLE
      &                  4,3,2,1,1.0d0)
 #endif
                    if(.not.intorb) then
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                     CALL GET_HASH_BLOCK(d_b,dbl_mb(k_b),dimb,
      &                   int_mb(k_b_offset),(p6b_2-1+(noab+nvab)*
      &                   (p5b_2-1+(noab+nvab)*(p4b_2-1+(noab+nvab)*
@@ -419,7 +419,7 @@ celse// USE_F90_ALLOCATABLE
      &                   (p3b_2-1)))))
 #endif
                    else
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                     CALL GET_HASH_BLOCK_I(d_b,dbl_mb(k_b),dimb,
      &                   int_mb(k_b_offset),(p6b_2-1+(noab+nvab)*
      &                   (p5b_2-1+(noab+nvab)*(p4b_2-1+(noab+nvab)*
@@ -431,7 +431,7 @@ celse// USE_F90_ALLOCATABLE
      &                   (p3b_2-1)))),p6b_2,p5b_2,p4b_2,p3b_2)
 #endif
                    end if
-#ifndef USE_LOOPS_NOT_DGEMM
+#ifndef USE_LOOPS_NOT_AGEMM
                    CALL TCE_SORT_4(dbl_mb(k_t),dbl_mb(k_b),
      &                  int_mb(k_range+p3b-1),int_mb(k_range+p4b-1),
      &                  int_mb(k_range+p5b-1),int_mb(k_range+p6b-1),
@@ -442,7 +442,7 @@ celse// USE_F90_ALLOCATABLE
                    else
                     alpha = 2.0d0
                    end if
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
                    call t2_p8(int_mb(k_range+h1b-1),
      &                        int_mb(k_range+h2b-1),
      &                        int_mb(k_range+p3b-1),
@@ -452,7 +452,7 @@ celse// USE_F90_ALLOCATABLE
      &                        dbl_mb(k_a),dbl_mb(k_b),dbl_mb(k_c),
      &                        0.5d0*alpha)
 #else
-                   CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+                   CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &                  alpha,dbl_mb(k_a),dim_common,dbl_mb(k_b),
      &                  dim_common,1.0d0,dbl_mb(k_c),dima_sort)
 #endif
@@ -461,7 +461,7 @@ celse// USE_F90_ALLOCATABLE
                 END IF
                END DO
               END DO
-#ifdef USE_LOOPS_NOT_DGEMM
+#ifdef USE_LOOPS_NOT_AGEMM
               CALL ADD_HASH_BLOCK(d_c,dbl_mb(k_c),dimc,
      &             int_mb(k_c_offset),(h2b-1+noab*(h1b-1+noab*
      &             (p4b-noab-1+nvab*(p3b-noab-1)))))
@@ -493,11 +493,11 @@ cendif// USE_F90_ALLOCATABLE
       deallocate(f_a,stat=e_a)
       deallocate(f_b,stat=e_b)
       deallocate(f_c,stat=e_c)
-# ifndef USE_LOOPS_NOT_DGEMM
+# ifndef USE_LOOPS_NOT_AGEMM
       deallocate(f_t,stat=e_t)
 # endif
 #else
-# ifndef USE_LOOPS_NOT_DGEMM
+# ifndef USE_LOOPS_NOT_AGEMM
       e_t=0
       if(.not.MA_POP_STACK(l_t)) e_t=-1
 # else
@@ -671,7 +671,7 @@ c
                    else
                     alpha = 2.0d0
                    end if
-                   call dgemm('T','N',dim12,dim34,dim56,alpha,
+                   call agemm('T','N',dim12,dim34,dim56,alpha,
      2                  dbl_mb(k_as),dim56,dbl_mb(k_bs),dim56,
      3                  1.0d0,dbl_mb(k_cs),dim12)
 c
@@ -723,7 +723,7 @@ c
       RETURN
       END
 
-      SUBROUTINE ccsd_t2_8_task_dgemm(d_a,k_a_offset,
+      SUBROUTINE ccsd_t2_8_task_agemm(d_a,k_a_offset,
      &                                d_b,k_b_offset,
      &                                d_c,k_c_offset,
      &                                maxh,maxp)
@@ -840,7 +840,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
                    else
                     alpha = 2.0d0
                    end if
-                   CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+                   CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &                  alpha,f_a,dim_common,f_b,
      &                  dim_common,1.0d0,f_c,dima_sort)
                   END IF
@@ -1292,7 +1292,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       END
 
 
-      SUBROUTINE ccsd_t2_8_dgemm_exec(d_a,k_a_offset,
+      SUBROUTINE ccsd_t2_8_agemm_exec(d_a,k_a_offset,
      &                                d_b,k_b_offset,
      &                                d_c,k_c_offset,
      &                                maxh,maxp,
@@ -1404,7 +1404,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
                else
                 alpha = 2.0d0
                end if
-               CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+               CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      &              alpha,f_a,dim_common,f_b,
      &              dim_common,1.0d0,f_c,dima_sort)
               END IF
@@ -1436,7 +1436,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       END
 
 
-      SUBROUTINE ccsd_t2_8_dgemm_driver(d_a,k_a_offset,
+      SUBROUTINE ccsd_t2_8_agemm_driver(d_a,k_a_offset,
      &                                  d_b,k_b_offset,
      &                                  d_c,k_c_offset,
      &                                  maxh,maxp)
@@ -1462,7 +1462,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       allocate(task_list(4,1:num_tasks),stat=e_tl)
       if (e_tl.ne.0) call errquit("alloc task_list",num_tasks,MA_ERR)
       call ccsd_t2_8_make_list(num_tasks, task_list)
-      call ccsd_t2_8_dgemm_exec(d_a,k_a_offset,
+      call ccsd_t2_8_agemm_exec(d_a,k_a_offset,
      &                          d_b,k_b_offset,
      &                          d_c,k_c_offset,
      &                          maxh,maxp,

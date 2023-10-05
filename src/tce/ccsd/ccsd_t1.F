@@ -251,7 +251,7 @@ ccx        IF (next.eq.count) THEN
      2               2,1,1.0d0)
                 IF (.not.MA_POP_STACK(l_b))
      1               CALL ERRQUIT('ccsd_t1_2',6,MA_ERR)
-                CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+                CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1               dbl_mb(k_a),dim_common,dbl_mb(k_bs),dim_common,
      2               1.0d0,dbl_mb(k_cs),dima_sort)
                 IF (.not.MA_POP_STACK(l_bs))
@@ -489,7 +489,7 @@ C     i1 ( h7 h1 )_ft + = 1 * Sum ( p3 ) * t ( p3 h1 )_t * i2 ( h7 p3 )_f
                 CALL GET_HASH_BLOCK(d_b,dbl_mb(k_b),dimb,
      1               int_mb(k_b_offset),
      2               (p3b_2 - noab - 1 + nvab * (h7b_2 - 1)))
-                CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+                CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1               dbl_mb(k_as),dim_common,dbl_mb(k_b),dim_common,
      2               1.0d0,dbl_mb(k_c),dima_sort)
                 IF (.not.MA_POP_STACK(l_b))
@@ -781,7 +781,7 @@ C     i2 ( h7 p3 )_vt + = -1 * Sum ( h6 p5 ) * t ( p5 h6 )_t * v ( h6 h7 p3 p5 )
                  END IF
                  IF (.not.MA_POP_STACK(l_b))
      1                CALL ERRQUIT('ccsd_t1_2_2_2',6,MA_ERR)
-                 CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+                 CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      1                1.0d0,dbl_mb(k_as),dim_common,dbl_mb(k_bs),
      2                dim_common,1.0d0,dbl_mb(k_cs),dima_sort)
                  IF (.not.MA_POP_STACK(l_bs))
@@ -941,7 +941,7 @@ C     i1 ( h7 h1 )_vt + = -1 * Sum ( h5 p4 ) * t ( p4 h5 )_t * v ( h5 h7 h1 p4 )
      &,3,1,2,4,-1.0d0)
       END IF
       IF (.not.MA_POP_STACK(l_b)) CALL ERRQUIT('ccsd_t1_2_3',6,MA_ERR)
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1     dbl_mb(k_as),dim_common,dbl_mb(k_bs),dim_common,1.0d0,
      2     dbl_mb(k_cs),dima_sort)
       IF (.not.MA_POP_STACK(l_bs))
@@ -1127,7 +1127,7 @@ C     i1 ( h7 h1 )_vt + = -1/2 * Sum ( h5 p3 p4 ) * t ( p3 p4 h1 h5 )_t * v ( h5
       ELSE
       isuperp = isuperp + 1
       END IF
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,2.0d0/FACTORIAL(
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,2.0d0/FACTORIAL(
      &nsuperp(1))/FACTORIAL(nsuperp(2)),dbl_mb(k_as),dim_common,dbl_
      &mb(k_bs),dim_common,1.0d0,dbl_mb(k_cs),dima_sort)
       IF (.not.MA_POP_STACK(l_bs)) CALL ERRQUIT('ccsd_t1_2_4',7,MA_E
@@ -1243,7 +1243,7 @@ C     i0 ( p2 h1 )_tf + = 1 * Sum ( p3 ) * t ( p3 h1 )_t * i1 ( p2 p3 )_f
                 CALL GET_HASH_BLOCK(d_b,dbl_mb(k_b),dimb,
      1               int_mb(k_b_offset),
      2               (p3b_2 - noab - 1 + nvab * (p2b_2 - noab - 1)))
-                CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+                CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1               dbl_mb(k_as),dim_common,dbl_mb(k_b),dim_common,
      2               1.0d0,dbl_mb(k_c),dima_sort)
                 IF (.not.MA_POP_STACK(l_b))
@@ -1516,7 +1516,7 @@ C     i1 ( p2 p3 )_vt + = -1 * Sum ( h5 p4 ) * t ( p4 h5 )_t * v ( h5 p2 p3 p4 )
      &,3,2,1,4,1.0d0)
       END IF
       IF (.not.MA_POP_STACK(l_b)) CALL ERRQUIT('ccsd_t1_3_2',6,MA_ERR)
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1     dbl_mb(k_as),dim_common,dbl_mb(k_bs),dim_common,1.0d0,
      2     dbl_mb(k_cs),dima_sort)
       IF (.not.MA_POP_STACK(l_bs))
@@ -1657,7 +1657,7 @@ C     i0 ( p2 h1 )_vt + = -1 * Sum ( h4 p3 ) * t ( p3 h4 )_t * v ( h4 p2 h1 p3 )
      &,3,2,1,4,1.0d0)
       END IF
       IF (.not.MA_POP_STACK(l_b)) CALL ERRQUIT('ccsd_t1_4',6,MA_ERR)
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1     dbl_mb(k_as),dim_common,dbl_mb(k_bs),dim_common,
      2     1.0d0,dbl_mb(k_cs),dima_sort)
       IF (.not.MA_POP_STACK(l_bs))
@@ -1797,7 +1797,7 @@ C     i0 ( p2 h1 )_tf + = 1 * Sum ( p7 h8 ) * t ( p2 p7 h1 h8 )_t * i1 ( h8 p7 )
                  CALL GET_HASH_BLOCK(d_b,dbl_mb(k_b),dimb,
      1                int_mb(k_b_offset),(p7b_2 - noab - 1 + nvab * 
      2                (h8b_2 - 1)))
-                 CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+                 CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      1                1.0d0,dbl_mb(k_as),dim_common,dbl_mb(k_b),
      2                dim_common,1.0d0,dbl_mb(k_cs),dima_sort)
                  IF (.not.MA_POP_STACK(l_b))
@@ -2107,7 +2107,7 @@ C     i1 ( h8 p7 )_vt + = 1 * Sum ( h6 p5 ) * t ( p5 h6 )_t * v ( h6 h8 p5 p7 )_
      &,3,1,2,4,1.0d0)
       END IF
       IF (.not.MA_POP_STACK(l_b)) CALL ERRQUIT('ccsd_t1_5_2',6,MA_ERR)
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1     dbl_mb(k_as),dim_common,dbl_mb(k_bs),dim_common,
      2     1.0d0,dbl_mb(k_cs),dima_sort)
       IF (.not.MA_POP_STACK(l_bs))
@@ -2268,7 +2268,7 @@ C     i0 ( p2 h1 )_vt + = -1/2 * Sum ( h4 h5 p3 ) * t ( p2 p3 h4 h5 )_t * i1 ( h
       ELSE
       isubh = isubh + 1
       END IF
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      1     2.0d0/FACTORIAL(nsubh(1))/FACTORIAL(nsubh(2)),dbl_mb(k_as),
      2     dim_common,dbl_mb(k_bs),dim_common,1.0d0,dbl_mb(k_cs),
      3     dima_sort)
@@ -2586,7 +2586,7 @@ C     i1 ( h4 h5 h1 p3 )_vt + = -1 * Sum ( p6 ) * t ( p6 h1 )_t * v ( h4 h5 p3 p
      2     int_mb(k_range+p3b-1),int_mb(k_range+p6b-1),3,2,1,4,1.0d0)
       END IF
       IF (.not.MA_POP_STACK(l_b)) CALL ERRQUIT('ccsd_t1_6_2',6,MA_ERR)
-      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
+      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,1.0d0,
      1     dbl_mb(k_as),dim_common,dbl_mb(k_bs),dim_common,1.0d0,
      2     dbl_mb(k_cs),dima_sort)
       IF (.not.MA_POP_STACK(l_bs)) CALL ERRQUIT('ccsd_t1_6_2',7,MA_ERR)
@@ -2742,7 +2742,7 @@ C     i0 ( p2 h1 )_vt + = -1/2 * Sum ( h5 p3 p4 ) * t ( p3 p4 h1 h5 )_t * v ( h5
                   ELSE
                    alpha = 2.0d0
                   END IF
-                  CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,
+                  CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,
      1                 alpha,dbl_mb(k_as),dim_common,dbl_mb(k_bs),
      2                 dim_common,1.0d0,dbl_mb(k_c),dima_sort)
                   IF (.not.MA_POP_STACK(l_bs)) 

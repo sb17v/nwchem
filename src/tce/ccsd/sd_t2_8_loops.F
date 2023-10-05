@@ -138,7 +138,7 @@ ccx      IF (.not.MA_POP_STACK(l_b)) CALL ERRQUIT('icsd_t2_8',6,MA_ERR)
       ELSE
       isuperp = isuperp + 1
       END IF
-ccx      CALL DGEMM('T','N',dima_sort,dimb_sort,dim_common,2.0d0/FACTORIAL(
+ccx      CALL AGEMM('T','N',dima_sort,dimb_sort,dim_common,2.0d0/FACTORIAL(
 ccx     &nsuperp(1))/FACTORIAL(nsuperp(2)),dbl_mb(k_a_sort),dim_common,dbl_
 ccx     &mb(k_b_sort),dim_common,1.0d0,dbl_mb(k_c_sort),dima_sort)
 ccx      IF (.not.MA_POP_STACK(l_b_sort)) CALL ERRQUIT('icsd_t2_8',7,MA_ERR
