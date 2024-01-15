@@ -244,6 +244,8 @@
                   emp4k = 0.0d0
                   emp5k = 0.0d0
 
+!$acc data copy(emp4i,emp5i,emp4k,emp5k)
+
                   do i=1,nocc
 
                      call ga_nbget(g_objv,1+(j-1)*nvir+(i-1)*lnov,
@@ -622,7 +624,7 @@
 #endif
 
 !$acc parallel loop tile(32,32) private(denom)
-!$acc&         reduction(+:emp4i,emp5i)
+!$acc&         reduction(+:emp4i,emp5i) present(emp4i,emp5i)
 !$acc&         async(9)
                do b=1,nvir
                  do c=1,nvir
@@ -649,7 +651,7 @@
                end do
                if (i.ne.k) then
 !$acc parallel loop tile(32,32) private(denom)
-!$acc&         reduction(+:emp4k,emp5k)
+!$acc&         reduction(+:emp4k,emp5k) present(emp4k,emp5k)
 !$acc&         async(10)
                do b=1,nvir
                  do c=1,nvir
@@ -701,6 +703,8 @@
                   else
                      call qexit('accwait',0)
                   endif
+
+!$acc end data
 
                   emp4 = emp4 + emp4i
                   emp5 = emp5 + emp5i
