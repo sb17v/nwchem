@@ -1325,6 +1325,8 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                                       scalarIn, scalarOut, desc, modes)
                use cutensor_v2
                implicit none
+#include "stdio.fh"
+#include "errquit.fh"
                type(cutensorHandle), intent(in) :: handle
                integer, intent(in) :: ex1,ex2,ex3,ex4
                integer, intent(in) :: mode1,mode2,mode3,mode4
@@ -1337,6 +1339,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                integer(8), dimension(ndim) :: strides
                integer, parameter :: ialign = 128
                type(cutensorStatus) :: cstat
+               integer :: i
 
                scalarOut = scalarOut * scalarIn
 
@@ -1356,9 +1359,10 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                cstat = cutensorCreateTensorDescriptor(handle, desc,
      &                           ndim, extents, strides,
      &                           cuTensorDataType(CUDA_R_64F), ialign)
-               if (cstat.ne.CUTENSOR_STATUS_SUCCESS)
-     &              write(LuOut,*) cutensorGetErrorString(cstat)
-                    CALL ERRQUIT('create_cutensor_tensor_view',cstat,UNKNOWN_ERR)
+
+               if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+                 write(LuOut,*) cutensorGetErrorString(cstat)
+                 CALL ERRQUIT('create_cutensor_tensor_view',cstat,UNKNOWN_ERR)
                end if
 
       end subroutine create_cutensor_tensor_view
