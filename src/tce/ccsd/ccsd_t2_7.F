@@ -1323,7 +1323,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                                       ex1,ex2,ex3,ex4,
      &                                       mode1,mode2,mode3,mode4,
      &                                       scalarIn, scalarOut, desc, modes)
-               use cutensor
+               use cutensor_v2
                implicit none
                type(cutensorHandle), intent(in) :: handle
                integer, intent(in) :: ex1,ex2,ex3,ex4
