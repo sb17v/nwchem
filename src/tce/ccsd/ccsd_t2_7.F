@@ -1314,3 +1314,51 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
       call GA_SYNC()
 
       END
+
+
+      ! this function creates a tensor descriptor and assigns the modes
+      ! accordingly (i.e., it can be interpreted as a tensor view--no
+      ! computation is happening here)
+      subroutine create_cutensor_tensor_view(handle,
+     &                                       ex1,ex2,ex3,ex4,
+     &                                       mode1,mode2,mode3,mode4,
+     &                                       scalarIn, scalarOut, desc, modes)
+               use cutensor
+               implicit none
+               type(cutensorHandle), intent(in) :: handle
+               integer, intent(in) :: ex1,ex2,ex3,ex4
+               integer, intent(in) :: mode1,mode2,mode3,mode4
+               double precision, intent(in) :: scalarIn
+               double precision, intent(out) :: scalarOut
+               type(cutensorTensorDescriptor), intent(out) :: desc
+               integer, parameter :: ndim = 4
+               integer(4), dimension(ndim), intent(out) :: modes
+               integer(8), dimension(ndim) :: extents
+               integer(8), dimension(ndim) :: strides
+               integer, parameter :: ialign = 128
+               type(cutensorStatus) :: cstat
+
+               scalarOut = scalarOut * scalarIn
+
+               extents(1) = ex1
+               extents(2) = ex2
+               extents(3) = ex3
+               extents(4) = ex4
+               modes(1) = mode1
+               modes(2) = mode2
+               modes(3) = mode3
+               modes(4) = mode4
+               strides(ndim) = 1
+               do i = ndim-1, 1, -1
+                 strides(i) = strides(i+1) * extents(i+1)
+               end do
+
+               cstat = cutensorCreateTensorDescriptor(handle, desc,
+     &                           ndim, extents, strides,
+     &                           cuTensorDataType(CUDA_R_64F), ialign)
+               if (cstat.ne.CUTENSOR_STATUS_SUCCESS)
+     &              write(LuOut,*) cutensorGetErrorString(cstat)
+                    CALL ERRQUIT('create_cutensor_tensor_view',cstat,UNKNOWN_ERR)
+               end if
+
+      end subroutine create_cutensor_tensor_view
