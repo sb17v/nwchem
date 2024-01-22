@@ -1649,9 +1649,9 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
 !     &                  int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
 !     &                  5,6,1,3,1.0d0,alpha, descC, modesC)
                    CALL create_cutensor_tensor_view(handle,
-     &                  int_mb(k_range+p3b-1),int_mb(k_range+h6b-1),
-     &                  int_mb(k_range+h1b-1),int_mb(k_range+p5b-1),
-     &                  3,6,1,5,1.0d0,alpha, descC, modesC)
+     &                  int_mb(k_range+p3b-1),int_mb(k_range+h1b-1),
+     &                  int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
+     &                  3,1,5,6,1.0d0,alpha, descC, modesC)
 
                    cstat = cutensorCreateContraction(handle, cdesc,
      &                 descA, modesA, CUTENSOR_OP_IDENTITY,
