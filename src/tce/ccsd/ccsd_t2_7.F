@@ -1426,11 +1426,6 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
       !h8 = 4
       !p7 = 5
 
-      modesC(1) = 3
-      modesC(2) = 6
-      modesC(3) = 1
-      modesC(4) = 5
-
       ! Init
       err = cudaStreamCreate(stream)
       if (err.ne.0) call errquit('cudaStreamCreate',err,UNKNOWN_ERR)
@@ -1643,6 +1638,11 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
 
                    descCompute = CUTENSOR_COMPUTE_DESC_64F
                    
+                   modesC(1) = 3
+                   modesC(2) = 6
+                   modesC(3) = 1
+                   modesC(4) = 5
+
                    ! p3,h6,h1,p5 <- p5,h6,h1,p3
 !                   CALL create_cutensor_tensor_view(handle,
 !     &                  int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
