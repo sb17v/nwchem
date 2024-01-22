@@ -1417,7 +1417,6 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
       integer, parameter :: ndim = 4
       real :: alpha, beta
       integer(4), dimension(ndim) :: modesA, modesB, modesC
-      integer(8) :: workspace_size
 
       ! unique identifies for each mode
       !p3 = 0
@@ -1644,10 +1643,15 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
 
                    descCompute = CUTENSOR_COMPUTE_DESC_64F
                    
+                   ! p3,h6,h1,p5 <- p5,h6,h1,p3
+!                   CALL create_cutensor_tensor_view(handle,
+!     &                  int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
+!     &                  int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
+!     &                  5,6,1,3,1.0d0,alpha, descC, modesC)
                    CALL create_cutensor_tensor_view(handle,
-     &                  int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
-     &                  int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
-     &                  5,6,8,3,-0.5d0,alpha, descC, modesC)
+     &                  int_mb(k_range+p3b-1),int_mb(k_range+h6b-1),
+     &                  int_mb(k_range+h1b-1),int_mb(k_range+p5b-1),
+     &                  3,6,1,5,1.0d0,alpha, descC, modesC)
 
                    cstat = cutensorCreateContraction(handle, cdesc,
      &                 descA, modesA, CUTENSOR_OP_IDENTITY,
@@ -1658,7 +1662,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                print *,cutensorGetErrorString(cstat)
 
                    cstat = cutensorCreatePlan(handle, plan, cdesc,
-     &                     pref, workspace_size)
+     &                     pref, dimhhpp*3)
                    if (cstat.ne.CUTENSOR_STATUS_SUCCESS)
      &                 print *,cutensorGetErrorString(cstat)
 
@@ -1669,12 +1673,17 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                  print *,cutensorGetErrorString(cstat)
                    ! p5,h6,h1,p3 <- (h1,p3),(h8,p7)^T x (p5,h6),(h8,p7) 
                    ! CALL DGEMM('T','N',m,n,k,1.0d0,f_a,k,f_b,k,beta,f_c,m)
-                   beta = 1.0d0
+                   !beta = 1.0d0
 
                    err = cudaStreamSynchronize(stream)
                    if (err.ne.0) then
                      call errquit('cudaStreamSync',err,UNKNOWN_ERR)
                    endif
+
+                   f_t = -0.5d0 * f_c
+                   CALL ADD_HASH_BLOCK(d_c,f_t,dimc,
+     &                  int_mb(k_c_offset),(h6b-1+noab*(p5b-noab-1+nvab*
+     &                  (h1b-1+noab*( p3b-noab-1)))))
 
                    cstat = cutensorDestroyPlan(plan)
                    if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
@@ -1692,17 +1701,17 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                 END IF
                END DO
               END DO
-              f_t = f_c
+!              f_t = f_c
               ! TODO avoid this permute & merge scaling into last GETT
               ! p3,h6,h1,p5 <- p5,h6,h1,p3
 !              CALL TCE_SORT_4_x(f_c,f_t,
 !     &             int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
 !     &             int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
-!     &             4,2,3,1,-1.0d0/2.0d0)
-              CALL ADD_HASH_BLOCK(d_c,f_t,dimc,
-     &             int_mb(k_c_offset),(h6b-1+noab*(p5b-noab-1+nvab*
-     &             (h1b-1+noab*( p3b-noab-1)))))
-              next = NXTASK(nprocs, 1)
+!     &             4,2,3,1,-0.5d0)
+!              CALL ADD_HASH_BLOCK(d_c,f_t,dimc,
+!     &             int_mb(k_c_offset),(h6b-1+noab*(p5b-noab-1+nvab*
+!     &             (h1b-1+noab*( p3b-noab-1)))))
+!              next = NXTASK(nprocs, 1)
              END IF
              count = count+1
             END IF
