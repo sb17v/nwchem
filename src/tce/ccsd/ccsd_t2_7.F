@@ -1388,8 +1388,8 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
       integer :: p7b_in,h8b_in
       integer :: dima, dimb, dimc, dima_sort, dimb_sort, dim_common
 #ifdef USE_TCE_CUBLAS
-!      double precision, allocatable, dimension(:), pinned :: f_t
-      double precision, allocatable, dimension(:), device :: f_a, f_b, f_c,f_t 
+      double precision, allocatable, dimension(:), pinned :: f_t
+      double precision, allocatable, dimension(:), device :: f_a, f_b, f_c, f_w
 #else
 #warning NO GPU ALLOCATIONS
       double precision, allocatable, dimension(:) :: f_t
@@ -1399,7 +1399,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
       INTEGER :: NXTASK
       EXTERNAL NXTASK
 
-      integer :: p3,p5,p7,h1,h6,h8 !mode IDs
+      !integer :: p3,p5,p7,h1,h6,h8 !mode IDs
       integer :: dimhhpp, m, n
       integer :: e_a
 
@@ -1419,18 +1419,18 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
       integer(4), dimension(ndim) :: modesA, modesB, modesC
       integer(8) :: workspace_size
 
-      modesC(1) = p3
-      modesC(2) = h6
-      modesC(3) = h1
-      modesC(4) = p5
-
       ! unique identifies for each mode
-      p3 = 0
-      h6 = 1
-      h1 = 2
-      p5 = 3
-      h8 = 4
-      p7 = 5
+      !p3 = 0
+      !h6 = 1
+      !h1 = 2
+      !p5 = 3
+      !h8 = 4
+      !p7 = 5
+
+      modesC(1) = 3
+      modesC(2) = 6
+      modesC(3) = 1
+      modesC(4) = 5
 
       ! Init
       err = cudaStreamCreate(stream)
@@ -1447,7 +1447,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
 
       dimhhpp = maxh*maxh*maxp*maxp
       allocate( f_a(1:dimhhpp), f_b(1:dimhhpp), f_c(1:dimhhpp), 
-     &          f_t(1:dimhhpp*3), stat=e_a)
+     &          f_w(1:dimhhpp*3), f_t(1:dimhhpp), stat=e_a)
       if (e_a .ne. 0) then
         CALL ERRQUIT('ccsd_t2_7_3_y',dimhhpp*4,MA_ERR)
       end if
@@ -1502,7 +1502,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
 
                   IF ((dima .gt. 0) .and. (dimb .gt. 0)) THEN
                    IF ((p7b .lt. p3b) .and. (h8b .lt. h1b)) THEN
-                    CALL GET_HASH_BLOCK(d_a,f_a,dima,
+                    CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                   int_mb(k_a_offset),(h1b_1-1+noab*(h8b_1-1+noab*
      &                   (p3b_1-noab-1+nvab*(p7b_1-noab-1)))))
 !                    CALL TCE_SORT_4_X(f_t,f_a,
@@ -1512,40 +1512,53 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                      CALL create_cutensor_tensor_view(handle,
      &                    int_mb(k_range+p7b-1),int_mb(k_range+p3b-1),
      &                    int_mb(k_range+h8b-1),int_mb(k_range+h1b-1),
-     &                    p7,p3,h8,h1,1.0d0,
-     &                    alpha, descA, modesA)
+     &                    7,3,8,1,1.0d0,alpha, descA, modesA)
                    IF ((p7b .lt. p3b) .and. (h1b .le. h8b)) THEN
-                    CALL GET_HASH_BLOCK(d_a,f_a,dima,
+                    CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                   int_mb(k_a_offset),(h8b_1-1+noab*(h1b_1-1+noab*
      &                   (p3b_1-noab-1+nvab*(p7b_1-noab-1)))))
                     ! h1,p3,h8,p7 <- p7,p3,h1,h8
-                    CALL TCE_SORT_4_x(f_t,f_a,
-     &                   int_mb(k_range+p7b-1),int_mb(k_range+p3b-1),
-     &                   int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
-     &                   3,2,4,1,-1.0d0)
+!                    CALL TCE_SORT_4_x(f_t,f_a,
+!     &                   int_mb(k_range+p7b-1),int_mb(k_range+p3b-1),
+!     &                   int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
+!     &                   3,2,4,1,-1.0d0)
+                     CALL create_cutensor_tensor_view(handle,
+     &                    int_mb(k_range+p7b-1),int_mb(k_range+p3b-1),
+     &                    int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
+     &                    7,3,1,8,-1.0d0,alpha, descA, modesA)
                    END IF
                    IF ((p3b .le. p7b) .and. (h8b .lt. h1b)) THEN
-                   CALL GET_HASH_BLOCK(d_a,f_a,dima,
+                   CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                  int_mb(k_a_offset),(h1b_1-1+noab*(h8b_1-1+noab*
      &                  (p7b_1-noab-1+nvab*(p3b_1-noab-1)))))
-                   CALL TCE_SORT_4_x(f_t,f_a,
-     &                  int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
-     &                  int_mb(k_range+h8b-1),int_mb(k_range+h1b-1),
-     &                  4,1,3,2,-1.0d0)
+!                   CALL TCE_SORT_4_x(f_t,f_a,
+!     &                  int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
+!     &                  int_mb(k_range+h8b-1),int_mb(k_range+h1b-1),
+!     &                  4,1,3,2,-1.0d0)
+                     CALL create_cutensor_tensor_view(handle,
+     &                    int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
+     &                    int_mb(k_range+h8b-1),int_mb(k_range+h1b-1),
+     &                    3,7,8,1,-1.0d0,alpha, descA, modesA)
                    END IF
                    IF ((p3b .le. p7b) .and. (h1b .le. h8b)) THEN
-                   CALL GET_HASH_BLOCK(d_a,f_a,dima,
+                   CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                  int_mb(k_a_offset),(h8b_1-1+noab*(h1b_1-1+noab*
      &                  (p7b_1-noab-1+nvab*(p3b_1-noab-1)))))
                    ! h1,p3,h8,p7 <- p3,p7,h1,h8
-                   CALL TCE_SORT_4_x(f_t,f_a,
-     &                  int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
-     &                  int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
-     &                  3,1,4,2,1.0d0)
+!                   CALL TCE_SORT_4_x(f_t,f_a,
+!     &                  int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
+!     &                  int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
+!     &                  3,1,4,2,1.0d0)
+                     CALL create_cutensor_tensor_view(handle,
+     &                    int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
+     &                    int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
+     &                    3,7,1,8,1.0d0,alpha, descA, modesA)
                    END IF
+                   f_a = f_t
+
                    IF ((h8b .lt. h6b) .and. (p7b .lt. p5b)) THEN
                     if(.not.intorb) then
-                     CALL GET_HASH_BLOCK(d_b,f_b,dimb,
+                     CALL GET_HASH_BLOCK(d_b,f_t,dimb,
      &                    int_mb(k_b_offset),(p5b_2-1+(noab+nvab)*
      &                    (p7b_2-1+(noab+nvab)*(h6b_2-1+(noab+nvab)*
      &                    (h8b_2-1)))))
@@ -1555,14 +1568,18 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                    (p7b_2-1+(noab+nvab)*(h6b_2-1+(noab+nvab)*
      &                    (h8b_2-1)))),p5b_2,p7b_2,h6b_2,h8b_2)
                     end if
-                    CALL TCE_SORT_4_x(f_t,f_b,
+!                    CALL TCE_SORT_4_x(f_t,f_b,
+!     &                   int_mb(k_range+h8b-1),int_mb(k_range+h6b-1),
+!     &                   int_mb(k_range+p7b-1),int_mb(k_range+p5b-1),
+!     &                   4,2,1,3,1.0d0)
+                    CALL create_cutensor_tensor_view(handle,
      &                   int_mb(k_range+h8b-1),int_mb(k_range+h6b-1),
      &                   int_mb(k_range+p7b-1),int_mb(k_range+p5b-1),
-     &                   4,2,1,3,1.0d0)
+     &                   8,6,7,5,1.0d0,alpha, descB, modesB)
                    END IF
                    IF ((h8b .lt. h6b) .and. (p5b .le. p7b)) THEN
                     if(.not.intorb) then
-                    CALL GET_HASH_BLOCK(d_b,f_b,dimb,
+                    CALL GET_HASH_BLOCK(d_b,f_t,dimb,
      &                   int_mb(k_b_offset),(p7b_2-1+(noab+nvab)*
      &                   (p5b_2-1+(noab+nvab)*(h6b_2-1+(noab+nvab)*
      &                   (h8b_2-1)))))
@@ -1572,14 +1589,18 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                   (p5b_2-1+(noab+nvab)*(h6b_2-1+(noab+nvab)*
      &                   (h8b_2-1)))),p7b_2,p5b_2,h6b_2,h8b_2)
                     end if
-                   CALL TCE_SORT_4_x(f_t,f_b,
-     &                  int_mb(k_range+h8b-1),int_mb(k_range+h6b-1),
-     &                  int_mb(k_range+p5b-1),int_mb(k_range+p7b-1),
-     &                  3,2,1,4,-1.0d0)
+!                   CALL TCE_SORT_4_x(f_t,f_b,
+!     &                  int_mb(k_range+h8b-1),int_mb(k_range+h6b-1),
+!     &                  int_mb(k_range+p5b-1),int_mb(k_range+p7b-1),
+!     &                  3,2,1,4,-1.0d0)
+                    CALL create_cutensor_tensor_view(handle,
+     &                   int_mb(k_range+h8b-1),int_mb(k_range+h6b-1),
+     &                   int_mb(k_range+p5b-1),int_mb(k_range+p7b-1),
+     &                   8,6,5,7,-1.0d0,alpha, descB, modesB)
                    END IF
                    IF ((h6b .le. h8b) .and. (p7b .lt. p5b)) THEN
                     if(.not.intorb) then
-                    CALL GET_HASH_BLOCK(d_b,f_b,dimb,
+                    CALL GET_HASH_BLOCK(d_b,f_t,dimb,
      &                   int_mb(k_b_offset),(p5b_2-1+(noab+nvab)*
      &                   (p7b_2-1+(noab+nvab)*(h8b_2-1+(noab+nvab)*
      &                   (h6b_2-1)))))
@@ -1589,14 +1610,18 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                   (p7b_2-1+(noab+nvab)*(h8b_2-1+(noab+nvab)*
      &                   (h6b_2-1)))),p5b_2,p7b_2,h8b_2,h6b_2)
                     end if
-                    CALL TCE_SORT_4_x(f_t,f_b,
+!                    CALL TCE_SORT_4_x(f_t,f_b,
+!     &                   int_mb(k_range+h6b-1),int_mb(k_range+h8b-1),
+!     &                   int_mb(k_range+p7b-1),int_mb(k_range+p5b-1),
+!     &                   4,1,2,3,-1.0d0)
+                    CALL create_cutensor_tensor_view(handle,
      &                   int_mb(k_range+h6b-1),int_mb(k_range+h8b-1),
      &                   int_mb(k_range+p7b-1),int_mb(k_range+p5b-1),
-     &                   4,1,2,3,-1.0d0)
+     &                   6,8,7,5,-1.0d0,alpha, descB, modesB)
                    END IF
                    IF ((h6b .le. h8b) .and. (p5b .le. p7b)) THEN
                     if(.not.intorb) then
-                    CALL GET_HASH_BLOCK(d_b,f_b,dimb,
+                    CALL GET_HASH_BLOCK(d_b,f_t,dimb,
      &                   int_mb(k_b_offset),(p7b_2-1+(noab+nvab)*
      &                   (p5b_2-1+(noab+nvab)*(h8b_2-1+(noab+nvab)*
      &                   (h6b_2-1)))))
@@ -1606,11 +1631,16 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                   (p5b_2-1+(noab+nvab)*(h8b_2-1+(noab+nvab)*
      &                   (h6b_2-1)))),p7b_2,p5b_2,h8b_2,h6b_2)
                     end if
-                    CALL TCE_SORT_4_x(f_t,f_b,
+!                    CALL TCE_SORT_4_x(f_t,f_b,
+!     &                   int_mb(k_range+h6b-1),int_mb(k_range+h8b-1),
+!     &                   int_mb(k_range+p5b-1),int_mb(k_range+p7b-1),
+!     &                   3,1,2,4,1.0d0)
+                    CALL create_cutensor_tensor_view(handle,
      &                   int_mb(k_range+h6b-1),int_mb(k_range+h8b-1),
      &                   int_mb(k_range+p5b-1),int_mb(k_range+p7b-1),
-     &                   3,1,2,4,1.0d0)
+     &                   6,8,5,7,1.0d0,alpha, descB, modesB)
                    END IF
+                   f_b = f_t
 
                    descCompute = CUTENSOR_COMPUTE_DESC_64F
                    
@@ -1629,12 +1659,17 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
 
                    cstat = cutensorContract(handle, plan, alpha,
      &                 f_a, f_b, beta, f_c, f_c,
-     &                 f_t, dimhhpp*3, stream)
+     &                 f_w, dimhhpp*3, stream)
                    if (cstat.ne.CUTENSOR_STATUS_SUCCESS)
      &                  print *,cutensorGetErrorString(cstat)
                    ! p5,h6,h1,p3 <- (h1,p3),(h8,p7)^T x (p5,h6),(h8,p7) 
                    ! CALL DGEMM('T','N',m,n,k,1.0d0,f_a,k,f_b,k,beta,f_c,m)
                    beta = 1.0d0
+
+                   err = cudaStreamSynchronize(stream)
+                   if (err.ne.0) then
+                     call errquit('cudaStreamSync',err,UNKNOWN_ERR)
+                   endif
 
                    cstat = cutensorDestroyPlan(plan)
                    if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
@@ -1651,13 +1686,14 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                 END IF
                END DO
               END DO
+              f_t = f_c
               ! TODO avoid this permute & merge scaling into last GETT
               ! p3,h6,h1,p5 <- p5,h6,h1,p3
 !              CALL TCE_SORT_4_x(f_c,f_t,
 !     &             int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
 !     &             int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
 !     &             4,2,3,1,-1.0d0/2.0d0)
-              CALL ADD_HASH_BLOCK(d_c,f_c,dimc,
+              CALL ADD_HASH_BLOCK(d_c,f_t,dimc,
      &             int_mb(k_c_offset),(h6b-1+noab*(p5b-noab-1+nvab*
      &             (h1b-1+noab*( p3b-noab-1)))))
               next = NXTASK(nprocs, 1)
@@ -1678,7 +1714,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
       err = cudaStreamDestroy(stream)
       if (err.ne.0) call errquit('cudaStreamDestroy',err,UNKNOWN_ERR)
 
-      deallocate( f_a, f_b, f_c, f_t, stat=e_a )
+      deallocate( f_a, f_b, f_c, f_t, f_w, stat=e_a )
       if (e_a .ne. 0) then
         CALL ERRQUIT('ccsd_t2_7_3_y',e_a,MA_ERR)
       end if
