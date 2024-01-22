@@ -1644,6 +1644,11 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
 
                    descCompute = CUTENSOR_COMPUTE_DESC_64F
                    
+                   CALL create_cutensor_tensor_view(handle,
+     &                  int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
+     &                  int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
+     &                  5,6,8,3,-0.5d0,alpha, descC, modesC)
+
                    cstat = cutensorCreateContraction(handle, cdesc,
      &                 descA, modesA, CUTENSOR_OP_IDENTITY,
      &                 descB, modesB, CUTENSOR_OP_IDENTITY,
@@ -1680,6 +1685,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                    cstat = cutensorDestroyTensorDescriptor(descB)
                    if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
                    cstat = cutensorDestroyTensorDescriptor(descC)
+                   if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
                    END IF
                   END IF
                  END IF

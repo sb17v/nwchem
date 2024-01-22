@@ -56,10 +56,10 @@ geometry "w5" units angstrom noprint
   H       0.773193       2.742924      -0.841426
 end
 
-set geometry "w4"
+set geometry "w1"
 
 basis noprint
-  * library cc-pvtz
+  * library cc-pvdz
 end
 
 scf
