@@ -308,6 +308,9 @@ c -----------------------
      &                   d_i1,k_i1_offset)
         CALL ccsd_t2_7_3(d_t2,k_t2_offset,d_v2,k_v2_offset,
      &                   d_i1,k_i1_offset)
+        CALL RECONCILEFILE(d_i1,size_i1)
+        CALL ccsd_t2_7(d_t2,k_t2_offset,d_i1,k_i1_offset,
+     &                 d_i0,k_i0_offset)
       else if (ccsd_t2_7_alg.eq.2) then
         CALL ccsd_t2_7_1_x(d_v2,k_v2_offset,
      &                     d_i1,k_i1_offset,maxh,maxp)
@@ -315,14 +318,17 @@ c -----------------------
      &                   d_i1,k_i1_offset,maxh,maxp)
         CALL ccsd_t2_7_3_x(d_t2,k_t2_offset,d_v2,k_v2_offset,
      &                   d_i1,k_i1_offset,maxh,maxp)
-      else
-        CALL errquit('ccsd_t2_7_alg',ccsd_t2_7_alg,INPUT_ERR)
-      endif
-      CALL RECONCILEFILE(d_i1,size_i1)
-      if (ccsd_t2_7_alg.eq.1) then
-        CALL ccsd_t2_7(d_t2,k_t2_offset,d_i1,k_i1_offset,
-     &                 d_i0,k_i0_offset)
-      else if (ccsd_t2_7_alg.eq.2) then
+        CALL RECONCILEFILE(d_i1,size_i1)
+        CALL ccsd_t2_7_x(d_t2,k_t2_offset,d_i1,k_i1_offset,
+     &                 d_i0,k_i0_offset,maxh,maxp)
+      else if (ccsd_t2_7_alg.eq.3) then
+        CALL ccsd_t2_7_1_x(d_v2,k_v2_offset,
+     &                     d_i1,k_i1_offset,maxh,maxp)
+        CALL ccsd_t2_7_2_x(d_t1,k_t1_offset,d_v2,k_v2_offset,
+     &                   d_i1,k_i1_offset,maxh,maxp)
+        CALL ccsd_t2_7_3_y(d_t2,k_t2_offset,d_v2,k_v2_offset,
+     &                   d_i1,k_i1_offset,maxh,maxp)
+        CALL RECONCILEFILE(d_i1,size_i1)
         CALL ccsd_t2_7_x(d_t2,k_t2_offset,d_i1,k_i1_offset,
      &                 d_i0,k_i0_offset,maxh,maxp)
       else
