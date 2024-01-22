@@ -3778,7 +3778,7 @@ ifdef TCE_CUDA
     CORE_LIBS += $(CUDA_LIBS)
     EXTRA_LIBS += -lstdc++
     ifdef USE_TTLG
-        EXTRA_LIBS += -lcublas
+        EXTRA_LIBS += -lcublas,cutensor
     endif
     ifeq ($(_CC),pgcc)
         COPTIONS += -acc
@@ -3817,7 +3817,7 @@ endif
 
 ifdef NWCHEM_LINK_CUDA
     ifeq ($(_FC),pgf90)
-       CORE_LIBS += -acc -cuda -cudalib=cublas
+       CORE_LIBS += -acc -cuda -cudalib=cublas,cutensor
     endif
     ifeq ($(_FC),gfortran)
        CORE_LIBS +=  -fopenacc -lcublas
