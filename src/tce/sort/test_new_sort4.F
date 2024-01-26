@@ -5,53 +5,61 @@
       use omp_lib
       implicit none
       double precision :: f
-      double precision, allocatable, dimension(:,:,:,:) :: u,s,r,x,y
-      double precision :: t0, t1, dt0, dt1, dt2, dt3
+      double precision, allocatable, dimension(:) :: u,s,r,x,y
+      double precision :: tt0, tt1, dt0, dt1, dt2, dt3
       double precision :: junk
-      integer :: d,T
+      integer :: T1,T2,T3,T4
       integer :: i,j,k,l,xxx
       integer :: num
       integer :: seed1,seed2
       double precision :: tmin,tmax,tavg
       double precision :: rmin,rmax,ravg
-      double precision :: xmin,xmax,xavg
       double precision :: cmin,cmax,cavg
       double precision :: z
       double precision :: ddot
       external :: ddot
       integer :: argnum, arglen, err
       character(len=32) :: argtmp
-      if (command_argument_count().ge.1) then
+      if (command_argument_count().eq.2) then
         call get_command_argument(1,argtmp,arglen,err)
-        if (err.eq.0) read(argtmp,'(i4)') T
+        if (err.eq.0) read(argtmp,'(i4)') T1
+        T2 = T1
+        T3 = T1
+        T4 = T1
+      else if (command_argument_count().eq.5) then
+        call get_command_argument(1,argtmp,arglen,err)
+        if (err.eq.0) read(argtmp,'(i4)') T1
+        call get_command_argument(2,argtmp,arglen,err)
+        if (err.eq.0) read(argtmp,'(i4)') T2
+        call get_command_argument(3,argtmp,arglen,err)
+        if (err.eq.0) read(argtmp,'(i4)') T3
+        call get_command_argument(4,argtmp,arglen,err)
+        if (err.eq.0) read(argtmp,'(i4)') T4
       else
-        T = 20
+        T1 = 20
+        T2 = T1
+        T3 = T1
+        T4 = T1
       endif
-      print*,'{tce,new}_sort_4 test with tilesize = ',T
-      allocate( u(1:T,1:T,1:T,1:T),
-     &          s(1:T,1:T,1:T,1:T),
-     &          r(1:T,1:T,1:T,1:T),
-     &          x(1:T,1:T,1:T,1:T),
-     &          y(1:T,1:T,1:T,1:T), stat=err)
+      print*,'{tce,new}_sort_4 test with tilesize = ',T1,T2,T3,T4
+      allocate( u(1:T1*T2*T3*T4),
+     &          s(1:T1*T2*T3*T4),
+     &          r(1:T1*T2*T3*T4),
+     &          x(1:T1*T2*T3*T4),
+     &          y(1:T1*T2*T3*T4), stat=err)
       seed1 = 1
       seed2 = 2
-      do i = 1,T
-      do j = 1,T
-      do k = 1,T
-      do l = 1,T
+      do i = 1,T1*T2*T3*T4
 #if defined(GCC)
 ! GNU extension
-        u(l,k,j,i) = rand(seed1)
-        s(l,k,j,i) = 0.0
-        r(l,k,j,i) = 0.0
+        u(i) = rand(seed1)
+        s(i) = 0.0
+        r(i) = 0.0
 #else
-        u(l,k,j,i) = 1.0*(l+k*T+j*T*T+i*T*T*T)
-        s(l,k,j,i) = 0.0
-        r(l,k,j,i) = 0.0
+        u(i) = i
+        s(i) = 0.0
+        r(i) = 0.0
 #endif
-      enddo
-      enddo
-      enddo
       enddo
       num = 0
       tmin = 999999999.9
@@ -60,7 +68,6 @@
       do xxx=1,2
           tmin=9**9;tmax=0;tavg=0;
           rmin=9**9;rmax=0;ravg=0;
-          xmin=9**9;xmax=0;xavg=0;
           cmin=9**9;cmax=0;cavg=0;
       write(6,*) '===================================='
       write(6,*) '(i,j,k,l),time,speedup'
@@ -73,62 +80,45 @@
       if ((((i.ne.j).and.(i.ne.k)).and.(i.ne.l)).and.
      &    (((j.ne.k).and.(j.ne.l)).and.(k.ne.l))) then
         num = num+1
-        d = T
         f = 1.0 ! scaling factor
 ! reference
-        t0 = omp_get_wtime()
-        call tce_sort_4(u,r,d,d,d,d,i,j,k,l,f)
-        t1 = omp_get_wtime()
-        dt0 = t1-t0
-        junk = junk + ddot(d*d*d*d,u,1,s,1)
+        tt0 = omp_get_wtime()
+        call tce_sort_4(u,r,T1,T2,T3,T4,i,j,k,l,f)
+        tt1 = omp_get_wtime()
+        dt0 = tt1-tt0
+        junk = junk + ddot(T1*T2*T3*T4,u,1,s,1)
         write(6,7) 'TCE',i,j,k,l,dt0,dt0/dt0
         ravg = ravg + dt0
         rmin = min(rmin,dt0)
         rmax = max(rmax,dt0)
 ! new
-        t0 = omp_get_wtime()
-        call new_sort_4(u,s,d,d,d,d,i,j,k,l,f)
-        t1 = omp_get_wtime()
-        dt1 = t1-t0
-        junk  = junk + ddot(d*d*d*d,u,1,s,1)
+        tt0 = omp_get_wtime()
+        call new_sort_4(u,s,T1,T2,T3,T4,i,j,k,l,f)
+        tt1 = omp_get_wtime()
+        dt1 = tt1-tt0
+        junk  = junk + ddot(T1*T2*T3*T4,u,1,s,1)
         write(6,7) 'NEW',i,j,k,l,dt1,dt0/dt1
         tavg = tavg + (dt1)
         tmin = min(tmin,(dt1))
         tmax = max(tmax,(dt1))
 ! validate
-        call diff4d(d,s,r,z)
-        if (z.gt.0.0) then
-            print*,'WRONG ',z
-            exit
-        endif
-! reshape
-        t0 = omp_get_wtime()
-        x = reshape(u,(/d,d,d,d/),order=(/i,j,k,l/))
-        t1 = omp_get_wtime()
-        dt2 = t1-t0
-        junk = junk + ddot(d*d*d*d,u,1,x,1)
-        xavg = xavg + dt3
-        xmin = min(xmin,dt3)
-        xmax = max(xmax,dt3)
-        write(6,7) 'RESHAPE',i,j,k,l,dt2,dt0/dt2
-! validate
-        call diff4d(d,s,r,z)
+        call diff4d(T1,T2,T3,T4,s,r,z)
         if (z.gt.0.0) then
             print*,'WRONG ',z
             exit
         endif
 ! cutensor
-        t0 = omp_get_wtime()
-        call tce_sort_4_y(u,y,d,d,d,d,i,j,k,l,f)
-        t1 = omp_get_wtime()
-        dt3 = t1-t0
-        junk = junk + ddot(d*d*d*d,u,1,s,1)
+        tt0 = omp_get_wtime()
+        call tce_sort_4_y(u,y,T1,T2,T3,T4,i,j,k,l,f)
+        tt1 = omp_get_wtime()
+        dt3 = tt1-tt0
+        junk = junk + ddot(T1*T2*T3*T4,u,1,s,1)
         write(6,7) 'CUTENSOR',i,j,k,l,dt3,dt0/dt3
         cavg = cavg + dt0
         cmin = min(cmin,dt0)
         cmax = max(cmax,dt0)
 ! validate
-        call diff4d(d,s,r,z)
+        call diff4d(T1,T2,T3,T4,s,r,z)
         if (z.gt.0.0) then
             print*,'WRONG ',z
             exit
@@ -141,31 +131,22 @@
       enddo
       tavg = tavg/num
       ravg = ravg/num
-      xavg = xavg/num
       cavg = cavg/num
       write(6,1) rmin,rmax,ravg
       write(6,1) tmin,tmax,tavg
-      write(6,1) xmin,xmax,xavg
       print*,'junk = ',junk
    1  format('min = ',f10.5,' max = ',f10.5,' avg = ',f10.5)
    3  format(4a2,10x,10x,10x,10x)
    7  format(a8,1x,4i2,1x,1f10.5,' (s) ',f10.5)
       end program
-      subroutine diff4d(n,x,y,z)
+      subroutine diff4d(T1,T2,T3,T4,x,y,z)
       implicit none
-      integer i,j,k,l,n
-      double precision x(n,n,n,n)
-      double precision y(n,n,n,n)
+      integer i,j,k,l,n,T1,T2,T3,T4
+      double precision, dimension(T1*T2*T3*T4) :: x,y
       double precision z
       z = 0.0
-      do i = 1,n
-      do j = 1,n
-      do k = 1,n
-      do l = 1,n
-        z=z+abs(x(l,k,j,i)-y(l,k,j,i))
-      enddo
-      enddo
-      enddo
+      do i = 1,T1*T2*T3*T4
+        z=z+abs(x(i)-y(i))
       enddo
       end subroutine
 
