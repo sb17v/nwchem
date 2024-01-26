@@ -34,10 +34,15 @@ OBJ_OPTIMIZE += new_sort4_x.o
 
 # replace this with something better later
 ifdef USE_OPENACC_TRPDRV
+  FOPTIONS += -DUSE_TCE_CUBLAS
   ifeq ($(_FC),pgf90)
-      FOPTIONS += -Mextend -stdpar=gpu -gpu=managed
+      FOPTIONS += -Mextend -stdpar=gpu -gpu=managed -cuda -cudalib=cublas,cutensor
   endif
+  OBJ_OPTIMIZE += tce_sort4_cutensor.o
 endif
+
+#
+# Possible #defines
 
 
 LIB_INCLUDES = -I../include
