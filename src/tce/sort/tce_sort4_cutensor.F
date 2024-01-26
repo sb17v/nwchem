@@ -27,7 +27,7 @@
       cstat = cutensorCreate(handle)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
         write(LuOut,*) cutensorGetErrorString(cstat)
-        CALL ERRQUIT('create_cutensor_tensor_view',cstat,UNKNOWN_ERR)
+        CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
       end if
 
       extents(1) = a
@@ -56,7 +56,7 @@
      &                            cuTensorDataType(CUDA_R_64F), ialign)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
         write(LuOut,*) cutensorGetErrorString(cstat)
-        CALL ERRQUIT('create_cutensor_tensor_view',cstat,UNKNOWN_ERR)
+        CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
       end if
 
       cstat = cutensorCreateTensorDescriptor(handle, descOut,
@@ -64,7 +64,7 @@
      &                           cuTensorDataType(CUDA_R_64F), ialign)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
         write(LuOut,*) cutensorGetErrorString(cstat)
-        CALL ERRQUIT('create_cutensor_tensor_view',cstat,UNKNOWN_ERR)
+        CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
       end if
 
       descCompute = CUTENSOR_COMPUTE_DESC_64F
