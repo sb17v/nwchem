@@ -1,4 +1,5 @@
-      subroutine tce_sort_4_cutensor(u,s,a,b,c,d,i,j,k,l,f)
+      subroutine tce_sort_4_y(u,s,a,b,c,d,i,j,k,l,f)
+      use cudafor
       use cutensor_v2
       implicit none
       integer, intent(in) :: a,b,c,d
@@ -16,7 +17,6 @@
       integer(8), dimension(ndim) :: stridesIn, stridesOut
       integer(4), parameter :: ialign = 128
       type(cutensorStatus) :: cstat
-      type(cutensorTensorDescriptor) :: descA, descB, descC
       type(cutensorOperationDescriptor) :: pdesc
       type(cutensorComputeDescriptor) :: descCompute
       type(cutensorPlan) :: plan
@@ -68,9 +68,10 @@
         CALL ERRQUIT('create_cutensor_tensor_view',cstat,UNKNOWN_ERR)
       end if
 
+      descCompute = CUTENSOR_COMPUTE_DESC_64F
       cstat = cutensorCreatePermutation(handle, pdesc,
-     &        descA, modeA, CUTENSOR_OP_IDENTITY,
-     &        descC, modeC, descCompute) 
+     &        descIn, modeA, CUTENSOR_OP_IDENTITY,
+     &        descOut, modeC, descCompute) 
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
       cstat = cutensorCreatePlanPreference(handle, pref,
      &              CUTENSOR_ALGO_DEFAULT, CUTENSOR_JIT_MODE_NONE)
