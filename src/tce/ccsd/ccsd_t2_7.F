@@ -1462,7 +1462,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                     CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                   int_mb(k_a_offset),(h8b_1-1+noab*(h1b_1-1+noab*
      &                   (p3b_1-noab-1+nvab*(p7b_1-noab-1)))))
-                    CALL tce_sort_4_x(f_t,f_a,
+                    CALL tce_sort_4_y(f_t,f_a,
      &                   int_mb(k_range+p7b-1),int_mb(k_range+p3b-1),
      &                   int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
      &                   3,2,4,1,-1.0d0)
@@ -1471,7 +1471,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                    CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                  int_mb(k_a_offset),(h1b_1-1+noab*(h8b_1-1+noab*
      &                  (p7b_1-noab-1+nvab*(p3b_1-noab-1)))))
-                   CALL tce_sort_4_x(f_t,f_a,
+                   CALL tce_sort_4_y(f_t,f_a,
      &                  int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
      &                  int_mb(k_range+h8b-1),int_mb(k_range+h1b-1),
      &                  4,1,3,2,-1.0d0)
@@ -1480,7 +1480,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                    CALL GET_HASH_BLOCK(d_a,f_t,dima,
      &                  int_mb(k_a_offset),(h8b_1-1+noab*(h1b_1-1+noab*
      &                  (p7b_1-noab-1+nvab*(p3b_1-noab-1)))))
-                   CALL tce_sort_4_x(f_t,f_a,
+                   CALL tce_sort_4_y(f_t,f_a,
      &                  int_mb(k_range+p3b-1),int_mb(k_range+p7b-1),
      &                  int_mb(k_range+h1b-1),int_mb(k_range+h8b-1),
      &                  3,1,4,2,1.0d0)
@@ -1497,7 +1497,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                    (p7b_2-1+(noab+nvab)*(h6b_2-1+(noab+nvab)*
      &                    (h8b_2-1)))),p5b_2,p7b_2,h6b_2,h8b_2)
                     end if
-                    CALL tce_sort_4_x(f_t,f_b,
+                    CALL tce_sort_4_y(f_t,f_b,
      &                   int_mb(k_range+h8b-1),int_mb(k_range+h6b-1),
      &                   int_mb(k_range+p7b-1),int_mb(k_range+p5b-1),
      &                   4,2,1,3,1.0d0)
@@ -1514,7 +1514,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                   (p5b_2-1+(noab+nvab)*(h6b_2-1+(noab+nvab)*
      &                   (h8b_2-1)))),p7b_2,p5b_2,h6b_2,h8b_2)
                     end if
-                   CALL tce_sort_4_x(f_t,f_b,
+                   CALL tce_sort_4_y(f_t,f_b,
      &                  int_mb(k_range+h8b-1),int_mb(k_range+h6b-1),
      &                  int_mb(k_range+p5b-1),int_mb(k_range+p7b-1),
      &                  3,2,1,4,-1.0d0)
@@ -1531,7 +1531,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                   (p7b_2-1+(noab+nvab)*(h8b_2-1+(noab+nvab)*
      &                   (h6b_2-1)))),p5b_2,p7b_2,h8b_2,h6b_2)
                     end if
-                    CALL tce_sort_4_x(f_t,f_b,
+                    CALL tce_sort_4_y(f_t,f_b,
      &                   int_mb(k_range+h6b-1),int_mb(k_range+h8b-1),
      &                   int_mb(k_range+p7b-1),int_mb(k_range+p5b-1),
      &                   4,1,2,3,-1.0d0)
@@ -1548,7 +1548,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
      &                   (p5b_2-1+(noab+nvab)*(h8b_2-1+(noab+nvab)*
      &                   (h6b_2-1)))),p7b_2,p5b_2,h8b_2,h6b_2)
                     end if
-                    CALL tce_sort_4_x(f_t,f_b,
+                    CALL tce_sort_4_y(f_t,f_b,
      &                   int_mb(k_range+h6b-1),int_mb(k_range+h8b-1),
      &                   int_mb(k_range+p5b-1),int_mb(k_range+p7b-1),
      &                   3,1,2,4,1.0d0)
