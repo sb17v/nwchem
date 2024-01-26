@@ -1573,7 +1573,7 @@ C     i1 ( h6 p3 h1 p5 )_vt+=-1/2*Sum ( h8 p7 )*t ( p3 p7 h1 h8 )_t*v ( h6 h8 p5
                 END IF
                END DO
               END DO
-              CALL tce_sort_4_x(f_c,f_t,
+              CALL tce_sort_4_y(f_c,f_t,
      &             int_mb(k_range+p5b-1),int_mb(k_range+h6b-1),
      &             int_mb(k_range+h1b-1),int_mb(k_range+p3b-1),
      &             4,2,3,1,-1.0d0/2.0d0)
