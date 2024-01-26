@@ -128,4 +128,7 @@
           stop
       endif
 
+      ii = cudaDeviceSynchronize()
+      if (ii.ne.0) STOP ii
+
       end
