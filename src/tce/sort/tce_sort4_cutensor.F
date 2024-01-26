@@ -7,8 +7,7 @@
       double precision, intent(out) :: s(a*b*c*d)
       double precision, intent(in) :: u(a*b*c*d)
       double precision, intent(in) :: f
-#include "stdio.fh"
-#include "errquit.fh"
+!#include "errquit.fh"
       type(cutensorHandle) :: handle
       type(cutensorTensorDescriptor) :: descIn,descOut
       integer(4), parameter :: ndim = 4
@@ -26,8 +25,8 @@
 
       cstat = cutensorCreate(handle)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
-        write(LuOut,*) cutensorGetErrorString(cstat)
-        CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
+        write(6,*) cutensorGetErrorString(cstat)
+        !CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
       end if
 
       extentsIn(1) = a
@@ -59,16 +58,18 @@
      &                           ndim, extentsIn, stridesIn,
      &                            cuTensorDataType(CUDA_R_64F), ialign)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
-        write(LuOut,*) cutensorGetErrorString(cstat)
-        CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
+        write(6,*) cutensorGetErrorString(cstat)
+        !CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
+        STOP
       end if
 
       cstat = cutensorCreateTensorDescriptor(handle, descOut,
      &                           ndim, extentsOut, stridesOut,
      &                           cuTensorDataType(CUDA_R_64F), ialign)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
-        write(LuOut,*) cutensorGetErrorString(cstat)
-        CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
+        write(6,*) cutensorGetErrorString(cstat)
+        !CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
+        STOP
       end if
 
       descCompute = CUTENSOR_COMPUTE_DESC_64F
