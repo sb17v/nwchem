@@ -103,9 +103,9 @@
         tmax = max(tmax,(dt1))
 ! validate
         call diff4d(T1,T2,T3,T4,s,r,z)
-        if (z.gt.0.0) then
+        if (z.ne.0.0d0) then
             print*,'WRONG ',z
-            exit
+            stop
         endif
 ! cutensor
         tt0 = omp_get_wtime()
@@ -119,9 +119,9 @@
         cmax = max(cmax,dt0)
 ! validate
         call diff4d(T1,T2,T3,T4,s,r,z)
-        if (z.gt.0.0) then
+        if (z.ne.0.0d0) then
             print*,'WRONG ',z
-            exit
+            stop
         endif
       endif
       enddo
@@ -144,7 +144,7 @@
       integer i,j,k,l,n,T1,T2,T3,T4
       double precision, dimension(T1*T2*T3*T4) :: x,y
       double precision z
-      z = 0.0
+      z = 0.0d0
       do i = 1,T1*T2*T3*T4
         z=z+abs(x(i)-y(i))
       enddo
