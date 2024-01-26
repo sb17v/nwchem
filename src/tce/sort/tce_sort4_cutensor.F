@@ -20,9 +20,8 @@
       type(cutensorOperationDescriptor) :: pdesc
       type(cutensorComputeDescriptor) :: descCompute
       type(cutensorPlan) :: plan
-      type(cutensorAlgo) :: algo
       type(cutensorPlanPreference) :: pref
-      integer(4), dimension(ndim) :: modeA, modeB, modeC
+      integer(4), dimension(ndim) :: modeIn, modeOut
       integer :: ii
 
       cstat = cutensorCreate(handle)
@@ -70,8 +69,8 @@
 
       descCompute = CUTENSOR_COMPUTE_DESC_64F
       cstat = cutensorCreatePermutation(handle, pdesc,
-     &        descIn, modeA, CUTENSOR_OP_IDENTITY,
-     &        descOut, modeC, descCompute) 
+     &        descIn, modeIn, CUTENSOR_OP_IDENTITY,
+     &        descOut, modeOut, descCompute) 
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
       cstat = cutensorCreatePlanPreference(handle, pref,
      &              CUTENSOR_ALGO_DEFAULT, CUTENSOR_JIT_MODE_NONE)
