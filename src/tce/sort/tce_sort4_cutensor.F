@@ -13,7 +13,7 @@
       type(cutensorTensorDescriptor) :: descIn,descOut
       integer(4), parameter :: ndim = 4
       integer(4), dimension(ndim) :: modesIn, modesOut
-      integer(8), dimension(ndim) :: extents
+      integer(8), dimension(ndim) :: extentsIn, extentsOut
       integer(8), dimension(ndim) :: stridesIn, stridesOut
       integer(4), parameter :: ialign = 128
       type(cutensorStatus) :: cstat
@@ -30,10 +30,10 @@
         CALL ERRQUIT('tce_sort_4_cutensor',cstat,UNKNOWN_ERR)
       end if
 
-      extents(1) = a
-      extents(2) = b
-      extents(3) = c
-      extents(4) = d
+      extentsIn(1) = a
+      extentsIn(2) = b
+      extentsIn(3) = c
+      extentsIn(4) = d
       modesIn(1) = 1
       modesIn(2) = 2
       modesIn(3) = 3
@@ -42,17 +42,21 @@
       modesOut(2) = j
       modesOut(3) = k
       modesOut(4) = l
+      extentsOut(1) = extentsIn(modesOut(1))
+      extentsOut(2) = extentsIn(modesOut(2))
+      extentsOut(3) = extentsIn(modesOut(3))
+      extentsOut(4) = extentsIn(modesOut(4))
       stridesIn(ndim) = 1
       do ii = ndim-1, 1, -1
-        stridesIn(ii) = stridesIn(ii+1) * extents(ii+1)
+        stridesIn(ii) = stridesIn(ii+1) * extentsIn(ii+1)
       end do
       stridesOut(ndim) = 1
       do ii = ndim-1, 1, -1
-        stridesOut(ii) = stridesOut(ii+1) * extents(modesOut(ii+1))
+        stridesOut(ii) = stridesOut(ii+1) * extentsOut(ii+1)
       end do
 
       cstat = cutensorCreateTensorDescriptor(handle, descIn,
-     &                           ndim, extents, stridesIn,
+     &                           ndim, extentsIn, stridesIn,
      &                            cuTensorDataType(CUDA_R_64F), ialign)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
         write(LuOut,*) cutensorGetErrorString(cstat)
@@ -60,7 +64,7 @@
       end if
 
       cstat = cutensorCreateTensorDescriptor(handle, descOut,
-     &                           ndim, extents, stridesOut,
+     &                           ndim, extentsOut, stridesOut,
      &                           cuTensorDataType(CUDA_R_64F), ialign)
       if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
         write(LuOut,*) cutensorGetErrorString(cstat)
@@ -71,26 +75,56 @@
       cstat = cutensorCreatePermutation(handle, pdesc,
      &        descIn, modeIn, CUTENSOR_OP_IDENTITY,
      &        descOut, modeOut, descCompute) 
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorCreatePlanPreference(handle, pref,
      &              CUTENSOR_ALGO_DEFAULT, CUTENSOR_JIT_MODE_NONE)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorCreatePlan(handle, plan, pdesc, pref, 0)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorPermute(handle, plan, f, u, s, 0)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
 
       cstat = cutensorDestroyPlan(plan)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorDestroyPlanPreference(pref)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorDestroyOperationDescriptor(pdesc)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorDestroyTensorDescriptor(descOut)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorDestroyTensorDescriptor(descIn)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
       cstat = cutensorDestroy(handle)
-      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) print *,cutensorGetErrorString(cstat)
+      if (cstat.ne.CUTENSOR_STATUS_SUCCESS) then
+          print *,cutensorGetErrorString(cstat)
+          stop
+      endif
 
       end
