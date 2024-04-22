@@ -390,7 +390,7 @@ c
            call util_file_name('movecs', .false.,.false.,vec_file )
         endif
       endif
-           write(6,*)' using vec ',vec_file,'@@'
+      write(6,'(a11,a60,a2)')' using vec ',vec_file,'@@'
       call util_file_name_resolve(vec_file, .false.)
 c> movecs 
       if (.not. movecs_read_header(vec_file, title_vec, basis_name,
@@ -808,7 +808,7 @@ c
       parameter (unitno = 38)
 
       waimfile_printwfn=.false.
-      write(6,*) '   Name of Final wnf-file  ', filename
+      write(6,'(a30,a60)') '   Name of Final wnf-file  ', filename
 cc
       open(unit=unitno, file=filename, status='unknown',
      &       form='formatted')
