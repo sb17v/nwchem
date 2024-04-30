@@ -83,10 +83,10 @@ c-----------------------------------------------------------------------
             do a=1,nvir
             do b=1,nvir
             ht1(k,a)=ht1(k,a) 
-                              - 2*scrc(b,k) * scre(a,b)
-                              - 2*scrc(b,k) * t1i(a)*t1j(b)
-                              +   scrc(k,b) * scre((a,b)
-                              +   scrc(k,b) * t1i(a)*t1j(b)
+                              - 2*scrc(b,k) * scre(b,a)     ! DGEMM
+                              - 2*scrc(b,k) * t1i(a)*t1j(b) ! DGEMM
+                              +   scrc(k,b) * scre(b,a)     ! DGEMM
+                              +   scrc(k,b) * t1i(a)*t1j(b) ! DGEMM
             enddo
             enddo
             enddo
@@ -95,10 +95,10 @@ c
             do a=1,nvir
             do b=1,nvir
             habe(a,b)=habe(a,b)
-                                - 2*scrc(b,c) * scre(c,a)
-                                - 2*scrc(b,c) * t1i(c)*t1j(a)
-                                +   scrc(c,b) * scre(c,a)
-                                +   scrc(c,b) * t1i(c)*t1j(a)
+                                - 2*scrc(b,c) * scre(a,c)     ! DGEMM
+                                - 2*scrc(b,c) * t1i(c)*t1j(a) ! DGEMM
+                                +   scrc(c,b) * scre(a,c)     ! DGEMM
+                                +   scrc(c,b) * t1i(c)*t1j(a) ! DGEMM
             enddo
             enddo
             enddo
@@ -157,13 +157,15 @@ c---------------------------------------------------------
             call dfill(nact*nact,0.0d00,scrf,1)
 c
 c D1,D7
-            ad1=0
             do a=1,nvir
               do b=nocc+1,nact
-                ad1=ad1+1
-                scrf(ad1)=scrf(ad1)+0.5d00*scre((b-1)*nvir+a)
+                scrf(b,a)=scrf(b,a)+0.5d0*scre(a,b) ! DGEAM
+              enddo
+            enddo
+            do a=1,nvir
+              do b=nocc+1,nact
                 do k=1,nocc
-                  scrf(ad1)=scrf(ad1)-scre((k-1)*nvir+a)*t1(k,b-nocc)
+                  scrf(b,a)=scrf(b,a)-scre(a,k)*t1(k,b) ! DGEMM
                 enddo
               enddo
             enddo
