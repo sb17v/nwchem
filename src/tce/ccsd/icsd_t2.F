@@ -1,5 +1,7 @@
-      SUBROUTINE icsd_t2(d_f1,d_i0,d_t1,d_t2,d_v2,k_f1_offset,k_i0_offse
-     &t,k_t1_offset,k_t2_offset,k_v2_offset,size_t1,size_t2,d_c2,iter)
+      SUBROUTINE icsd_t2(d_f1,d_i0,d_t1,d_t2,d_v2,k_f1_offset,
+     &                   k_i0_offset,k_t1_offset,k_t2_offset,
+     &                   k_v2_offset,size_t1,size_t2,d_c2,
+     &                   iter,rtdb)
 c
 c new parameters in procedure call size_t1,size_t2,d_c2
 c d_c2 is assumed to be created before icsd_t2 is called
@@ -59,6 +61,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
 #include "util.fh"
 #include "errquit.fh"
 #include "tce.fh"
+#include "rtdb.fh"
 c when local copies of  T1/X1 tensors are used,  d_t1 refers to k_t1_local (kk)
 c local copies of the most important 2-dimensional intermediates
 c icsd_t2_4(...) and icsd_t2_5(...) (kk)
@@ -129,7 +132,7 @@ c
       integer size_i2_6
       integer size_i1_7
       integer size_i1_vt     
-      integer level_x,iter
+      integer level_x,iter,rtdb
       integer size_t1,size_t2
       integer layer1,layer2,layer3,layer4
 c ----- independent counters -----
@@ -540,10 +543,10 @@ c
 c
 c
       if(level_x.eq.1) then 
-        if (ccsd_t2_8_alg.eq.1) then
+        if (icsd_t2_8_alg.eq.1) then
           CALL icsd_t2_8(d_c2,k_t2_offset,d_v2,k_v2_offset,
      &                   d_i0,k_i0_offset,ctx,41)
-        else if (ccsd_t2_8_alg.eq.2) then
+        else if (icsd_t2_8_alg.eq.2) then
           CALL icsd_t2_8_x(d_c2,k_t2_offset,d_v2,k_v2_offset,
      &                     d_i0,k_i0_offset,ctx,41)
         else
@@ -9293,13 +9296,16 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       INTEGER p3b_2,p4b_2,p5b_2,p6b_2
       INTEGER dima,dimb,dimc,dim_common,dima_sort,dimb_sort
       integer :: h21d, p43d, p65d
-      double precision, allocatable :: f_a(:), f_b(:), f_c(:)
+      double precision, allocatable :: f_a(:), f_b(:), f_c(:,:)
       integer :: e_a,e_b,e_c
       double precision alpha
       integer p5b_in,p6b_in
       integer ctx,icounter
       external nxt_ctx_create, nxt_ctx_destroy, nxt_ctx_next
       integer :: p,h
+      integer :: phase
+      integer :: nbh(0:1)
+      logical :: first
       nprocs = GA_NNODES()
       count = 0
       !next = NXTASK(nprocs, 1)
@@ -9323,11 +9329,16 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       e_b=0
       e_c=0
       allocate(f_a(1:dimhhpp),stat=e_a)
-      allocate(f_b(1:dimpppp),stat=e_b)
-      allocate(f_c(1:dimhhpp),stat=e_c)
       if (e_a.ne.0) call errquit("MA a",dimhhpp,MA_ERR)
+      allocate(f_b(1:dimpppp),stat=e_b)
       if (e_b.ne.0) call errquit("MA b",dimpppp,MA_ERR)
+      allocate(f_c(1:dimhhpp,2),stat=e_c)
       if (e_c.ne.0) call errquit("MA c",dimhhpp,MA_ERR)
+
+      nbh   = 0
+      phase = 0
+      first = .true.
+
       DO p3b = noab+1,noab+nvab
        DO p4b = p3b,noab+nvab
         DO h1b = 1,noab
@@ -9347,7 +9358,14 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &                  * int_mb(k_range+p4b-1)
               dimc = int_mb(k_range+p3b-1) * int_mb(k_range+p4b-1)
      &             * int_mb(k_range+h1b-1) * int_mb(k_range+h2b-1)
-              CALL DFILL(dimc,0.0d0,f_c,1)
+
+              ! if this is not the first iteration, flush before reusing buffer
+              if (.not.first) then
+                print*,'flushing phase ',phase
+                call ga_nbwait(nbh(phase))
+              end if
+              CALL DFILL(dimc,0.0d0,f_c(:,phase),1)
+
               DO p5b_in =ga_nodeid(),ga_nodeid()+nvab-1
                 p5b=mod(p5b_in,nvab)+noab+1
                 DO p6b_in=ga_nodeid(),ga_nodeid()+nvab+noab-p5b
@@ -9380,6 +9398,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &                   (p5b_2-1+(noab+nvab)*(p4b_2-1+(noab+nvab)*
      &                   (p3b_2-1)))),p6b_2,p5b_2,p4b_2,p3b_2)
                    end if
+
                    if (p5b .eq. p6b) then
                     alpha = 1.0d0
                    else
@@ -9391,15 +9410,20 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
                    call DGEMM('n','n',h21d,p43d,p65d,
      &                         0.5d0*alpha,f_a,h21d,
      &                                     f_b,p65d,
-     &                         1.0d0,      f_c,h21d)
+     &                         1.0d0,      f_c(1:dimhhpp,phase),h21d)
                   END IF
                  END IF
                 END IF
                END DO
               END DO
-              CALL ADD_HASH_BLOCK(d_c,f_c,dimc,
+              CALL ADD_HASH_BLOCK_NB(d_c,f_c(:,phase),dimc,
      &             int_mb(k_c_offset),(h2b-1+noab*(h1b-1+noab*
-     &             (p4b-noab-1+nvab*(p3b-noab-1)))))
+     &             (p4b-noab-1+nvab*(p3b-noab-1)))),nbh(phase))
+
+              print*,'firing on phase ',phase,
+     &               ' new phase=',mod(phase+1,2)
+              phase = mod(phase+1,2)
+              
               !next = NXTASK(nprocs, 1)
               call nxt_ctx_next(ctx, icounter, next)
              END IF
