@@ -9332,7 +9332,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
       if (e_a.ne.0) call errquit("MA a",dimhhpp,MA_ERR)
       allocate(f_b(1:dimpppp),stat=e_b)
       if (e_b.ne.0) call errquit("MA b",dimpppp,MA_ERR)
-      allocate(f_c(1:dimhhpp,2),stat=e_c)
+      allocate(f_c(1:dimhhpp,0:1),stat=e_c)
       if (e_c.ne.0) call errquit("MA c",dimhhpp,MA_ERR)
 
       nbh   = 0
