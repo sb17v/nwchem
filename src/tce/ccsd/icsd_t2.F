@@ -9423,6 +9423,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
               print*,'firing on phase ',phase,
      &               ' new phase=',mod(phase+1,2)
               phase = mod(phase+1,2)
+              first = .false.
               
               !next = NXTASK(nprocs, 1)
               call nxt_ctx_next(ctx, icounter, next)
