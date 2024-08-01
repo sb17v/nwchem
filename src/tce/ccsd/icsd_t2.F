@@ -1,6 +1,6 @@
       module local_timing_array
             implicit none
-            real :: timing_data(4)
+            real :: timing_data(4) = 0.0
             integer(4), save :: timing_cntr = 1
       end module local_timing_array
 c
@@ -12,7 +12,8 @@ c
 #include "mpif.h"
 #endif
 c
-            real :: result_avg(4), result_min(4), result_max(4)
+            real :: result_avg(4) = 0.0, result_min(4) = 0.0,
+     &              result_max(4) = 0.0
             integer(4) :: i, rank, nprocs;
             integer :: ret, comm;
 c
@@ -38,6 +39,7 @@ c
      &                      MPI_MAX,0,MPI_COMM_WORLD,ret)
 #endif
             if (0 == rank) then
+c                 print *, "=== Timing cntr: ", timing_cntr
                   do i = 1, 4
                         result_avg(i) = result_avg(i)/nprocs
                         print *, i, "-", timing_data(i),
@@ -45,6 +47,11 @@ c
      &                         result_min(i), result_max(i)
                   end do
             end if
+            timing_data = 0.0
+            timing_cntr = 1
+            result_avg  = 0.0
+            result_min  = 0.0
+            result_max  = 0.0
       end SUBROUTINE
 c
       SUBROUTINE icsd_t2(d_f1,d_i0,d_t1,d_t2,d_v2,k_f1_offset,
@@ -112,6 +119,12 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
 #include "errquit.fh"
 #include "tce.fh"
 #include "rtdb.fh"
+
+c #ifdef MPI4
+c #include "stupid_mpi4.fh"
+c #else
+c #include "mpif.h"
+c #endif
 c when local copies of  T1/X1 tensors are used,  d_t1 refers to k_t1_local (kk)
 c local copies of the most important 2-dimensional intermediates
 c icsd_t2_4(...) and icsd_t2_5(...) (kk)
@@ -197,6 +210,7 @@ c - T1/X1 LOCALIZATION -------------------
 c ---------------------------------------
 c - icsd_t2_8 timer ---------------------
       real(8)              :: t2_8_t_start = 0.0, t2_8_t_end = 0.0
+c      integer              :: rank, ret
 c --------------------------------------- 
       CHARACTER*255 filename
       logical nodezero         ! True if node 0
@@ -612,6 +626,10 @@ c
       call cpu_time(t2_8_t_end)
 c
 c      print *, 't2_8 time-', t2_8_e_time - t2_8_s_time
+c      call MPI_Comm_rank(MPI_COMM_WORLD, rank, ret)
+c      if (0 == rank) then
+c            print *, "!!! Timing cntr: ", timing_cntr
+c      end if
       timing_data(timing_cntr) = (t2_8_t_end - t2_8_t_start)
       timing_cntr = timing_cntr + 1
 c
