@@ -1,7 +1,64 @@
+      module local_timing_array
+            implicit none
+            real :: timing_data(4) = 0.0
+            integer(4), save :: timing_cntr = 1
+      end module local_timing_array
+c
+      SUBROUTINE print_t2_8_profile
+            use local_timing_array
+#ifdef MPI4
+#include "stupid_mpi4.fh"
+#else
+#include "mpif.h"
+#endif
+c
+            real :: result_avg(4) = 0.0, result_min(4) = 0.0,
+     &              result_max(4) = 0.0
+            integer(4) :: i, rank, nprocs;
+            integer :: ret, comm;
+c
+            call MPI_Comm_rank(MPI_COMM_WORLD, rank, ret)
+            call MPI_Comm_size(MPI_COMM_WORLD, nprocs, ret)
+
+#ifdef MPI4
+            call MPI_Reduce(timing_data,result_avg,4, 
+     &                      stupid_double,stupid_sum, 
+     &                      0,stupid_comm_i,stupid_ierr)
+            call MPI_Reduce(timing_data,result_min,4, 
+     &                      stupid_double,stupid_min, 
+     &                      0,stupid_comm_i,stupid_ierr)
+            call MPI_Reduce(timing_data,result_max,4, 
+     &                      stupid_double,stupid_max, 
+     &                      0,stupid_comm_i,stupid_ierr)
+#else
+            call MPI_Reduce(timing_data,result_avg,4,MPI_REAL, 
+     &                      MPI_SUM,0,MPI_COMM_WORLD,ret)
+            call MPI_Reduce(timing_data,result_min,4,MPI_REAL, 
+     &                      MPI_MIN,0,MPI_COMM_WORLD,ret)
+            call MPI_Reduce(timing_data,result_max,4,MPI_REAL,
+     &                      MPI_MAX,0,MPI_COMM_WORLD,ret)
+#endif
+            if (0 == rank) then
+c                 print *, "=== Timing cntr: ", timing_cntr
+                  do i = 1, 4
+                        result_avg(i) = result_avg(i)/nprocs
+                        print *, i, "-", timing_data(i),
+     &                         result_avg(i),
+     &                         result_min(i), result_max(i)
+                  end do
+            end if
+            timing_data = 0.0
+            timing_cntr = 1
+            result_avg  = 0.0
+            result_min  = 0.0
+            result_max  = 0.0
+      end SUBROUTINE
+c
       SUBROUTINE icsd_t2(d_f1,d_i0,d_t1,d_t2,d_v2,k_f1_offset,
      &                   k_i0_offset,k_t1_offset,k_t2_offset,
      &                   k_v2_offset,size_t1,size_t2,d_c2,
      &                   iter,rtdb)
+      use local_timing_array
 c
 c new parameters in procedure call size_t1,size_t2,d_c2
 c d_c2 is assumed to be created before icsd_t2 is called
@@ -62,6 +119,12 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
 #include "errquit.fh"
 #include "tce.fh"
 #include "rtdb.fh"
+
+c #ifdef MPI4
+c #include "stupid_mpi4.fh"
+c #else
+c #include "mpif.h"
+c #endif
 c when local copies of  T1/X1 tensors are used,  d_t1 refers to k_t1_local (kk)
 c local copies of the most important 2-dimensional intermediates
 c icsd_t2_4(...) and icsd_t2_5(...) (kk)
@@ -146,6 +209,10 @@ c --------------------------------
 c - T1/X1 LOCALIZATION -------------------
       integer l_i1_local,k_i1_local
 c ---------------------------------------
+c - icsd_t2_8 timer ---------------------
+      real(8)              :: t2_8_t_start = 0.0, t2_8_t_end = 0.0
+c      integer              :: rank, ret
+c --------------------------------------- 
       CHARACTER*255 filename
       logical nodezero         ! True if node 0
       double precision cpu     ! CPU sec counter
@@ -546,6 +613,8 @@ c
       end if
 c
 c
+      call cpu_time(t2_8_t_start)
+c
       if(level_x.eq.1) then 
         if (icsd_t2_8_alg.eq.1) then
           CALL icsd_t2_8(d_c2,k_t2_offset,d_v2,k_v2_offset,
@@ -557,6 +626,16 @@ c
           CALL errquit('icsd_t2_8_alg',icsd_t2_8_alg,INPUT_ERR)
         end if
       end if
+c
+      call cpu_time(t2_8_t_end)
+c
+c      print *, 't2_8 time-', t2_8_e_time - t2_8_s_time
+c      call MPI_Comm_rank(MPI_COMM_WORLD, rank, ret)
+c      if (0 == rank) then
+c            print *, "!!! Timing cntr: ", timing_cntr
+c      end if
+      timing_data(timing_cntr) = (t2_8_t_end - t2_8_t_start)
+      timing_cntr = timing_cntr + 1
 c
 cc        if(level_x.eq.1) then
 c -----------------------------------
@@ -9364,7 +9443,7 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
 
               ! if this is not the first iteration, flush before reusing buffer
               if (.not.first) then
-                print*,'flushing phase ',phase
+!                print*,'flushing phase ',phase
                 call ga_nbwait(nbh(phase))
               end if
               CALL DFILL(dimc,0.0d0,f_c(:,phase),1)
@@ -9423,8 +9502,8 @@ C     i0 ( p3 p4 h1 h2 )_vt + = 1/2 * Sum ( p5 p6 ) * t ( p5 p6 h1 h2 )_t * v ( 
      &             int_mb(k_c_offset),(h2b-1+noab*(h1b-1+noab*
      &             (p4b-noab-1+nvab*(p3b-noab-1)))),nbh(phase))
 
-              print*,'firing on phase ',phase,
-     &               ' new phase=',mod(phase+1,2)
+!              print*,'firing on phase ',phase,
+!     &               ' new phase=',mod(phase+1,2)
               phase = mod(phase+1,2)
               first = .false.
               

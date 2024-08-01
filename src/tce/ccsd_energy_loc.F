@@ -113,6 +113,7 @@ cxxxxxxxxxxxxxxxxxxxxx
      1                  k_f1_offset,k_t2_offset,
      2                  k_t1_offset,k_t2_offset,k_v2_offset,
      3                  size_t1,size_t2,d_c2,iter,rtdb)
+           call print_t2_8_profile()
            call deletefile(d_c2)
            else
            call ccsd_t2(rtdb,d_f1,d_r2,k_t1_local,d_t2,d_v2,
